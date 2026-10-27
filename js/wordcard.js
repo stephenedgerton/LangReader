@@ -3,6 +3,9 @@ import { openSheet, closeSheet, esc, icons, $, $$ } from './ui.js';
 import { entry, setWord, deleteWord, STATUS_LABELS } from './vocab.js';
 import { translate, dictionaryLinks, speak } from './services.js';
 import { bump } from './stats.js';
+import { lookup, gloss } from './dictionary.js';
+import { settings } from './settings.js';
+import { normalize } from './text.js';
 
 // opts: {term, display, phrase, context, inPhrase, onClose, onOpenPhrase}
 export function openWordCard(opts) {
@@ -22,6 +25,7 @@ export function openWordCard(opts) {
         <button class="x" aria-label="Close">${icons.close}</button>
       </div>
       ${ctxHTML}
+      <div class="dict" hidden></div>
       <div class="hints"><div class="loading">Looking up translations…</div></div>
       <form class="meaning-input">
         <input name="m" placeholder="Your own meaning…" value="${esc(e.meaning)}" autocomplete="off" autocapitalize="off" enterkeyhint="done">
@@ -51,30 +55,47 @@ export function openWordCard(opts) {
     paintHints();
   };
 
-  let hints = [];
+  // Hints come from two sources: Wiktionary glosses first, then machine translation.
+  let dictHints = [], mtHints = [], pending = 0, failed = '';
   const paintHints = () => {
     const box = $('.hints', body);
     const list = [];
-    if (cur.meaning) list.push({ text: cur.meaning, src: 'Saved', on: true });
-    for (const h of hints) if (h.text.toLowerCase() !== (cur.meaning || '').toLowerCase()) list.push(h);
-    if (!list.length) { box.innerHTML = hints.loading ? '<div class="loading">Looking up translations…</div>' : '<div class="loading">No suggestions — add your own meaning below.</div>'; return; }
-    box.innerHTML = list.map((h) => `<button class="hint${h.on ? ' on' : ''}" data-t="${esc(h.text)}"><span>${esc(h.text)}</span>${h.on ? '<small>Saved</small>' : '<span class="plus">+</span>'}</button>`).join('');
+    const seen = new Set();
+    const add = (h) => { const k = h.text.toLowerCase(); if (!seen.has(k)) { seen.add(k); list.push(h); } };
+    if (cur.meaning) add({ text: cur.meaning, on: true });
+    dictHints.slice(0, 4).forEach(add);
+    mtHints.slice(0, 3).forEach(add);
+    if (!list.length) {
+      box.innerHTML = pending ? '<div class="loading">Looking up…</div>'
+        : `<div class="loading">${failed ? esc(failed) + ' — the dictionaries below still work.' : 'No suggestions — add your own meaning below.'}</div>`;
+      return;
+    }
+    box.innerHTML = list.map((h) => `<button class="hint${h.on ? ' on' : ''}" data-t="${esc(h.text)}"><span>${esc(h.text)}${h.note ? ` <small>${esc(h.note)}</small>` : ''}</span>${h.on ? '<small>Saved</small>' : '<span class="plus">+</span>'}</button>`).join('')
+      + (pending ? '<div class="loading">Looking up…</div>' : '');
   };
 
-  hints.loading = true;
-  translate(display, { word: true }).then((r) => {
-    hints = r.options; paintHints();
-  }).catch((err) => {
-    hints = []; paintHints();
-    $('.hints', body).insertAdjacentHTML('beforeend', `<div class="loading">${esc(err.message || 'Offline')} — dictionaries below still work.</div>`);
-  });
-  if (cur.meaning) paintHints();
+  const useDict = !phrase && settings.target === 'en';
+  if (useDict) {
+    pending++;
+    lookup(display).then((r) => { if (r) { dictHints = dictionaryHints(r); paintDict(body, r); } })
+      .catch((err) => { failed = err.message; })
+      .finally(() => { pending--; paintHints(); });
+  }
+  pending++;
+  translate(display, { word: true }).then((r) => { mtHints = r.options; })
+    .catch((err) => { failed = failed || err.message || 'Offline'; })
+    .finally(() => { pending--; paintHints(); });
+  paintHints();
 
   body.addEventListener('click', async (ev) => {
     const t = ev.target.closest('button, a');
     if (!t) return;
     if (t.matches('.x')) return closeSheet();
     if (t.matches('.speak')) return speak(display);
+    if (t.matches('.lemma-btn')) {
+      const lemma = t.dataset.lemma;
+      return openWordCard({ term: normalize(lemma), display: lemma, context, onClose: opts.onClose });
+    }
     if (t.matches('[data-ph]')) return opts.onOpenPhrase && opts.onOpenPhrase();
     if (t.matches('.hint')) {
       ev.preventDefault();
@@ -103,6 +124,40 @@ export function openWordCard(opts) {
     save({ meaning: m, status: m ? status : cur.status });
     ev.target.m.blur();
   });
+}
+
+// Meanings to offer as one-tap LingQ hints. For an inflected form, use the base word's senses.
+function dictionaryHints(r) {
+  const src = r.lemma && r.lemmaEntries.length ? r.lemmaEntries : r.entries;
+  const out = [];
+  for (const e of src) {
+    for (const d of e.defs) {
+      if (d.lemma) continue; // "plural of …" isn't a meaning
+      const g = gloss(d.text);
+      if (g) out.push({ text: g, note: r.lemma ? r.lemma : '' });
+      if (out.length >= 4) return out;
+    }
+  }
+  return out;
+}
+
+function paintDict(body, r) {
+  const box = $('.dict', body);
+  if (!box) return;
+  const section = (entries, max) => entries.slice(0, 2).map((e) => `
+    <div class="pos"><span>${esc(e.pos)}</span><ol>${e.defs.slice(0, max).map((d) => `<li>${esc(d.text)}</li>`).join('')}</ol></div>`).join('');
+  let html = '';
+  const formDefs = r.entries.flatMap((e) => e.defs).filter((d) => d.lemma);
+  if (r.lemma) {
+    html += `<div class="form-of">${esc(formDefs[0]?.text || 'Form of ' + r.lemma)}</div>
+      <button class="lemma-btn" data-lemma="${esc(r.lemma)}"><b>${esc(r.lemma)}</b><span>Open base word ›</span></button>`;
+    html += section(r.lemmaEntries, 3);
+  } else {
+    html += section(r.entries, 3);
+  }
+  html += '<div class="src">Wiktionary</div>';
+  box.innerHTML = html;
+  box.hidden = false;
 }
 
 function highlight(context, display) {

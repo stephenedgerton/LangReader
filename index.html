@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="LangReader">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <title>LangReader</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Main tabs -->
+    <main id="views">
+      <section id="view-home" class="view" data-tab="home"></section>
+      <section id="view-library" class="view" data-tab="library" hidden></section>
+      <section id="view-vocab" class="view" data-tab="vocab" hidden></section>
+    </main>
+
+    <nav id="tabbar" aria-label="Sections">
+      <button data-tab="home" class="active">
+        <svg viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H10a3 3 0 0 1 2 .8A3 3 0 0 1 14 3h4.5A1.5 1.5 0 0 1 20 4.5v13a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 0 0-2 2 2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 17.5z"/></svg>
+        <span>Home</span>
+      </button>
+      <button data-tab="library">
+        <svg viewBox="0 0 24 24"><path d="M4 3h3v18H4zM9 3h3v18H9zM14.2 3.6l2.9-.8 4.7 17.4-2.9.8z"/></svg>
+        <span>Library</span>
+      </button>
+      <button data-tab="vocab">
+        <svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5zm3 5v2h8V8zm0 4v2h8v-2zm0 4v2h5v-2z"/></svg>
+        <span>Vocabulary</span>
+      </button>
+    </nav>
+
+    <!-- Reader (full screen overlay) -->
+    <section id="reader" hidden>
+      <header id="reader-top" class="chrome">
+        <button id="r-close" class="round" aria-label="Close book">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <div id="r-title"></div>
+        <button id="r-vocab" class="round" aria-label="Words on this page">
+          <svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5zm3 5v2h8V8zm0 4v2h8v-2zm0 4v2h5v-2z"/></svg>
+        </button>
+      </header>
+      <div id="r-running" class="running"></div>
+      <div id="page-area">
+        <div id="page-content"></div>
+      </div>
+      <footer id="reader-bottom">
+        <div id="r-pageno"></div>
+        <button id="r-menu" class="round chrome" aria-label="Reader menu">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </footer>
+      <div id="r-menu-pop" class="popover" hidden>
+        <button data-act="contents"><span>Contents</span><svg viewBox="0 0 24 24"><path d="M4 6h2M9 6h11M4 12h2M9 12h11M4 18h2M9 18h11"/></svg></button>
+        <button data-act="themes"><span>Themes &amp; Settings</span><b>Aa</b></button>
+        <button data-act="translate-page"><span>Translate Page</span><svg viewBox="0 0 24 24"><path d="M3 5h10M8 3v2m3 0c-1 5-4 8-7 9m2-6c1 2 3 4 6 5m2 7 4-10 4 10m-6.5-3h5"/></svg></button>
+        <button data-act="speak-page"><span>Listen to Page</span><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zm12-1a5 5 0 0 1 0 8m2.5-10.5a8.5 8.5 0 0 1 0 13"/></svg></button>
+        <button data-act="complete"><span>Mark Chapter Complete</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+      </div>
+      <div id="r-toast" class="toast" hidden></div>
+    </section>
+
+    <!-- Bottom sheets -->
+    <div id="scrim" hidden></div>
+    <div id="sheet" class="sheet" hidden>
+      <div class="grabber"></div>
+      <div id="sheet-body"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

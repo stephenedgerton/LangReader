@@ -12,7 +12,8 @@ A web app for reading Italian on your phone. It looks and feels like **Apple Boo
 - Contents list, chapter name at the top, "N pages left in chapter" at the bottom, and controls that hide while you read
 
 **LingQ-style learning**
-- Every word is tappable. Unknown words are **blue**, LingQs (words you're learning) are **yellow** at 4 levels, and known words are plain.
+- Every word is tappable. Its card shows Wiktionary definitions and the base form of inflected words (*arrivò* → *arrivare*), with one tap to open the base word.
+- Unknown words are **blue**, LingQs (words you're learning) are **yellow** at 4 levels, and known words are plain.
 - The word card shows translation hints, your own meaning, the 1–4 / Known / Ignore levels, the sentence with a translation, Italian pronunciation, and links to WordReference, Reverso, Treccani, Wiktionary and Google
 - **Phrases**: long-press a word, then tap the last word, to save a phrase as one LingQ
 - **Turning the page marks the blue words you skipped as Known**, like LingQ. You can switch this off.
@@ -38,5 +39,6 @@ python3 -m http.server 8000
 3. For better pronunciation, download an enhanced Italian voice in iOS Settings → Accessibility → Spoken Content → Voices → Italian.
 
 ## Notes
-- Translations come from the free [MyMemory](https://mymemory.translated.net) API, cached on the device. Adding your email in Settings raises the daily free limit.
+- Word lookups use [Wiktionary](https://en.wiktionary.org) (free, no key): parts of speech, definitions, and the base form of inflected words (*arrivò* → *arrivare*). Wiktionary lookups apply when translating into English.
+- Sentence translations, and words Wiktionary doesn't have, use the free [MyMemory](https://mymemory.translated.net) API. Results from both are cached on the device. Adding your email in Settings raises MyMemory's daily free limit.
 - All data lives in IndexedDB on the device. Use Settings → Export to back it up or move it to another device.

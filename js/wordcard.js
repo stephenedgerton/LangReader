@@ -6,6 +6,7 @@ import { bump } from './stats.js';
 import { lookup, gloss } from './dictionary.js';
 import { settings } from './settings.js';
 import { normalize } from './text.js';
+import { haptic } from './haptics.js';
 
 // opts: {term, display, phrase, context, inPhrase, onClose, onOpenPhrase}
 export function openWordCard(opts) {
@@ -99,11 +100,13 @@ export function openWordCard(opts) {
     if (t.matches('[data-ph]')) return opts.onOpenPhrase && opts.onOpenPhrase();
     if (t.matches('.hint')) {
       ev.preventDefault();
+      if (!t.classList.contains('on')) haptic();
       const status = cur.status >= 1 && cur.status <= 4 ? cur.status : 1;
       if (t.classList.contains('on')) return;
       return save({ meaning: t.dataset.t, status });
     }
     if (t.matches('.status-bar button')) {
+      haptic();
       const s = +t.dataset.s;
       if (s === cur.status && phrase) { await deleteWord(term); return closeSheet(); }
       await save({ status: s });
@@ -119,6 +122,7 @@ export function openWordCard(opts) {
   });
   $('.meaning-input', body).addEventListener('submit', (ev) => {
     ev.preventDefault();
+    haptic();
     const m = ev.target.m.value.trim();
     const status = cur.status >= 1 && cur.status <= 4 ? cur.status : 1;
     save({ meaning: m, status: m ? status : cur.status });
@@ -127,7 +131,7 @@ export function openWordCard(opts) {
 }
 
 // Meanings to offer as one-tap LingQ hints. For an inflected form, use the base word's senses.
-function dictionaryHints(r) {
+export function dictionaryHints(r) {
   const src = r.lemma && r.lemmaEntries.length ? r.lemmaEntries : r.entries;
   const out = [];
   for (const e of src) {

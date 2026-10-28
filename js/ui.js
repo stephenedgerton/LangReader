@@ -73,11 +73,20 @@ export function initSheetGestures() {
 }
 
 let toastTimer;
-export function toast(msg, el = $('#r-toast')) {
+// opts.action + opts.onAction add a button (e.g. "Undo") and keep the toast up a little longer.
+export function toast(msg, opts = {}) {
+  const el = opts.el || $('#r-toast');
   el.textContent = msg;
+  el.classList.toggle('has-action', !!opts.action);
+  if (opts.action) {
+    const b = document.createElement('button');
+    b.textContent = opts.action;
+    b.onclick = (e) => { e.stopPropagation(); el.hidden = true; opts.onAction(); };
+    el.appendChild(b);
+  }
   el.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, 1800);
+  toastTimer = setTimeout(() => { el.hidden = true; }, opts.action ? 4500 : 1800);
 }
 
 // Generated cover for books without artwork: deterministic colour from the title.

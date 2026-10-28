@@ -7,16 +7,18 @@ A web app for reading Italian on your phone. It looks and feels like **Apple Boo
 **Apple Books-style reading**
 - Library grid with book covers (taken from the EPUB, or generated), a "Continue" book and progress percentages
 - A Reading Goals ring that times today's reading, plus a streak count
-- Real pages instead of scrolling: swipe pages that follow your finger, or tap the left or right edge to turn. Two columns on wide screens.
+- Real pages instead of scrolling, with Books' **page curl** that follows your finger (or Slide / None). Tap the left or right edge to turn. Two columns on wide screens.
 - Themes & Settings: Original, Quiet, Paper, Bold, Calm and Focus themes, each with a dark version. Font size, the iOS Books fonts (New York, Athelas, Charter, Georgia, Iowan, Palatino, San Francisco, Seravek), line spacing, margins and justified text.
 - Contents list, chapter name at the top, "N pages left in chapter" at the bottom, and controls that hide while you read
 
 **LingQ-style learning**
-- Every word is tappable. Its card shows Wiktionary definitions and the base form of inflected words (*arrivò* → *arrivare*), with one tap to open the base word.
+- Tap a word for a quick **bubble** above it: the top meaning, its base form, pronunciation and the 1–4 / Known buttons. Tap ⋯ for the full card.
+- The full card shows Wiktionary definitions and the base form of inflected words (*arrivò* → *arrivare*), with one tap to open the base word.
 - Unknown words are **blue**, LingQs (words you're learning) are **yellow** at 4 levels, and known words are plain.
 - The word card shows translation hints, your own meaning, the 1–4 / Known / Ignore levels, the sentence with a translation, Italian pronunciation, and links to WordReference, Reverso, Treccani, Wiktionary and Google
 - **Phrases**: long-press a word, then tap the last word, to save a phrase as one LingQ
-- **Turning the page marks the blue words you skipped as Known**, like LingQ. You can switch this off.
+- **Turning the page marks the blue words you skipped as Known**, like LingQ, with an **Undo** button. Chapter titles don't count. You can switch this off.
+- Light haptic feedback when you set a level or save a meaning (iPhone with iOS 18+, and Android).
 - Words on this page, Translate Page, Listen to Page (text-to-speech), and Mark Chapter Complete
 - Vocabulary list (LingQs, Phrases, Known, Ignored), flashcard review, and CSV export for Anki
 - Stats for known words, LingQs, words read today and new known words today

@@ -16,7 +16,7 @@ const R = {
   book: null, ch: 0, chapter: null,
   page: 0, pages: 1, step: 0,
   spans: [], pageOf: null, seenPages: new Set(),
-  anchor: null, phraseStart: null, onExit: null, speaking: false, busy: false,
+  anchor: null, phraseStart: null, selEnd: null, selSpans: [], onExit: null, speaking: false, busy: false,
 };
 
 const dark = () => settings.appearance === 'dark' || (settings.appearance === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
@@ -38,7 +38,7 @@ export function initReader() {
   initGestures();
   // Text fills the page, so the strips above and below it toggle the controls (Books' tap-to-show chrome).
   R.el.addEventListener('click', (e) => {
-    if (e.target.closest('button, #page-area, .popover, .wpop')) return;
+    if (e.target.closest('button, #page-area, .popover, .wpop, .tips')) return;
     toggleMenu(false);
     R.el.classList.toggle('immersive');
   });
@@ -76,11 +76,13 @@ export async function openReader(book, onExit) {
   $('#r-title').textContent = book.title;
   await loadChapter(book.progress?.chapter || 0, { frac: book.progress?.frac || 0 });
   startReadingClock();
+  showTipsOnce();
 }
 
 export function closeReader() {
   stopSpeaking(); R.speaking = false;
-  closeSheet(); closeBubble(); toggleMenu(false);
+  closeSheet(); closeBubble(); toggleMenu(false); clearPhrase();
+  $('.tips', R.el)?.remove();
   saveProgress();
   stopReadingClock();
   R.el.hidden = true;
@@ -337,6 +339,8 @@ function initGestures() {
   });
   area.addEventListener('pointermove', (e) => {
     if (e.pointerId !== pid) return;
+    // After a long press the finger selects words instead of turning the page.
+    if (longPressed) { extendSelection(e.clientX, e.clientY); return; }
     const dx = e.clientX - sx, dy = e.clientY - sy;
     if (!dragging && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
       dragging = true; clearTimeout(lp);
@@ -382,7 +386,8 @@ function initGestures() {
       else goTo(R.page);
       return;
     }
-    if (longPressed || e.type === 'pointercancel') return;
+    if (longPressed) { if (e.type !== 'pointercancel') endSelection(); return; }
+    if (e.type === 'pointercancel') return;
     onTap(e, target);
   };
   area.addEventListener('pointerup', end);
@@ -431,14 +436,35 @@ function openWordFull(el) {
   });
 }
 
-// Long-press a word, then tap the last word: creates a phrase LingQ (LingQ's multi-word selection).
+// Phrases: hold a word, then drag across the phrase (or lift and tap its last word).
 function startPhrase(el) {
   clearPhrase();
   R.phraseStart = el;
-  el.classList.add('sel');
+  paintSelection(+el.dataset.i, +el.dataset.i);
   closeBubble();
   haptic();
-  toast('Tap the last word of the phrase');
+  toast('Drag to select a phrase, or tap its last word');
+}
+function extendSelection(x, y) {
+  if (!R.phraseStart) return;
+  const el = document.elementFromPoint(x, y)?.closest?.('.w');
+  if (!el || !R.content.contains(el) || el === R.selEnd) return;
+  const a = +R.phraseStart.dataset.i;
+  let b = +el.dataset.i;
+  if (Math.abs(b - a) > 11) b = a + Math.sign(b - a) * 11; // phrases are up to 12 words
+  R.selEnd = R.spans[b];
+  paintSelection(Math.min(a, b), Math.max(a, b));
+}
+function endSelection() {
+  const end = R.selEnd;
+  R.selEnd = null;
+  // Lifted without dragging: stay in "tap the last word" mode.
+  if (end && end !== R.phraseStart) finishPhrase(end);
+}
+function paintSelection(a, b) {
+  for (const s of R.selSpans) s.classList.remove('sel');
+  R.selSpans = R.spans.slice(a, b + 1);
+  for (const s of R.selSpans) s.classList.add('sel');
 }
 function finishPhrase(el) {
   let a = +R.phraseStart.dataset.i, b = +el.dataset.i;
@@ -447,6 +473,7 @@ function finishPhrase(el) {
   if (a === b) { const s = R.phraseStart; clearPhrase(); openWordFull(s); return; }
   const spans = R.spans.slice(a, b + 1);
   R.phraseStart = null;
+  R.selSpans = []; // the phrase card owns the highlight from here
   const term = spans.map((s) => s.dataset.w).join(' ');
   openPhraseCard(term, spans, sentenceOf(spans[0]));
 }
@@ -460,8 +487,35 @@ function openPhraseCard(term, spans, context) {
   openWordCard({ term, display, phrase: true, context, onClose: () => spans.forEach((s) => s.classList.remove('sel')) });
 }
 function clearPhrase() {
-  if (R.phraseStart) R.phraseStart.classList.remove('sel');
+  for (const s of R.selSpans) s.classList.remove('sel');
+  R.selSpans = [];
   R.phraseStart = null;
+  R.selEnd = null;
+}
+
+// First-run tips (Settings › "Show reading tips again" brings them back).
+const TIPS_KEY = 'langreader.tipsSeen';
+function showTipsOnce() {
+  try { if (localStorage.getItem(TIPS_KEY)) return; } catch { return; }
+  const el = document.createElement('div');
+  el.className = 'tips';
+  el.innerHTML = `
+    <h3>Reading tips</h3>
+    <ul>
+      <li><b>Tap a word</b> to see its meaning. Tap 1–4 to save it as a LingQ.</li>
+      <li><b>Hold a word and drag</b> to select a phrase.</li>
+      <li><b>Swipe or tap the edges</b> to turn the page. Blue words you skip become known, and you can undo.</li>
+      <li><b>☰ Menu</b>, bottom right: themes, page translation and listening.</li>
+    </ul>
+    <button class="primary">Got it</button>`;
+  el.querySelector('button').addEventListener('click', (e) => {
+    e.stopPropagation();
+    haptic();
+    try { localStorage.setItem(TIPS_KEY, '1'); } catch {}
+    el.remove();
+  });
+  el.addEventListener('pointerdown', (e) => e.stopPropagation());
+  R.el.appendChild(el);
 }
 
 // ---------- Menu & sheets ----------

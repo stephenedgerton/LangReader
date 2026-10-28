@@ -1,5 +1,5 @@
 // Offline support: app shell is cached; translation requests always go to the network.
-const VERSION = 'langreader-v5';
+const VERSION = 'langreader-v6';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/db.js', 'js/text.js', 'js/vocab.js', 'js/settings.js', 'js/services.js',

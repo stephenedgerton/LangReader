@@ -14,6 +14,8 @@ const defaults = {
   justify: true,
   paraSpace: 0,
   autoKnown: true,         // LingQ: paging forward marks remaining blue words as known
+  pageTurn: 'curl',        // curl | slide | none (Apple Books' page turn styles)
+  haptics: true,
   highlights: true,
   rate: 0.9,
   voice: '',

@@ -79,6 +79,20 @@ export async function setMany(terms, status) {
   return changed.length;
 }
 
+// Undo a bulk "mark as known": drop entries that are still plain Known words with nothing saved on them.
+export async function revertToNew(terms) {
+  const reverted = [];
+  for (const term of terms) {
+    const e = words.get(term);
+    if (!e || e.status !== 5 || e.meaning || e.notes || e.phrase) continue;
+    words.delete(term);
+    await db.del('words', term);
+    reverted.push(term);
+  }
+  if (reverted.length) for (const fn of listeners) fn(reverted);
+  return reverted.length;
+}
+
 export async function deleteWord(term) {
   const prev = words.get(term);
   words.delete(term);

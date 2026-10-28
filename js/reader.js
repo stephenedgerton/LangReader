@@ -2,18 +2,21 @@
 import { db } from './db.js';
 import { settings, FONTS, THEMES, TARGETS } from './settings.js';
 import { paragraphHTML } from './text.js';
-import { statusOf, phrases, onChange, setMany, entry } from './vocab.js';
+import { statusOf, phrases, onChange, setMany, entry, revertToNew } from './vocab.js';
 import { openSheet, closeSheet, sheetOpen, toast, esc, icons, $, $$ } from './ui.js';
 import { openWordCard } from './wordcard.js';
 import { translate, speak, stopSpeaking, voicesForLang, googleTranslateURL } from './services.js';
 import { bump, startReadingClock, stopReadingClock } from './stats.js';
+import { openBubble, closeBubble, bubbleOpen } from './bubble.js';
+import { createCurl } from './curl.js';
+import { haptic } from './haptics.js';
 
 const R = {
   el: null, area: null, content: null,
   book: null, ch: 0, chapter: null,
   page: 0, pages: 1, step: 0,
   spans: [], pageOf: null, seenPages: new Set(),
-  anchor: null, phraseStart: null, onExit: null, speaking: false,
+  anchor: null, phraseStart: null, onExit: null, speaking: false, busy: false,
 };
 
 const dark = () => settings.appearance === 'dark' || (settings.appearance === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
@@ -24,7 +27,7 @@ export function initReader() {
   R.content = $('#page-content');
 
   $('#r-close').addEventListener('click', closeReader);
-  $('#r-menu').addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+  $('#r-menu').addEventListener('click', (e) => { e.stopPropagation(); closeBubble(); toggleMenu(); });
   $('#r-vocab').addEventListener('click', pageWordsSheet);
   $('#r-menu-pop').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
@@ -35,12 +38,12 @@ export function initReader() {
   initGestures();
   // Text fills the page, so the strips above and below it toggle the controls (Books' tap-to-show chrome).
   R.el.addEventListener('click', (e) => {
-    if (e.target.closest('button, #page-area, .popover')) return;
+    if (e.target.closest('button, #page-area, .popover, .wpop')) return;
     toggleMenu(false);
     R.el.classList.toggle('immersive');
   });
   addEventListener('keydown', (e) => {
-    if (R.el.hidden || sheetOpen() || e.target.matches('input, textarea, select')) return;
+    if (R.el.hidden || sheetOpen() || R.busy || R.area.querySelector('.curl') || e.target.matches('input, textarea, select')) return;
     if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
     if (e.key === 'Escape') closeReader();
@@ -77,7 +80,7 @@ export async function openReader(book, onExit) {
 
 export function closeReader() {
   stopSpeaking(); R.speaking = false;
-  closeSheet(); toggleMenu(false);
+  closeSheet(); closeBubble(); toggleMenu(false);
   saveProgress();
   stopReadingClock();
   R.el.hidden = true;
@@ -216,26 +219,58 @@ function updateFooter() {
 }
 
 // ---------- Navigation ----------
-async function next() {
-  closeSheet();
-  clearPhrase();
+const twoUp = () => R.area.clientWidth >= 900;
+const canCurl = (dir) => settings.pageTurn === 'curl' && !twoUp() && (dir > 0 ? R.page < R.pages - 1 : R.page > 0);
+const whileBusy = async (fn) => { R.busy = true; try { await fn(); } finally { R.busy = false; } };
+
+async function next(session) {
+  if (R.busy) return;
+  closeSheet(); closeBubble(); clearPhrase();
   leavePage(R.page);
-  if (R.page < R.pages - 1) { goTo(R.page + 1); saveProgress(); return; }
+  if (R.page < R.pages - 1) { await whileBusy(() => turnWithin(1, session)); saveProgress(); return; }
   if (R.ch < R.book.chapterCount - 1) {
     markChapterDone(R.ch);
-    await transition(() => loadChapter(R.ch + 1, { frac: 0 }), 1);
+    await whileBusy(() => transition(() => loadChapter(R.ch + 1, { frac: 0 }), 1));
   } else {
     markChapterDone(R.ch);
     goTo(R.page);
     toast('You finished the book! 🎉');
   }
 }
-async function prev() {
-  closeSheet();
-  clearPhrase();
-  if (R.page > 0) { goTo(R.page - 1); saveProgress(); return; }
-  if (R.ch > 0) await transition(() => loadChapter(R.ch - 1, { last: true }), -1);
+async function prev(session) {
+  if (R.busy) return;
+  closeSheet(); closeBubble(); clearPhrase();
+  if (R.page > 0) { await whileBusy(() => turnWithin(-1, session)); saveProgress(); return; }
+  if (R.ch > 0) await whileBusy(() => transition(() => loadChapter(R.ch - 1, { last: true }), -1));
   else goTo(0);
+}
+
+// One page forward (dir 1) or back (dir -1) inside the chapter, in the chosen page-turn style.
+async function turnWithin(dir, session) {
+  if (session) return endCurl(session, true);
+  if (canCurl(dir)) return endCurl(beginCurl(dir), true, { ms: 420, lift: R.area.clientHeight * 0.08 });
+  goTo(R.page + dir, settings.pageTurn !== 'none');
+}
+
+// Page curl: a copy of the turning page curls over the real content, which already shows the page beneath.
+function beginCurl(dir, corner = 'bottom') {
+  const turning = dir > 0 ? R.page : R.page - 1;
+  const clone = R.content.cloneNode(true);
+  clone.classList.remove('animate');
+  clone.style.transform = `translateX(${-turning * R.step}px)`;
+  clone.querySelectorAll('.sel').forEach((n) => n.classList.remove('sel'));
+  R.content.classList.remove('animate');
+  R.content.style.transform = `translateX(${-(dir > 0 ? R.page + 1 : R.page) * R.step}px)`;
+  const curl = createCurl(R.area, clone, corner);
+  if (dir < 0) curl.set(-curl.W, curl.C.y); // the previous page starts fully turned away
+  return { dir, curl };
+}
+async function endCurl({ dir, curl }, complete, { ms = 300, lift = 0 } = {}) {
+  // Forward turns finish with the corner pulled all the way left; backward turns finish flat.
+  const x = (dir > 0) === complete ? -curl.W : curl.W;
+  await curl.animateTo(x, curl.C.y, ms, lift);
+  curl.destroy();
+  goTo(complete ? R.page + dir : R.page, false);
 }
 async function transition(fn, dir) {
   R.content.classList.add('animate');
@@ -246,18 +281,30 @@ async function transition(fn, dir) {
   R.content.style.opacity = '';
 }
 
-// LingQ: when you page forward, the blue words you skipped become Known.
+// LingQ: when you page forward, the blue words you skipped become Known (with Undo).
 function leavePage(p) {
   if (R.seenPages.has(p)) return;
   R.seenPages.add(p);
-  const spans = spansOnPage(p);
+  // Chapter titles aren't reading, so they never count.
+  const spans = spansOnPage(p).filter((s) => !s.closest('h1, h2'));
   bump('wordsRead', spans.length);
   if (!settings.autoKnown) return;
-  const blue = new Set();
-  for (const s of spans) if (statusOf(s.dataset.w) === 0) blue.add(s.dataset.w);
-  if (!blue.size) return;
-  setMany([...blue], 5).then((n) => {
-    if (n) { bump('known', n); toast(`+${n} known word${n === 1 ? '' : 's'}`); }
+  const blue = [...new Set(spans.filter((s) => statusOf(s.dataset.w) === 0).map((s) => s.dataset.w))];
+  if (!blue.length) return;
+  setMany(blue, 5).then((n) => {
+    if (!n) return;
+    bump('known', n);
+    toast(`+${n} known word${n === 1 ? '' : 's'}`, {
+      action: 'Undo',
+      onAction: async () => {
+        haptic();
+        const back = await revertToNew(blue);
+        bump('known', -back);
+        bump('wordsRead', -spans.length);
+        R.seenPages.delete(p);
+        toast(`${back} word${back === 1 ? '' : 's'} back to new`);
+      },
+    });
   });
 }
 
@@ -276,11 +323,11 @@ function saveProgress() {
 
 // ---------- Gestures ----------
 function initGestures() {
-  let sx = 0, sy = 0, st = 0, dragging = false, pid = null, lp = null, longPressed = false, target = null;
+  let sx = 0, sy = 0, st = 0, dragging = false, pid = null, lp = null, longPressed = false, target = null, session = null;
   const area = R.area;
 
   area.addEventListener('pointerdown', (e) => {
-    if (e.button && e.button !== 0) return;
+    if ((e.button && e.button !== 0) || R.busy) return;
     toggleMenu(false);
     pid = e.pointerId; sx = e.clientX; sy = e.clientY; st = performance.now();
     dragging = false; longPressed = false;
@@ -295,8 +342,21 @@ function initGestures() {
       dragging = true; clearTimeout(lp);
       area.setPointerCapture?.(pid);
       R.content.classList.remove('animate');
+      closeBubble();
+      const dir = dx < 0 ? 1 : -1;
+      if (canCurl(dir)) {
+        const ar = area.getBoundingClientRect();
+        session = beginCurl(dir, sy - ar.top < ar.height / 2 ? 'top' : 'bottom');
+      }
     }
     if (Math.abs(dy) > 12 && !dragging) clearTimeout(lp);
+    if (dragging && session) {
+      // The page corner follows the finger; vertical movement tilts the fold.
+      const { curl } = session;
+      const x = session.dir > 0 ? curl.W + dx * 1.25 : -curl.W + dx * 2;
+      curl.set(x, curl.C.y + dy * 0.6);
+      return;
+    }
     if (dragging) {
       let d = dx;
       const atStart = R.page === 0 && R.ch === 0, atEnd = R.page === R.pages - 1 && R.ch === R.book.chapterCount - 1;
@@ -310,8 +370,15 @@ function initGestures() {
     const dx = e.clientX - sx, dt = performance.now() - st;
     if (dragging) {
       const v = Math.abs(dx) / dt;
-      if (dx < -60 || (dx < -15 && v > 0.4)) next();
-      else if (dx > 60 || (dx > 15 && v > 0.4)) prev();
+      const fwd = dx < -60 || (dx < -15 && v > 0.4), back = dx > 60 || (dx > 15 && v > 0.4);
+      if (session) {
+        const s = session; session = null;
+        if (s.dir > 0 ? fwd : back) s.dir > 0 ? next(s) : prev(s);
+        else whileBusy(() => endCurl(s, false));
+        return;
+      }
+      if (fwd) next();
+      else if (back) prev();
       else goTo(R.page);
       return;
     }
@@ -327,6 +394,7 @@ function onTap(e, wordEl) {
   if (sheetOpen()) { closeSheet(); return; }
   if (wordEl && R.phraseStart) { finishPhrase(wordEl); return; }
   if (wordEl) { openWord(wordEl); return; }
+  if (bubbleOpen()) { closeBubble(); return; }
   clearPhrase();
   const w = R.area.clientWidth, x = e.clientX;
   if (x < w * 0.22) prev();
@@ -338,7 +406,18 @@ function sentenceOf(el) {
   return (el.closest('.sent')?.textContent || el.parentElement.textContent).trim();
 }
 
+// Tapping a word shows the quick bubble; its "⋯" (or the word itself) opens the full card.
 function openWord(el) {
+  el.classList.add('sel');
+  openBubble({
+    anchor: el, container: R.el, term: el.dataset.w,
+    display: el.textContent.replace(/’/g, "'"), context: sentenceOf(el),
+    onClose: () => el.classList.remove('sel'),
+    onExpand: () => openWordFull(el),
+  });
+}
+
+function openWordFull(el) {
   const term = el.dataset.w;
   el.classList.add('sel');
   const inPhrase = el.dataset.ph && el.dataset.ph !== term ? el.dataset.ph : null;
@@ -357,14 +436,15 @@ function startPhrase(el) {
   clearPhrase();
   R.phraseStart = el;
   el.classList.add('sel');
-  navigator.vibrate?.(10);
+  closeBubble();
+  haptic();
   toast('Tap the last word of the phrase');
 }
 function finishPhrase(el) {
   let a = +R.phraseStart.dataset.i, b = +el.dataset.i;
   if (a > b) [a, b] = [b, a];
   if (b - a > 11) { toast('Phrases can be up to 12 words'); clearPhrase(); return; }
-  if (a === b) { const s = R.phraseStart; clearPhrase(); openWord(s); return; }
+  if (a === b) { const s = R.phraseStart; clearPhrase(); openWordFull(s); return; }
   const spans = R.spans.slice(a, b + 1);
   R.phraseStart = null;
   const term = spans.map((s) => s.dataset.w).join(' ');
@@ -426,10 +506,12 @@ function themesSheet() {
       <label class="ts-item"><span class="lbl">Line Spacing</span><input type="range" min="1.2" max="2.1" step="0.05" value="${settings.lineHeight}" data-set="lineHeight"></label>
       <label class="ts-item"><span class="lbl">Margins</span><input type="range" min="12" max="56" step="2" value="${settings.margin}" data-set="margin"></label>
       <label class="ts-item"><span class="lbl">Paragraph Spacing</span><input type="range" min="0" max="1.2" step="0.1" value="${settings.paraSpace}" data-set="paraSpace"></label>
+      <label class="ts-item"><span class="lbl">Page Turn</span><select data-set="pageTurn">${[['curl', 'Curl'], ['slide', 'Slide'], ['none', 'None']].map(([k, n]) => `<option value="${k}" ${settings.pageTurn === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="ts-item"><span class="lbl">Justify Text</span><span class="switch"><input type="checkbox" data-set="justify" ${settings.justify ? 'checked' : ''}><i></i></span></label>
     </div>
     <div class="ts-group">
       <label class="ts-item"><span class="lbl">Page turn marks blue words known<small>LingQ: words you skip past count as known</small></span><span class="switch"><input type="checkbox" data-set="autoKnown" ${settings.autoKnown ? 'checked' : ''}><i></i></span></label>
+      <label class="ts-item"><span class="lbl">Haptics</span><span class="switch"><input type="checkbox" data-set="haptics" ${settings.haptics ? 'checked' : ''}><i></i></span></label>
       <label class="ts-item"><span class="lbl">Translate into</span><select data-set="target">${Object.entries(TARGETS).map(([k, n]) => `<option value="${k}" ${settings.target === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="ts-item"><span class="lbl">Speech Rate</span><input type="range" min="0.5" max="1.3" step="0.05" value="${settings.rate}" data-set="rate"></label>
       ${voices.length ? `<label class="ts-item"><span class="lbl">Voice</span><select data-set="voice"><option value="">Automatic</option>${voices.map((v) => `<option ${settings.voice === v.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label>` : ''}

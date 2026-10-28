@@ -7,6 +7,7 @@ import { openWordCard } from './wordcard.js';
 import { getDays, streak, todayKey, bump } from './stats.js';
 import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, $, $$ } from './ui.js';
 import { SAMPLE } from '../samples/sample.js';
+import { haptic } from './haptics.js';
 import { requestPersistence, isPersisted, backupDue, backupAge, markBackedUp, snoozeBackup, saveFile } from './storage.js';
 
 let tab = 'home';
@@ -340,6 +341,7 @@ function review() {
     if (b.matches('.x') || b.dataset.done != null) return closeSheet();
     if (b.dataset.flip != null) { revealed = true; return card(); }
     if (b.dataset.r != null) {
+      haptic();
       const w = queue[i];
       if (b.dataset.r === '1') {
         right++;

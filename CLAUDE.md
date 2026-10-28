@@ -11,7 +11,15 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 - Run locally: `python3 -m http.server 8000`, then open http://localhost:8000. ES modules and the service worker need http(s), not `file://`.
 - Deploy: GitHub Pages serves `main` from the repo root (https://stephenedgerton.github.io/LangReader/). Merging to `main` is the deploy. So far the workflow has been: work on branch `langreader-app`, open a PR, merge.
 - **On every release, bump `VERSION` in `sw.js`, and add any new file to its `SHELL` list**, or installed home-screen copies keep stale or missing modules. The service worker is network-first for same-origin requests and falls back to its cache offline.
-- There's no test suite or linter in the repo. Changes have been checked by driving the app in headless Chromium with Playwright at the iPhone 13 viewport (390×664), mocking `en.wiktionary.org` and `api.mymemory.translated.net` with `page.route`. Set `localStorage['langreader.tipsSeen']` first, or the tips card covers the page.
+
+## Tests
+
+- Run everything: `node --test` (Node 22+, takes about 20 s). One file: `node --test tests/words.test.mjs`. One test by name: `node --test --test-name-pattern="hold and drag"`.
+- `tests/text.test.mjs` holds plain unit tests for `js/text.js`. The other files drive the real app in headless Chromium through Playwright, at the iPhone 13 viewport (390×664).
+- `tests/helpers.mjs` starts a static server for the repo on a random port. `openApp()` opens a fresh browser context, mocks `en.wiktionary.org` (the `WIKTIONARY` fixture map; any other title returns 404) and `api.mymemory.translated.net`, marks the tips as seen, and collects page errors. Tests assert that the error list is empty. Pass `settings` to preset `langreader.settings`, `tipsSeen: false` to show the tips card, or `mt: null` to make translation fail.
+- Playwright is loaded with `createRequire`, so a globally installed copy (`NODE_PATH`) works. There's no `package.json`. Elsewhere, install Playwright and its Chromium first.
+- Most tests use the bundled *Un caffè a Bologna*, its opening sentence and the words in it (`treno`, `arrivò`, `valigia` …). Changing that story's text will break tests.
+- There's no linter.
 
 ## Architecture
 

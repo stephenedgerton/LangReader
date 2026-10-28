@@ -5,7 +5,7 @@ import { paragraphHTML } from './text.js';
 import { statusOf, phrases, onChange, setMany, entry } from './vocab.js';
 import { openSheet, closeSheet, sheetOpen, toast, esc, icons, $, $$ } from './ui.js';
 import { openWordCard } from './wordcard.js';
-import { translate, speak, stopSpeaking, voicesForLang } from './services.js';
+import { translate, speak, stopSpeaking, voicesForLang, googleTranslateURL } from './services.js';
 import { bump, startReadingClock, stopReadingClock } from './stats.js';
 
 const R = {
@@ -503,7 +503,9 @@ function sentencesOnPage() {
 
 async function translatePage() {
   const sents = sentencesOnPage().map((s) => s.textContent.trim()).filter(Boolean);
-  const body = openSheet(`<h2>Page Translation<button class="x">${icons.close}</button></h2><div class="trans-block">Translating…</div>`);
+  const body = openSheet(`<h2>Page Translation<button class="x">${icons.close}</button></h2>
+    <a class="secondary gt-page" href="${googleTranslateURL(sents.join(' '))}" target="_blank" rel="noopener">Open in Google Translate ↗</a>
+    <div class="trans-block">Translating…</div>`);
   $('.x', body).onclick = closeSheet;
   // MyMemory accepts up to ~500 characters per request: batch sentences.
   const chunks = [];

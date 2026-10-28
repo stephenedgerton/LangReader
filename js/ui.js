@@ -98,7 +98,7 @@ export function coverHTML(book) {
   if (book.cover) return `<div class="cover"><img src="${book.cover}" alt="" loading="lazy"></div>`;
   let h = 0;
   for (const c of book.title) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const [a, b] = PALETTES[h % PALETTES.length];
+  const [a, b] = book.coverColors || PALETTES[h % PALETTES.length];
   return `<div class="cover" style="background:linear-gradient(160deg, ${b}, ${a})">
     <div class="ct">${esc(book.title)}</div><div class="ca">${esc(book.author || '')}</div></div>`;
 }

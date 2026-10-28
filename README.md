@@ -26,6 +26,8 @@ A web app for reading Italian on your phone. It looks and feels like **Apple Boo
 
 **Import**: paste text, or open `.txt` or `.epub` files. Lines like "Capitolo 2" split pasted text into chapters.
 
+**Bundled stories**: five original stories ship with the app and are added to the library once: *Un caffè a Bologna* (A2–B1), plus four B1 stories, one each in sci-fi, mystery, crime and fantasy. Add more in `samples/stories.js`, each with its own `id`.
+
 ## Run it
 
 Any static file server works:

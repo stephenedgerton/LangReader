@@ -4,11 +4,11 @@ import { textToChapters, countWords } from './text.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-export async function saveBook({ title, author = '', chapters, cover = null }) {
+export async function saveBook({ title, author = '', chapters, cover = null, coverColors = null }) {
   const id = uid();
   const split = splitLong(chapters);
   const book = {
-    id, title: title || 'Senza titolo', author, lang: 'it', cover,
+    id, title: title || 'Senza titolo', author, lang: 'it', cover, coverColors,
     chapterCount: split.length,
     chapterTitles: split.map((c) => c.title),
     chapterWords: split.map((c) => c.blocks.reduce((n, b) => n + countWords(b.x), 0)),

@@ -1,5 +1,6 @@
 // An original short story (A2–B1 level) bundled as the first book in the library.
 export const SAMPLE = {
+  id: 'caffe-bologna',
   title: 'Un caffè a Bologna',
   author: 'LangReader',
   chapters: [

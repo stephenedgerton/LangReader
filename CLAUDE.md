@@ -1,0 +1,47 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+LangReader is a phone-first web app (PWA) for reading Italian. It copies the look and gestures of Apple Books (paginated pages, themes, page curl) and the learning features of LingQ (blue/yellow word statuses, LingQs, phrases, "page turn marks blue words known"). It's plain HTML/CSS/ES modules: **no build step, no package.json, no dependencies, no CDN**. All user data stays on the device.
+
+## Running and deploying
+
+- Run locally: `python3 -m http.server 8000`, then open http://localhost:8000. ES modules and the service worker need http(s), not `file://`.
+- Deploy: GitHub Pages serves `main` from the repo root (https://stephenedgerton.github.io/LangReader/). Merging to `main` is the deploy. So far the workflow has been: work on branch `langreader-app`, open a PR, merge.
+- **On every release, bump `VERSION` in `sw.js`, and add any new file to its `SHELL` list**, or installed home-screen copies keep stale or missing modules. The service worker is network-first for same-origin requests and falls back to its cache offline.
+- There's no test suite or linter in the repo. Changes have been checked by driving the app in headless Chromium with Playwright at the iPhone 13 viewport (390×664), mocking `en.wiktionary.org` and `api.mymemory.translated.net` with `page.route`. Set `localStorage['langreader.tipsSeen']` first, or the tips card covers the page.
+
+## Architecture
+
+`index.html` holds the static shell: three tab views, the `#reader` overlay, and one shared bottom `#sheet`. `js/app.js` boots the app (loads vocabulary, adds bundled stories, registers the service worker) and renders the Home, Library and Vocabulary tabs as HTML strings. `js/reader.js` owns everything inside the reader.
+
+### Data (`db.js`, `vocab.js`, `settings.js`)
+- IndexedDB `langreader` has these stores: `books` (metadata and progress; `chapterTitles` and `chapterWords` are denormalised here), `chapters` (key `${bookId}:${idx}`, `blocks: [{t:'h'|'p', x}]`), `words` (vocabulary), `tcache` (translation and dictionary cache), and `days` (daily stats). Adding a store means bumping `DB_VERSION` and adding it in `onupgradeneeded`.
+- Word status: a missing entry (status 0) is New/blue, 1–4 are LingQ levels (yellow), 5 is Known and -1 is Ignored. `setWord` *deletes* an entry that ends up at status 0 with no meaning. Terms are normalised by `normalize()` in `text.js`: lowercase NFC, with `’` turned into `'`. A phrase is stored as its normalised tokens joined by single spaces, with `phrase: true`.
+- `vocab.js` keeps every word in an in-memory `Map` loaded at boot, and notifies `onChange` listeners. The reader recolours matching `.w[data-w]` spans in place, and re-renders the whole chapter when a phrase changes, because phrase underlines are computed at render time.
+- Settings live in localStorage `langreader.settings`, behind a Proxy that saves on every write. Other localStorage keys: `langreader.seeded`, `langreader.samplesAdded`, `langreader.tipsSeen`, `langreader.lastBackup`, `langreader.backupSnooze`.
+
+### Text and rendering (`text.js`)
+- `tokenize` splits elisions the way LingQ does (*dell'anno* → *dell'* + *anno*) and keeps the apostrophe only on known truncations (*po'*). `paragraphHTML` wraps sentences in `.sent` and words in `.w` spans carrying status classes `s0`–`s4`, plus `ph` for words inside a saved phrase.
+- `textToChapters` splits pasted or .txt text on headings like "Capitolo N". `importer.js` also splits chapters longer than about 4000 words, and has its own minimal ZIP reader (built on `DecompressionStream`) for EPUB.
+
+### Reader (`reader.js`)
+- Pages come from **CSS multi-column layout**: `#page-content` is one column-filled element shifted by `translateX(-page * R.step)`. The page count comes from the position of the trailing `.end` marker. Which page each word span is on (`R.pageOf`) is computed lazily from bounding rects and reset by `layout()`. Only one chapter is in the DOM at a time.
+- One pointer pipeline in `initGestures()` decides between a tap (open the bubble, turn at the edges, toggle the controls), a long press (≈480 ms; then dragging extends a phrase selection), and a horizontal drag (page curl or slide). `#page-area` has `touch-action: none` so iOS can't cancel these gestures. `R.busy` blocks input while a turn animates.
+- Page curl (`curl.js`): `beginCurl` **clones `#page-content`** for the turning page, and the real element moves to show the page underneath. The clone keeps the duplicate id on purpose, because the reading styles are keyed on `#page-content`. The curl is skipped on wide two-column layouts (≥900px) and at chapter boundaries, which use a slide or fade instead.
+- `leavePage()` runs on every forward turn: it bumps the stats and marks the page's blue words Known, with Undo through `revertToNew`. Words inside `h1`/`h2` are excluded.
+
+### Word lookup (`bubble.js` → `wordcard.js`)
+- Tapping a word opens the small bubble. ⋯ opens the full card in the shared sheet. Phrases open the full card directly.
+- Lookup order: the saved meaning, then Wiktionary (`dictionary.js`, used only when the translation language is English; it follows "… of *lemma*" links to the base form), then MyMemory (`services.js`). Both are cached in `tcache`. Google Translate links are plain URLs built by `googleTranslateURL`.
+
+### UI conventions (`ui.js`)
+- `openSheet()` **replaces `#sheet-body` with a fresh element** every time, so a sheet's listeners never leak into the next one. Attach handlers to the returned body.
+- The reader themes are CSS variables on `#reader[data-theme]`, plus a `.dark` class. While the reader is open, `documentElement[data-appearance]` is set so the shared sheets follow the reader's light/dark appearance.
+- On iOS, `haptic()` (`haptics.js`) clicks a hidden `<input type=checkbox switch>`, because iOS Safari has no Vibration API. It only fires when called synchronously from a user gesture.
+- `storage.js` asks for persistent storage, tracks backup reminders, and saves exports through the iOS share sheet (`navigator.share` with files) when available.
+
+### Bundled content (`samples/`)
+`sample.js` (*Un caffè a Bologna*) and `stories.js` hold the original stories. Each has a stable `id`. `addBundledStories()` in `app.js` adds each id once per device, never re-adds a deleted story, and skips titles already in the library. To ship a new story, append it to `STORIES` with a new id; existing installs pick it up on their next launch.

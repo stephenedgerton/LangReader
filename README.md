@@ -14,9 +14,11 @@ A web app for reading Italian on your phone. It looks and feels like **Apple Boo
 **LingQ-style learning**
 - Tap a word for a quick **bubble** above it: the top meaning, its base form, pronunciation and the 1–4 / Known buttons. Tap ⋯ for the full card.
 - The full card shows Wiktionary definitions and the base form of inflected words (*arrivò* → *arrivare*), with one tap to open the base word.
-- Unknown words are **blue**, LingQs (words you're learning) are **yellow** at 4 levels, and known words are plain.
+- Unknown words are **blue**, LingQs (words you're learning) are **yellow** at 4 levels, and known words are plain. Like LingQ, they're shown as coloured **underlines** (solid, light, dashed and dotted for levels 1–4), or as background highlights if you prefer (Themes & Settings › Word Highlights).
 - The word card shows translation hints, your own meaning, the 1–4 / Known / Ignore levels, the sentence with a translation, Italian pronunciation, and links to WordReference, Reverso, Treccani, Wiktionary and Google
-- **Phrases**: hold a word and drag across the phrase (or hold, lift, and tap the last word) to save it as one LingQ. A quick swipe still turns the page.
+- **Phrases and sentences**: hold a word and drag across the phrase (or hold, lift, and tap the last word) to save it as one LingQ, up to a whole sentence or two. "Save whole sentence" on the word card does it in one tap. A quick swipe still turns the page.
+- Like LingQ, every LingQ keeps the **sentence it came from**, and that sentence's translation once you've translated it. The Vocabulary list, review cards and the Anki CSV show both.
+- Common Italian first names and surnames, and the characters and places in the bundled stories, start out **Ignored**, so they're never blue. Names that are also everyday words (Rosa, Felice, Serena …) are left alone. Settings › Ignore common Italian names applies the list again.
 - First-run reading tips (Settings › Show reading tips again)
 - **Turning the page marks the blue words you skipped as Known**, like LingQ, with an **Undo** button. Chapter titles don't count. You can switch this off.
 - Light haptic feedback when you set a level or save a meaning (iPhone with iOS 18+, and Android).

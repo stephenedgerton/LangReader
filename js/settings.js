@@ -17,6 +17,7 @@ const defaults = {
   pageTurn: 'curl',        // curl | slide | none (Apple Books' page turn styles)
   haptics: true,
   highlights: true,
+  hlStyle: 'underline',    // underline | background (LingQ's two highlight styles)
   rate: 0.9,
   voice: '',
   goalMinutes: 15,

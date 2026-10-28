@@ -5,23 +5,31 @@ import { translate, dictionaryLinks, speak, googleTranslateURL } from './service
 import { bump } from './stats.js';
 import { lookup, gloss } from './dictionary.js';
 import { settings } from './settings.js';
-import { normalize } from './text.js';
+import { normalize, tokenize } from './text.js';
 import { haptic } from './haptics.js';
 
-// opts: {term, display, phrase, context, inPhrase, onClose, onOpenPhrase}
+// Like LingQ, every LingQ keeps the sentence it was saved from (`example`), plus that sentence's
+// translation (`exampleTr`) once you've translated it. Phrases also keep `display`, the text as printed.
+// opts: {term, display, phrase, context, inPhrase, onClose, onOpenPhrase, onSaveSentence}
 export function openWordCard(opts) {
-  const { term, display = term, phrase = false, context = '', inPhrase = null } = opts;
+  const { term, phrase = false, inPhrase = null } = opts;
   const e = entry(term) || { term, status: 0, meaning: '' };
+  const display = opts.display || e.display || term;
+  const context = opts.context || e.example || '';
+  // A selection that is the whole sentence doesn't need the sentence printed again under it.
+  const long = phrase && term.split(' ').length >= 6;
+  const isSentence = phrase && tokenize(context).filter((t) => t.type === 'w').map((t) => normalize(t.text)).join(' ') === term;
+  let sentTr = e.example === context.slice(0, 600) ? e.exampleTr || '' : '';
 
   const ctxHTML = context
-    ? `<div class="ctx">${highlight(context, display)}<span class="tr" hidden></span><div class="ctx-actions"><button class="tr-btn">Translate sentence</button><a class="gt-link" href="${googleTranslateURL(context)}" target="_blank" rel="noopener">Google Translate ↗</a></div></div>`
+    ? `<div class="ctx${isSentence ? ' bare' : ''}">${isSentence ? '' : highlight(context, display)}<span class="tr"${sentTr ? '' : ' hidden'}>${esc(sentTr)}</span><div class="ctx-actions">${sentTr ? '' : `<button class="tr-btn">Translate sentence</button>`}<a class="gt-link" href="${googleTranslateURL(context)}" target="_blank" rel="noopener">Google Translate ↗</a>${opts.onSaveSentence && !isSentence ? '<button class="sent-btn">Save whole sentence</button>' : ''}</div></div>`
     : '';
 
   const body = openSheet(`
     <div class="wcard">
       ${inPhrase ? `<button class="phrase-chip" data-ph>Phrase: ${esc(inPhrase)} ›</button>` : ''}
       <div class="head">
-        <div class="term">${esc(display)}</div>
+        <div class="term${long ? ' long' : ''}">${esc(display)}</div>
         <button class="speak" aria-label="Pronounce">${icons.speaker}</button>
         <button class="x" aria-label="Close">${icons.close}</button>
       </div>
@@ -38,7 +46,7 @@ export function openWordCard(opts) {
         <button class="si" data-s="-1" aria-label="Ignore">${icons.trash}</button>
       </div>
       <div class="status-legend"><span>New</span><span>Recognized</span><span>Familiar</span><span>Learned</span><span>Known</span><span>Ignore</span></div>
-      <div class="dicts">${dictionaryLinks(term).map((d) => `<a href="${d.url}" target="_blank" rel="noopener">${d.name}</a>`).join('')}</div>
+      <div class="dicts">${dictionaryLinks(term).filter((d) => !long || /Reverso|Google/.test(d.name)).map((d) => `<a href="${d.url}" target="_blank" rel="noopener">${d.name}</a>`).join('')}</div>
     </div>`, { onClose: opts.onClose, transparent: true });
 
   let cur = entry(term) || e;
@@ -49,7 +57,8 @@ export function openWordCard(opts) {
 
   const save = async (patch) => {
     const before = cur.status;
-    cur = await setWord(term, { phrase, example: cur.example || context.slice(0, 300), ...patch });
+    const ctx = cur.example ? {} : { example: context.slice(0, 600), ...(sentTr && { exampleTr: sentTr }) };
+    cur = await setWord(term, { phrase, ...(phrase && { display }), ...ctx, ...patch });
     if ((before === 0 || before === 5 || before === -1) && cur.status >= 1 && cur.status <= 4) bump('lingqs');
     if (before !== 5 && cur.status === 5 && !phrase) bump('known');
     paintStatus();
@@ -83,7 +92,7 @@ export function openWordCard(opts) {
       .finally(() => { pending--; paintHints(); });
   }
   pending++;
-  translate(display, { word: true }).then((r) => { mtHints = r.options; })
+  translate(display, { word: !long }).then((r) => { mtHints = r.options; })
     .catch((err) => { failed = failed || err.message || 'Offline'; })
     .finally(() => { pending--; paintHints(); });
   paintHints();
@@ -113,11 +122,15 @@ export function openWordCard(opts) {
       if (s === 5 || s === -1) setTimeout(closeSheet, 220);
       return;
     }
+    if (t.matches('.sent-btn')) return opts.onSaveSentence();
     if (t.matches('.tr-btn')) {
       const tr = $('.ctx .tr', body);
       t.textContent = 'Translating…';
-      try { tr.textContent = (await translate(context)).main; tr.hidden = false; t.remove(); }
-      catch (err) { t.textContent = 'Translation unavailable (offline?)'; }
+      try { sentTr = (await translate(context)).main; tr.textContent = sentTr; tr.hidden = false; t.remove(); }
+      catch (err) { t.textContent = 'Translation unavailable (offline?)'; return; }
+      // Keep it on the LingQ, so the vocabulary list and review can show it.
+      const saved = entry(term);
+      if (saved && saved.example === context.slice(0, 600)) cur = await setWord(term, { exampleTr: sentTr }, { silent: true });
     }
   });
   $('.meaning-input', body).addEventListener('submit', (ev) => {
@@ -164,7 +177,7 @@ function paintDict(body, r) {
   box.hidden = false;
 }
 
-function highlight(context, display) {
+export function highlight(context, display) {
   const i = context.toLowerCase().replace(/’/g, "'").indexOf(display.toLowerCase().replace(/’/g, "'"));
   if (i < 0) return esc(context);
   return esc(context.slice(0, i)) + '<b>' + esc(context.slice(i, i + display.length)) + '</b>' + esc(context.slice(i + display.length));

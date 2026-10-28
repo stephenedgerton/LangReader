@@ -177,6 +177,9 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .row + .row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
 .row .w { font-weight: 600; }
 .row .m { color: var(--label-2); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .ex { color: var(--label-2); font: 13px/1.35 var(--serif-ui); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.row .ex b { color: var(--label); font-weight: 600; }
+.flash .ft { font-size: 14px; color: var(--label-2); margin-top: 8px; }
 .row .txt { flex: 1; min-width: 0; }
 .pill { font-size: 12px; font-weight: 700; border-radius: 99px; padding: 2px 8px; flex: none; }
 .pill.s1 { background: rgba(255, 193, 7, .9); color: #000; }
@@ -255,6 +258,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   background: var(--r-bg); color: var(--r-fg);
   --r-bg: #ffffff; --r-fg: #000000; --r-muted: rgba(0,0,0,.45); --r-chrome: rgba(120,120,128,.16);
   --new: rgba(80, 150, 255, .26);
+  --new-ul: rgba(30, 120, 255, .8);
   --lq: 255, 190, 0;
   --pop-bg: rgba(250,250,250,.9); --pop-fg: #000;
   --font: ui-serif, "New York", Georgia, serif;
@@ -263,7 +267,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   transition: background-color .3s, color .3s;
   touch-action: pan-y;
 }
-#reader[data-theme="quiet"]  { --r-bg: #4a4a4d; --r-fg: #d6d6d6; --r-muted: rgba(255,255,255,.45); --r-chrome: rgba(255,255,255,.14); --new: rgba(110, 170, 255, .30); --pop-bg: rgba(60,60,62,.9); --pop-fg: #eee; }
+#reader[data-theme="quiet"]  { --new-ul: rgba(120, 175, 255, .9); --r-bg: #4a4a4d; --r-fg: #d6d6d6; --r-muted: rgba(255,255,255,.45); --r-chrome: rgba(255,255,255,.14); --new: rgba(110, 170, 255, .30); --pop-bg: rgba(60,60,62,.9); --pop-fg: #eee; }
 #reader[data-theme="paper"]  { --r-bg: #efece6; --r-fg: #2a2a2a; --r-muted: rgba(0,0,0,.42); }
 #reader[data-theme="bold"]   { --r-bg: #ffffff; --r-fg: #000000; --weight: 600; }
 #reader[data-theme="calm"]   { --r-bg: #f3e6cc; --r-fg: #3f2e1c; --r-muted: rgba(63,46,28,.5); --pop-bg: rgba(250,240,220,.92); }
@@ -274,6 +278,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 #reader[data-theme="calm"].dark   { --r-bg: #2b2418; --r-fg: #e3d3b3; --r-muted: rgba(255,240,210,.45); --r-chrome: rgba(255,255,255,.14); --new: rgba(90, 150, 255, .32); --lq: 230, 170, 0; --pop-bg: rgba(55,47,34,.92); --pop-fg: #eee; }
 #reader[data-theme="focus"].dark  { --r-bg: #1e1b14; --r-fg: #e8dfc8; --r-muted: rgba(255,250,230,.42); --r-chrome: rgba(255,255,255,.14); --new: rgba(90, 150, 255, .32); --lq: 230, 170, 0; --pop-bg: rgba(48,44,34,.92); --pop-fg: #eee; }
 #reader[data-theme="quiet"].dark  { --r-bg: #2c2c2e; }
+#reader.dark { --new-ul: rgba(90, 160, 255, .9); }
 
 #reader .chrome { transition: opacity .25s ease; }
 #reader.immersive .chrome { opacity: 0; pointer-events: none; }
@@ -346,6 +351,16 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .w.s4 { background: rgba(var(--lq), .12); border-bottom: 1px dashed rgba(var(--lq), .8); border-radius: .18em .18em 0 0; }
 #reader.no-hl .w { background: none !important; border-bottom: 0 !important; }
 .w.ph { text-decoration: underline; text-decoration-color: rgba(var(--lq), .95); text-decoration-thickness: 2px; text-underline-offset: .18em; }
+/* LingQ's underline style: the colour says new or learning, the line style says the level.
+   Saved phrases get a soft tint instead, since the underline already belongs to each word. */
+#reader[data-hl="underline"] .w { background: none; border-bottom: 0; border-radius: 0; text-decoration: none; text-underline-offset: .2em; text-decoration-skip-ink: none; }
+#reader[data-hl="underline"] .w.s0 { text-decoration: underline solid var(--new-ul) 2px; }
+#reader[data-hl="underline"] .w.s1 { text-decoration: underline solid rgba(var(--lq), 1) 2.5px; }
+#reader[data-hl="underline"] .w.s2 { text-decoration: underline solid rgba(var(--lq), .7) 2px; }
+#reader[data-hl="underline"] .w.s3 { text-decoration: underline dashed rgba(var(--lq), .85) 2px; }
+#reader[data-hl="underline"] .w.s4 { text-decoration: underline dotted rgba(var(--lq), .9) 2px; }
+#reader[data-hl="underline"] .w.ph { background: rgba(var(--lq), .2); }
+#reader.no-hl[data-hl="underline"] .w { text-decoration: none !important; }
 .w.sel { background: rgba(0, 122, 255, .35) !important; color: inherit; outline: 2px solid rgba(0, 122, 255, .55); }
 .sent.speaking { background: rgba(52, 199, 89, .14); border-radius: .2em; }
 
@@ -362,6 +377,8 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .wcard { color: var(--label); }
 .wcard .head { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
 .wcard .term { font: 600 26px/1.2 var(--serif-ui); flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.wcard .term.long { font-size: 20px; line-height: 1.35; }
+.wcard .ctx.bare .tr { margin-top: 0; }
 .wcard .speak { width: 38px; height: 38px; border-radius: 50%; background: var(--fill); color: var(--tint); display: grid; place-items: center; flex: none; }
 .wcard .speak svg { width: 20px; height: 20px; }
 .wcard .ctx { font: 15px/1.45 var(--serif-ui); color: var(--label-2); margin: 8px 0 12px; padding-left: 10px; border-left: 3px solid var(--fill-2); }
@@ -454,6 +471,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 /* Review */
 .flash { min-height: 260px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 22px; background: var(--fill); border-radius: 16px; margin-bottom: 14px; cursor: pointer; }
 .flash .fw { font: 600 32px/1.2 var(--serif-ui); }
+.flash .fw.long { font-size: 21px; line-height: 1.35; }
 .flash .fc { font: 15px/1.45 var(--serif-ui); color: var(--label-2); margin-top: 12px; }
 .flash .fm { font-size: 20px; margin-top: 16px; font-weight: 600; color: var(--tint); }
 .flash .hint-tap { font-size: 13px; color: var(--label-3); margin-top: 18px; }

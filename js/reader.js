@@ -3,11 +3,11 @@ import { db } from './db.js';
 import { settings, FONTS, THEMES, TARGETS } from './settings.js';
 import { paragraphHTML } from './text.js';
 import { statusOf, phrases, onChange, setMany, entry, revertToNew } from './vocab.js';
-import { openSheet, closeSheet, sheetOpen, toast, esc, icons, $, $$ } from './ui.js';
+import { openSheet, closeSheet, sheetOpen, sheetClosedAt, toast, esc, icons, $, $$ } from './ui.js';
 import { openWordCard } from './wordcard.js';
 import { translate, speak, stopSpeaking, voicesForLang, googleTranslateURL } from './services.js';
 import { bump, startReadingClock, stopReadingClock } from './stats.js';
-import { openBubble, closeBubble, bubbleOpen } from './bubble.js';
+import { openBubble, closeBubble, bubbleOpen, bubbleClosedAt } from './bubble.js';
 import { createCurl } from './curl.js';
 import { haptic } from './haptics.js';
 
@@ -98,6 +98,7 @@ function applyAppearance() {
   // Sheets opened from the reader follow its appearance, like Books.
   if (!R.el.hidden) document.documentElement.dataset.appearance = dark() ? 'dark' : 'light';
   R.el.classList.toggle('no-hl', !settings.highlights);
+  R.el.dataset.hl = settings.hlStyle;
   const font = FONTS[settings.font] || FONTS.original;
   const st = R.el.style;
   st.setProperty('--font', font.css);
@@ -374,7 +375,8 @@ function initGestures() {
     const dx = e.clientX - sx, dt = performance.now() - st;
     if (dragging) {
       const v = Math.abs(dx) / dt;
-      const fwd = dx < -60 || (dx < -15 && v > 0.4), back = dx > 60 || (dx > 15 && v > 0.4);
+      // A flick needs real travel: a tap that wobbles a few pixels must not turn the page.
+      const fwd = dx < -60 || (dx < -30 && v > 0.4), back = dx > 60 || (dx > 30 && v > 0.4);
       if (session) {
         const s = session; session = null;
         if (s.dir > 0 ? fwd : back) s.dir > 0 ? next(s) : prev(s);
@@ -400,6 +402,8 @@ function onTap(e, wordEl) {
   if (wordEl && R.phraseStart) { finishPhrase(wordEl); return; }
   if (wordEl) { openWord(wordEl); return; }
   if (bubbleOpen()) { closeBubble(); return; }
+  // A second tap right after the bubble or card closed (say, a double tap on ✓) is meant for them, not the page.
+  if (performance.now() - Math.max(bubbleClosedAt(), sheetClosedAt()) < 450) return;
   clearPhrase();
   const w = R.area.clientWidth, x = e.clientX;
   if (x < w * 0.22) prev();
@@ -410,6 +414,17 @@ function onTap(e, wordEl) {
 function sentenceOf(el) {
   return (el.closest('.sent')?.textContent || el.parentElement.textContent).trim();
 }
+// Every sentence a selection touches, so a phrase is saved with its full context.
+function contextOf(spans) {
+  return [...new Set(spans.map((s) => s.closest('.sent')))].map((s) => s.textContent.trim()).join(' ');
+}
+// The text exactly as printed between two words, punctuation included.
+function textBetween(a, b) {
+  const r = document.createRange();
+  r.setStartBefore(a); r.setEndAfter(b);
+  return r.toString().replace(/\s+/g, ' ').replace(/’/g, "'").trim();
+}
+const blockOf = (el) => el.closest('p, h1, h2');
 
 // Tapping a word shows the quick bubble; its "⋯" (or the word itself) opens the full card.
 function openWord(el) {
@@ -431,9 +446,17 @@ function openWordFull(el) {
     onClose: () => el.classList.remove('sel'),
     onOpenPhrase: () => {
       const spans = R.content.querySelectorAll(`.w[data-ph="${CSS.escape(inPhrase)}"]`);
-      openPhraseCard(inPhrase, [...spans].filter((s) => s.closest('.sent') === el.closest('.sent')), sentenceOf(el));
+      openPhraseCard(inPhrase, [...spans].filter((s) => blockOf(s) === blockOf(el)), sentenceOf(el));
     },
+    onSaveSentence: () => openSentenceCard(el),
   });
+}
+
+// LingQ lets you save a whole sentence as one LingQ, with its translation as the meaning.
+function openSentenceCard(el) {
+  const spans = [...(el.closest('.sent') || blockOf(el)).querySelectorAll('.w')];
+  if (spans.length < 2) return;
+  openPhraseCard(spans.map((s) => s.dataset.w).join(' '), spans, sentenceOf(el));
 }
 
 // Phrases: hold a word, then drag across the phrase (or lift and tap its last word).
@@ -448,10 +471,10 @@ function startPhrase(el) {
 function extendSelection(x, y) {
   if (!R.phraseStart) return;
   const el = document.elementFromPoint(x, y)?.closest?.('.w');
-  if (!el || !R.content.contains(el) || el === R.selEnd) return;
+  if (!el || !R.content.contains(el) || el === R.selEnd || blockOf(el) !== blockOf(R.phraseStart)) return;
   const a = +R.phraseStart.dataset.i;
   let b = +el.dataset.i;
-  if (Math.abs(b - a) > 11) b = a + Math.sign(b - a) * 11; // phrases are up to 12 words
+  if (Math.abs(b - a) > MAX_PHRASE - 1) b = a + Math.sign(b - a) * (MAX_PHRASE - 1);
   R.selEnd = R.spans[b];
   paintSelection(Math.min(a, b), Math.max(a, b));
 }
@@ -466,24 +489,23 @@ function paintSelection(a, b) {
   R.selSpans = R.spans.slice(a, b + 1);
   for (const s of R.selSpans) s.classList.add('sel');
 }
+// Long enough for a whole sentence or two; phrase underlines are matched within one paragraph.
+const MAX_PHRASE = 60;
 function finishPhrase(el) {
   let a = +R.phraseStart.dataset.i, b = +el.dataset.i;
   if (a > b) [a, b] = [b, a];
-  if (b - a > 11) { toast('Phrases can be up to 12 words'); clearPhrase(); return; }
+  if (blockOf(el) !== blockOf(R.phraseStart)) { toast('A phrase has to stay inside one paragraph'); clearPhrase(); return; }
+  if (b - a > MAX_PHRASE - 1) { toast(`Phrases can be up to ${MAX_PHRASE} words`); clearPhrase(); return; }
   if (a === b) { const s = R.phraseStart; clearPhrase(); openWordFull(s); return; }
   const spans = R.spans.slice(a, b + 1);
   R.phraseStart = null;
   R.selSpans = []; // the phrase card owns the highlight from here
   const term = spans.map((s) => s.dataset.w).join(' ');
-  openPhraseCard(term, spans, sentenceOf(spans[0]));
+  openPhraseCard(term, spans, contextOf(spans));
 }
 function openPhraseCard(term, spans, context) {
   spans.forEach((s) => s.classList.add('sel'));
-  let display = '';
-  spans.forEach((s, k) => {
-    const t = s.textContent.replace(/’/g, "'");
-    display += (k && !/'$/.test(display) ? ' ' : '') + t;
-  });
+  const display = textBetween(spans[0], spans[spans.length - 1]);
   openWordCard({ term, display, phrase: true, context, onClose: () => spans.forEach((s) => s.classList.remove('sel')) });
 }
 function clearPhrase() {
@@ -503,7 +525,7 @@ function showTipsOnce() {
     <h3>Reading tips</h3>
     <ul>
       <li><b>Tap a word</b> to see its meaning. Tap 1–4 to save it as a LingQ.</li>
-      <li><b>Hold a word and drag</b> to select a phrase.</li>
+      <li><b>Hold a word and drag</b> to select a phrase or a whole sentence. It's saved with its sentence.</li>
       <li><b>Swipe or tap the edges</b> to turn the page. Blue words you skip become known, and you can undo.</li>
       <li><b>☰ Menu</b>, bottom right: themes, page translation and listening.</li>
     </ul>
@@ -561,6 +583,7 @@ function themesSheet() {
       <label class="ts-item"><span class="lbl">Margins</span><input type="range" min="12" max="56" step="2" value="${settings.margin}" data-set="margin"></label>
       <label class="ts-item"><span class="lbl">Paragraph Spacing</span><input type="range" min="0" max="1.2" step="0.1" value="${settings.paraSpace}" data-set="paraSpace"></label>
       <label class="ts-item"><span class="lbl">Page Turn</span><select data-set="pageTurn">${[['curl', 'Curl'], ['slide', 'Slide'], ['none', 'None']].map(([k, n]) => `<option value="${k}" ${settings.pageTurn === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label class="ts-item"><span class="lbl">Word Highlights</span><select data-set="hlStyle">${[['underline', 'Underline'], ['background', 'Background']].map(([k, n]) => `<option value="${k}" ${settings.hlStyle === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="ts-item"><span class="lbl">Justify Text</span><span class="switch"><input type="checkbox" data-set="justify" ${settings.justify ? 'checked' : ''}><i></i></span></label>
     </div>
     <div class="ts-group">
@@ -597,6 +620,7 @@ function themesSheet() {
     const v = e.target.type === 'checkbox' ? e.target.checked : e.target.type === 'range' ? +e.target.value : e.target.value;
     settings[k] = v;
     if (['font', 'lineHeight', 'margin', 'paraSpace', 'justify'].includes(k)) { applyAppearance(); relayoutSoon(); }
+    if (k === 'hlStyle') applyAppearance();
   });
 }
 let rl;

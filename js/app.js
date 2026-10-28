@@ -1,9 +1,11 @@
 import { db } from './db.js';
 import { settings, TARGETS } from './settings.js';
-import { loadVocab, counts, allEntries, entry, setWord, importVocab, onChange } from './vocab.js';
+import { loadVocab, counts, allEntries, entry, setWord, setMany, importVocab, onChange } from './vocab.js';
 import { importText, importFile, saveBook } from './importer.js';
 import { initReader, openReader } from './reader.js';
-import { openWordCard } from './wordcard.js';
+import { openWordCard, highlight } from './wordcard.js';
+import { NAMES, NAMES_VERSION } from './names.js';
+import { normalize } from './text.js';
 import { getDays, streak, todayKey, bump } from './stats.js';
 import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, $, $$ } from './ui.js';
 import { SAMPLE } from '../samples/sample.js';
@@ -16,6 +18,7 @@ let books = [];
 
 async function boot() {
   await loadVocab();
+  await ignoreNames();
   await addBundledStories();
   initReader();
   initSheetGestures();
@@ -47,6 +50,20 @@ async function addBundledStories() {
   try { localStorage.setItem(KEY, JSON.stringify(added)); localStorage.setItem('langreader.seeded', '1'); } catch {}
   books = await db.all('books');
 }
+
+// Common Italian names and the bundled stories' characters start out Ignored. Words you've
+// already given a status keep it, and a name you un-ignore isn't ignored again.
+async function ignoreNames(force = false) {
+  const KEY = 'langreader.namesIgnored';
+  try { if (!force && +localStorage.getItem(KEY) >= NAMES_VERSION) return 0; } catch {}
+  const n = await setMany([...NAME_TERMS], -1);
+  try { localStorage.setItem(KEY, String(NAMES_VERSION)); } catch {}
+  return n;
+}
+
+// Words you've saved yourself: the names ignored at install don't need a backup reminder.
+const NAME_TERMS = new Set(NAMES.map(normalize));
+const savedCount = () => allEntries().filter((w) => !(w.status === -1 && NAME_TERMS.has(w.term))).length;
 
 function show(t) {
   if (!['home', 'library', 'vocab'].includes(t)) t = 'home';
@@ -105,10 +122,10 @@ async function renderHome() {
           <button class="resume" data-open="${current.id}">${current.lastOpened ? 'Resume' : 'Read'}</button>
         </div>
       </div>` : ''}
-    ${backupDue(allEntries().length) ? `
+    ${backupDue(savedCount()) ? `
       <div class="card backup-card">
         <h4>Back up your vocabulary</h4>
-        <p>${allEntries().length.toLocaleString()} words are saved only on this phone. Last backup: ${backupAge()}.</p>
+        <p>${savedCount().toLocaleString()} words are saved only on this phone. Last backup: ${backupAge()}.</p>
         <div class="row-btns"><button class="primary" data-act="backup">Back Up Now</button><button class="secondary" data-act="snooze">Later</button></div>
       </div>` : ''}
     <div class="section-title">Reading Goals</div>
@@ -163,6 +180,7 @@ function settingsSheet() {
     </div>
     <div class="action-list" style="margin-top:14px">
       <button data-act="tips"><span>Show reading tips again</span></button>
+      <button data-act="names"><span>Ignore common Italian names</span></button>
     </div>
     <input type="file" accept=".json,application/json" hidden>
     <p class="muted" style="font-size:13px;margin-top:14px">Everything is stored privately on this device. Translations by MyMemory (translated.net). Speech uses your device's Italian voice — on iPhone, download an enhanced voice in Settings › Accessibility › Spoken Content › Voices › Italian.</p>`);
@@ -175,6 +193,10 @@ function settingsSheet() {
     if (b.dataset.act === 'tips') {
       try { localStorage.removeItem('langreader.tipsSeen'); } catch {}
       b.querySelector('span').textContent = 'Tips will show when you next open a book';
+    }
+    if (b.dataset.act === 'names') {
+      const n = await ignoreNames(true);
+      b.querySelector('span').textContent = n ? `${n} names ignored` : 'All the names are already in your vocabulary';
     }
   };
   isPersisted().then((p) => {
@@ -204,8 +226,8 @@ async function exportAll() {
 }
 function exportCSV() {
   const q = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
-  const rows = allEntries().filter((w) => w.status >= 1 && w.status <= 4).map((w) => [w.term, w.meaning, w.example, w.status].map(q).join(','));
-  saveFile(`lingqs-${todayKey()}.csv`, 'term,meaning,example,status\n' + rows.join('\n'), 'text/csv');
+  const rows = allEntries().filter((w) => w.status >= 1 && w.status <= 4).map((w) => [w.display || w.term, w.meaning, w.example, w.status, w.exampleTr].map(q).join(','));
+  saveFile(`lingqs-${todayKey()}.csv`, 'term,meaning,example,status,example_translation\n' + rows.join('\n'), 'text/csv');
 }
 
 // ---------------- Library ----------------
@@ -297,7 +319,7 @@ function renderVocab() {
     ignored: (w) => w.status === -1,
   };
   const q = vQuery.toLowerCase();
-  const list = all.filter(filters[vFilter]).filter((w) => !q || w.term.includes(q) || (w.meaning || '').toLowerCase().includes(q))
+  const list = all.filter(filters[vFilter]).filter((w) => !q || w.term.includes(q) || (w.meaning || '').toLowerCase().includes(q) || (w.example || '').toLowerCase().includes(q))
     .sort((a, b) => b.updated - a.updated);
   const n = (k) => all.filter(filters[k]).length;
   const due = all.filter((w) => w.status >= 1 && w.status <= 4).length;
@@ -316,8 +338,9 @@ function renderVocab() {
       ${[['lingqs', 'LingQs'], ['phrases', 'Phrases'], ['known', 'Known'], ['ignored', 'Ignored']].map(([k, l]) => `<button data-f="${k}" class="${vFilter === k ? 'on' : ''}">${l} ${n(k)}</button>`).join('')}
     </div>
     ${shown.length ? `<div class="list">${shown.map((w) => `
-      <button class="row" data-t="${esc(w.term)}"><div class="txt"><div class="w">${esc(w.term)}</div>
-        ${w.meaning ? `<div class="m">${esc(w.meaning)}</div>` : ''}</div>${pill(w.status)}</button>`).join('')}</div>
+      <button class="row" data-t="${esc(w.term)}"><div class="txt"><div class="w">${esc(w.display || w.term)}</div>
+        ${w.meaning ? `<div class="m">${esc(w.meaning)}</div>` : ''}
+        ${w.example && vFilter !== 'ignored' && vFilter !== 'known' ? `<div class="ex">${highlight(w.example, w.display || w.term)}</div>` : ''}</div>${pill(w.status)}</button>`).join('')}</div>
       ${list.length > shown.length ? `<p class="muted" style="text-align:center;font-size:13px">Showing 300 of ${list.length.toLocaleString()} — search to narrow down.</p>` : ''}`
       : `<div class="empty"><h3>Nothing here yet</h3><p>${vFilter === 'lingqs' ? 'Tap a blue word while reading and choose a meaning to create a LingQ.' : vFilter === 'phrases' ? 'Long-press a word, then tap the last word of a phrase.' : 'Words appear here as you read.'}</p></div>`}
   `;
@@ -327,7 +350,7 @@ function renderVocab() {
     if (b.dataset.f) { vFilter = b.dataset.f; return renderVocab(); }
     if (b.dataset.t) {
       const w = entry(b.dataset.t);
-      return openWordCard({ term: w.term, phrase: !!w.phrase, context: w.example || '', onClose: () => renderVocab() });
+      return openWordCard({ term: w.term, display: w.display, phrase: !!w.phrase, context: w.example || '', onClose: () => renderVocab() });
     }
     if (b.dataset.act === 'review') return review();
     if (b.dataset.act === 'csv') return exportCSV();
@@ -349,11 +372,11 @@ function review() {
       return;
     }
     const w = queue[i];
-    const ctx = w.example ? esc(w.example).replace(new RegExp(`(${w.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'i'), '<b>$1</b>') : '';
+    const ctx = w.example ? highlight(w.example, w.display || w.term) : '';
     body.innerHTML = `<h2>Review <span class="muted" style="font-size:15px;font-weight:500">${i + 1} of ${queue.length}</span><button class="x">${icons.close}</button></h2>
       <div class="progress-line"><i style="width:${(i / queue.length) * 100}%"></i></div>
-      <div class="flash" data-flip><div class="fw">${esc(w.term)}</div>${ctx ? `<div class="fc">${ctx}</div>` : ''}
-        ${revealed ? `<div class="fm">${esc(w.meaning || '—')}</div>` : '<div class="hint-tap">Tap to show meaning</div>'}</div>
+      <div class="flash" data-flip><div class="fw${(w.display || w.term).length > 40 ? ' long' : ''}">${esc(w.display || w.term)}</div>${ctx ? `<div class="fc">${ctx}</div>` : ''}
+        ${revealed ? `<div class="fm">${esc(w.meaning || '—')}</div>${w.exampleTr ? `<div class="ft">${esc(w.exampleTr)}</div>` : ''}` : '<div class="hint-tap">Tap to show meaning</div>'}</div>
       <div class="review-btns"><button class="no" data-r="0">Still learning</button><button class="yes" data-r="1">Got it</button></div>`;
   };
   card();

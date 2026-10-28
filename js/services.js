@@ -26,7 +26,7 @@ export async function translate(text, { word = false } = {}) {
   const add = (t, src) => {
     t = clean(t);
     const k = t.toLowerCase();
-    if (!t || seen.has(k) || k === text.toLowerCase() || t.length > 80) return;
+    if (!t || seen.has(k) || k === text.toLowerCase() || (word && t.length > 80)) return;
     seen.add(k); options.push({ text: t, src });
   };
   add(main, 'MT');

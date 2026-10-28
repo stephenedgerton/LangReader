@@ -38,6 +38,16 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
+### Tests
+
+```sh
+node --test                                      # everything (unit + browser), ~20 s
+node --test tests/words.test.mjs                 # one file
+node --test --test-name-pattern="hold and drag"  # one test
+```
+
+Browser tests use [Playwright](https://playwright.dev) with Chromium at iPhone size. Wiktionary and MyMemory are mocked, so the tests run offline.
+
 ### On your iPhone
 1. Host the folder over HTTPS. The easiest way is **GitHub Pages**: repo Settings → Pages → Deploy from branch → `main` / root.
 2. Open the URL in Safari → Share → **Add to Home Screen**. It then opens full-screen and works offline.

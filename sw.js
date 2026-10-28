@@ -1,9 +1,9 @@
 // Offline support: app shell is cached; translation requests always go to the network.
-const VERSION = 'langreader-v2';
+const VERSION = 'langreader-v3';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/db.js', 'js/text.js', 'js/vocab.js', 'js/settings.js', 'js/services.js',
-  'js/ui.js', 'js/stats.js', 'js/wordcard.js', 'js/reader.js', 'js/importer.js', 'js/dictionary.js',
+  'js/ui.js', 'js/stats.js', 'js/wordcard.js', 'js/reader.js', 'js/importer.js', 'js/dictionary.js', 'js/storage.js',
   'samples/sample.js', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 

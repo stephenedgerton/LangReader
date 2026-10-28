@@ -7,6 +7,7 @@ import { openWordCard } from './wordcard.js';
 import { getDays, streak, todayKey, bump } from './stats.js';
 import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, $, $$ } from './ui.js';
 import { SAMPLE } from '../samples/sample.js';
+import { requestPersistence, isPersisted, backupDue, backupAge, markBackedUp, snoozeBackup, saveFile } from './storage.js';
 
 let tab = 'home';
 let books = [];
@@ -24,6 +25,8 @@ async function boot() {
   $$('#tabbar button').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
   onChange(() => { if (tab === 'vocab' && $('#reader').hidden) renderVocab(); });
   show(location.hash.slice(1) || 'home');
+
+  requestPersistence();
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -87,6 +90,12 @@ async function renderHome() {
           <button class="resume" data-open="${current.id}">${current.lastOpened ? 'Resume' : 'Read'}</button>
         </div>
       </div>` : ''}
+    ${backupDue(allEntries().length) ? `
+      <div class="card backup-card">
+        <h4>Back up your vocabulary</h4>
+        <p>${allEntries().length.toLocaleString()} words are saved only on this phone. Last backup: ${backupAge()}.</p>
+        <div class="row-btns"><button class="primary" data-act="backup">Back Up Now</button><button class="secondary" data-act="snooze">Later</button></div>
+      </div>` : ''}
     <div class="section-title">Reading Goals</div>
     <button class="card goal" data-act="goal" style="width:100%;text-align:left">
       <div class="ring"><svg viewBox="0 0 96 96"><circle class="track" cx="48" cy="48" r="${R}"/>
@@ -110,6 +119,8 @@ async function renderHome() {
     if (b.dataset.open) return open(books.find((x) => x.id === b.dataset.open));
     if (b.dataset.act === 'goal') return goalSheet();
     if (b.dataset.act === 'settings') return settingsSheet();
+    if (b.dataset.act === 'backup') return exportAll().then(renderHome);
+    if (b.dataset.act === 'snooze') { snoozeBackup(); return renderHome(); }
   };
 }
 
@@ -129,6 +140,7 @@ function settingsSheet() {
     <label class="field"><span>Translate into</span><select name="target">${Object.entries(TARGETS).map(([k, n]) => `<option value="${k}" ${settings.target === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <label class="field"><span>Email for MyMemory (optional, raises the free daily quota)</span><input name="email" type="email" value="${esc(settings.email)}" placeholder="you@example.com"></label>
     <div class="section-title" style="font-size:17px;margin-top:18px">Backup</div>
+    <p class="muted storage-status" style="font-size:13px;margin:-4px 0 10px">Last backup: ${backupAge()}.</p>
     <div class="action-list">
       <button data-act="export"><span>Export everything (JSON)</span>${icons.download}</button>
       <button data-act="csv"><span>Export LingQs for Anki (CSV)</span>${icons.download}</button>
@@ -143,6 +155,12 @@ function settingsSheet() {
     if (b.dataset.act === 'csv') return exportCSV();
     if (b.dataset.act === 'import') $('input[type=file]', body).click();
   };
+  isPersisted().then((p) => {
+    const el = $('.storage-status', body);
+    if (!el || p === null) return;
+    el.textContent = (p ? 'Storage is protected on this device. ' : 'Storage isn’t protected yet: iOS may clear it if the phone runs out of space. Open the app from your Home Screen, and back up regularly. ')
+      + `Last backup: ${backupAge()}.`;
+  });
   body.oninput = (e) => { if (e.target.name) settings[e.target.name] = e.target.value.trim(); };
   $('input[type=file]', body).onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -160,19 +178,12 @@ function settingsSheet() {
 
 async function exportAll() {
   const data = { app: 'LangReader', version: 1, exported: new Date().toISOString(), words: allEntries(), books: await db.all('books'), chapters: await db.all('chapters'), days: await db.all('days') };
-  download(`langreader-backup-${todayKey()}.json`, JSON.stringify(data), 'application/json');
+  if (await saveFile(`langreader-backup-${todayKey()}.json`, JSON.stringify(data), 'application/json')) markBackedUp();
 }
 function exportCSV() {
   const q = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
   const rows = allEntries().filter((w) => w.status >= 1 && w.status <= 4).map((w) => [w.term, w.meaning, w.example, w.status].map(q).join(','));
-  download(`lingqs-${todayKey()}.csv`, 'term,meaning,example,status\n' + rows.join('\n'), 'text/csv');
-}
-function download(name, text, type) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], { type }));
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  saveFile(`lingqs-${todayKey()}.csv`, 'term,meaning,example,status\n' + rows.join('\n'), 'text/csv');
 }
 
 // ---------------- Library ----------------

@@ -366,7 +366,14 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .wcard .ctx { font: 15px/1.45 var(--serif-ui); color: var(--label-2); margin: 8px 0 12px; padding-left: 10px; border-left: 3px solid var(--fill-2); }
 .wcard .ctx b { color: var(--label); font-weight: 600; }
 .wcard .ctx .tr { display: block; margin-top: 6px; color: var(--label); font-family: var(--sans); font-size: 14px; }
-.wcard .ctx button { display: block; color: var(--tint); font: 600 13px var(--sans); margin-top: 6px; }
+.wcard .ctx-actions { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; }
+.wcard .ctx-actions button, .wcard .ctx-actions a { color: var(--tint); font: 600 13px var(--sans); text-decoration: none; }
+.gt-page { display: block; text-align: center; text-decoration: none; margin-bottom: 12px; }
+.backup-card { margin-top: 18px; }
+.backup-card h4 { margin: 0 0 4px; font-size: 17px; }
+.backup-card p { margin: 0 0 12px; color: var(--label-2); font-size: 15px; }
+.row-btns { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+.row-btns .primary, .row-btns .secondary { padding: 11px; font-size: 16px; }
 .dict { background: var(--fill); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 15px; line-height: 1.4; }
 .dict .form-of { color: var(--label-2); font-size: 14px; margin-bottom: 8px; }
 .dict .lemma-btn { display: flex; width: 100%; align-items: baseline; justify-content: space-between; gap: 10px; background: var(--bg-elev); border-radius: 9px; padding: 8px 10px; margin-bottom: 8px; }

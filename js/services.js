@@ -46,6 +46,11 @@ export async function translate(text, { word = false } = {}) {
 const clean = (s) => String(s || '').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim().replace(/^[.,;:!?]+|[.,;:]+$/g, '');
 const normalizeCmp = (s) => String(s || '').toLowerCase().replace(/[^\p{L}\s']/gu, '').trim();
 
+// Google Translate web page (opens the Google Translate app on iPhone when it's installed).
+export function googleTranslateURL(text) {
+  return `https://translate.google.com/?sl=${settings.lang}&tl=${settings.target}&op=translate&text=${encodeURIComponent(text.slice(0, 4500))}`;
+}
+
 // External dictionaries (open in a new tab).
 export function dictionaryLinks(term) {
   const q = encodeURIComponent(term);
@@ -56,7 +61,7 @@ export function dictionaryLinks(term) {
     { name: 'Reverso', url: `https://context.reverso.net/translation/italian-english/${q}` },
     { name: 'Treccani', url: `https://www.treccani.it/vocabolario/ricerca/${q}/` },
     { name: 'Wiktionary', url: `https://en.wiktionary.org/wiki/${q}#Italian` },
-    { name: 'Google', url: `https://translate.google.com/?sl=${settings.lang}&tl=${tgt}&text=${q}` },
+    { name: 'Google', url: googleTranslateURL(term) },
   ];
 }
 

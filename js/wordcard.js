@@ -1,7 +1,7 @@
 // LingQ-style word / phrase card.
 import { openSheet, closeSheet, esc, icons, $, $$ } from './ui.js';
 import { entry, setWord, deleteWord, STATUS_LABELS } from './vocab.js';
-import { translate, dictionaryLinks, speak } from './services.js';
+import { translate, dictionaryLinks, speak, googleTranslateURL } from './services.js';
 import { bump } from './stats.js';
 import { lookup, gloss } from './dictionary.js';
 import { settings } from './settings.js';
@@ -13,7 +13,7 @@ export function openWordCard(opts) {
   const e = entry(term) || { term, status: 0, meaning: '' };
 
   const ctxHTML = context
-    ? `<div class="ctx">${highlight(context, display)}<span class="tr" hidden></span><button class="tr-btn">Translate sentence</button></div>`
+    ? `<div class="ctx">${highlight(context, display)}<span class="tr" hidden></span><div class="ctx-actions"><button class="tr-btn">Translate sentence</button><a class="gt-link" href="${googleTranslateURL(context)}" target="_blank" rel="noopener">Google Translate ↗</a></div></div>`
     : '';
 
   const body = openSheet(`

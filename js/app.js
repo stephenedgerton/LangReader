@@ -7,6 +7,7 @@ import { openWordCard } from './wordcard.js';
 import { getDays, streak, todayKey, bump } from './stats.js';
 import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, $, $$ } from './ui.js';
 import { SAMPLE } from '../samples/sample.js';
+import { STORIES } from '../samples/stories.js';
 import { haptic } from './haptics.js';
 import { requestPersistence, isPersisted, backupDue, backupAge, markBackedUp, snoozeBackup, saveFile } from './storage.js';
 
@@ -15,12 +16,7 @@ let books = [];
 
 async function boot() {
   await loadVocab();
-  books = await db.all('books');
-  if (!books.length && !localStorage.getItem('langreader.seeded')) {
-    localStorage.setItem('langreader.seeded', '1');
-    await saveBook(SAMPLE);
-    books = await db.all('books');
-  }
+  await addBundledStories();
   initReader();
   initSheetGestures();
   $$('#tabbar button').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
@@ -32,6 +28,24 @@ async function boot() {
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
+}
+
+// Bundled stories are each added once: new installs get them all, existing libraries get new ones.
+// A story you delete stays deleted.
+async function addBundledStories() {
+  const KEY = 'langreader.samplesAdded';
+  let added = [];
+  try { added = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch {}
+  if (localStorage.getItem('langreader.seeded') && !added.includes(SAMPLE.id)) added.push(SAMPLE.id); // seeded before ids existed
+  books = await db.all('books');
+  const titles = new Set(books.map((b) => b.title));
+  for (const s of [SAMPLE, ...STORIES]) {
+    if (added.includes(s.id)) continue;
+    if (!titles.has(s.title)) await saveBook(s);
+    added.push(s.id);
+  }
+  try { localStorage.setItem(KEY, JSON.stringify(added)); localStorage.setItem('langreader.seeded', '1'); } catch {}
+  books = await db.all('books');
 }
 
 function show(t) {

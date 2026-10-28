@@ -161,6 +161,9 @@ function settingsSheet() {
       <button data-act="csv"><span>Export LingQs for Anki (CSV)</span>${icons.download}</button>
       <button data-act="import"><span>Restore from backup…</span>${icons.upload}</button>
     </div>
+    <div class="action-list" style="margin-top:14px">
+      <button data-act="tips"><span>Show reading tips again</span></button>
+    </div>
     <input type="file" accept=".json,application/json" hidden>
     <p class="muted" style="font-size:13px;margin-top:14px">Everything is stored privately on this device. Translations by MyMemory (translated.net). Speech uses your device's Italian voice — on iPhone, download an enhanced voice in Settings › Accessibility › Spoken Content › Voices › Italian.</p>`);
   body.onclick = async (e) => {
@@ -169,6 +172,10 @@ function settingsSheet() {
     if (b.dataset.act === 'export') return exportAll();
     if (b.dataset.act === 'csv') return exportCSV();
     if (b.dataset.act === 'import') $('input[type=file]', body).click();
+    if (b.dataset.act === 'tips') {
+      try { localStorage.removeItem('langreader.tipsSeen'); } catch {}
+      b.querySelector('span').textContent = 'Tips will show when you next open a book';
+    }
   };
   isPersisted().then((p) => {
     const el = $('.storage-status', body);

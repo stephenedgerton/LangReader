@@ -9,13 +9,16 @@ import { bump } from './stats.js';
 import { haptic } from './haptics.js';
 
 let current = null;
+let closedAt = -Infinity;
 
 export const bubbleOpen = () => !!current;
+export const bubbleClosedAt = () => closedAt;
 
 export function closeBubble() {
   if (!current) return;
   const c = current;
   current = null;
+  closedAt = performance.now();
   c.el.remove();
   c.onClose?.();
 }
@@ -59,7 +62,7 @@ export function openBubble(opts) {
 
   const save = async (patch) => {
     const before = cur.status;
-    cur = await setWord(term, { example: cur.example || context.slice(0, 300), ...patch });
+    cur = await setWord(term, { example: cur.example || context.slice(0, 600), ...patch });
     if ((before === 0 || before === 5 || before === -1) && cur.status >= 1 && cur.status <= 4) bump('lingqs');
     if (before !== 5 && cur.status === 5) bump('known');
     if (current?.el === el) paint();

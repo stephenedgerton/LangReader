@@ -21,6 +21,7 @@ export const icons = {
 };
 
 let onSheetClose = null;
+let closedAt = -Infinity;
 
 export function openSheet(html, { onClose, transparent = false } = {}) {
   const sheet = $('#sheet'), scrim = $('#scrim');
@@ -42,12 +43,14 @@ export function openSheet(html, { onClose, transparent = false } = {}) {
 export function closeSheet() {
   const sheet = $('#sheet'), scrim = $('#scrim');
   if (sheet.hidden) return;
+  closedAt = performance.now();
   sheet.classList.add('closing');
   scrim.hidden = true;
   const f = onSheetClose; onSheetClose = null;
   setTimeout(() => { sheet.hidden = true; sheet.classList.remove('closing'); }, 190);
   if (f) f();
 }
+export const sheetClosedAt = () => closedAt;
 export const sheetOpen = () => !$('#sheet').hidden && !$('#sheet').classList.contains('closing');
 
 // Swipe the sheet down to dismiss it.

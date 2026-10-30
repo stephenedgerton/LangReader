@@ -13,6 +13,7 @@ import { createCurl } from './curl.js';
 import { haptic, hapticAnytime } from './haptics.js';
 import { trackProgress, goalSheet, goalSummary } from './goals.js';
 import { checkBadges } from './achievements.js';
+import { freqLoaded, loadFreq, isCommon } from './freq.js';
 
 const R = {
   el: null, area: null, content: null,
@@ -63,7 +64,7 @@ export function initReader() {
       const s = statusOf(t);
       const cls = s === 0 ? ' s0' : s >= 1 && s <= 4 ? ` s${s}` : '';
       for (const sp of R.content.querySelectorAll(`.w[data-w="${CSS.escape(t)}"]`)) {
-        sp.className = 'w' + cls + (sp.dataset.ph ? ' ph' : '') + (sp.classList.contains('sel') ? ' sel' : '');
+        sp.className = 'w' + cls + (sp.classList.contains('c') ? ' c' : '') + (sp.dataset.ph ? ' ph' : '') + (sp.classList.contains('sel') ? ' sel' : '');
       }
     }
   });
@@ -79,6 +80,8 @@ export async function openReader(book, onExit) {
   prepareVoice();
   $('#r-title').textContent = book.title;
   await loadChapter(book.progress?.chapter || 0, { frac: book.progress?.frac || 0 });
+  // The frequency list usually loads at launch; if it's still on its way, mark common words once it lands.
+  if (!freqLoaded()) loadFreq().then((d) => { if (d && R.book === book && !R.el.hidden) rerender(); });
   startReadingClock();
   showTipsOnce();
 }
@@ -103,6 +106,7 @@ function applyAppearance() {
   if (!R.el.hidden) document.documentElement.dataset.appearance = dark() ? 'dark' : 'light';
   R.el.classList.toggle('no-hl', !settings.highlights);
   R.el.dataset.hl = settings.hlStyle;
+  R.el.classList.toggle('common-hl', settings.commonHL);
   const font = FONTS[settings.font] || FONTS.original;
   const st = R.el.style;
   st.setProperty('--font', font.css);
@@ -142,10 +146,10 @@ function render() {
   if (blocks[0]?.t !== 'h') html += `<h1><span class="chap-kicker">${esc(R.book.title)}</span>${esc(R.chapter.title)}</h1>`;
   for (const b of blocks) {
     if (b.t === 'h') {
-      html += `<${i === 0 ? 'h1' : 'h2'}>${paragraphHTML(b.x, statusOf, ph)}</${i === 0 ? 'h1' : 'h2'}>`;
+      html += `<${i === 0 ? 'h1' : 'h2'}>${paragraphHTML(b.x, statusOf, ph, isCommon)}</${i === 0 ? 'h1' : 'h2'}>`;
       first = true;
     } else {
-      html += `<p${first ? ' class="first"' : ''}>${paragraphHTML(b.x, statusOf, ph)}</p>`;
+      html += `<p${first ? ' class="first"' : ''}>${paragraphHTML(b.x, statusOf, ph, isCommon)}</p>`;
       first = false;
     }
     i++;
@@ -711,6 +715,7 @@ function themesSheet() {
       <label class="ts-item"><span class="lbl">Paragraph Spacing</span><input type="range" min="0" max="1.2" step="0.1" value="${settings.paraSpace}" data-set="paraSpace"></label>
       <label class="ts-item"><span class="lbl">Page Turn</span><select data-set="pageTurn">${[['curl', 'Curl'], ['slide', 'Slide'], ['none', 'None']].map(([k, n]) => `<option value="${k}" ${settings.pageTurn === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="ts-item"><span class="lbl">Word Highlights</span><select data-set="hlStyle">${[['underline', 'Underline'], ['background', 'Background']].map(([k, n]) => `<option value="${k}" ${settings.hlStyle === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label class="ts-item"><span class="lbl">Stronger mark on common new words<small>The 2,000 most common words in Italian fiction</small></span><span class="switch"><input type="checkbox" data-set="commonHL" ${settings.commonHL ? 'checked' : ''}><i></i></span></label>
       <label class="ts-item"><span class="lbl">Justify Text</span><span class="switch"><input type="checkbox" data-set="justify" ${settings.justify ? 'checked' : ''}><i></i></span></label>
     </div>
     <div class="ts-group">
@@ -748,7 +753,7 @@ function themesSheet() {
     const v = e.target.type === 'checkbox' ? e.target.checked : e.target.type === 'range' ? +e.target.value : e.target.value;
     settings[k] = v;
     if (['font', 'lineHeight', 'margin', 'paraSpace', 'justify'].includes(k)) { applyAppearance(); relayoutSoon(); }
-    if (k === 'hlStyle') applyAppearance();
+    if (k === 'hlStyle' || k === 'commonHL') applyAppearance();
     if (k === 'voice') prepareVoice();
   });
 }

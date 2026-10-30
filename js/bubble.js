@@ -7,6 +7,7 @@ import { dictionaryHints } from './wordcard.js';
 import { settings } from './settings.js';
 import { bump } from './stats.js';
 import { haptic } from './haptics.js';
+import { freqLoaded, loadFreq, freqTagHTML, lookupFreq } from './freq.js';
 
 let current = null;
 let closedAt = -Infinity;
@@ -42,6 +43,7 @@ export function openBubble(opts) {
       <button class="wp-term" data-more>${esc(display)}<span class="wp-lemma"></span></button>
       <button class="wp-icon" data-speak aria-label="Pronounce">${icons.speaker}</button>
     </div>
+    <div class="wp-freq" hidden></div>
     <button class="wp-mean" data-mean><span class="wp-loading">Looking up…</span></button>
     <div class="wp-status">
       ${[1, 2, 3, 4].map((s) => `<button class="s${s}" data-s="${s}">${s}</button>`).join('')}
@@ -66,6 +68,17 @@ export function openBubble(opts) {
   };
   paint();
   position(el, anchor(), container);
+
+  // How common the word is (its dictionary form's rank in Italian fiction). Phrases have none, and an
+  // Ignored word outside the list (a name) shows nothing rather than "Rare".
+  const paintFreq = () => {
+    if (cur.status === -1 && !lookupFreq(term)) return;
+    const f = el.querySelector('.wp-freq');
+    f.innerHTML = freqTagHTML(term);
+    f.hidden = false;
+    if (anchor()?.isConnected) position(el, anchor(), container);
+  };
+  if (!phrase) { if (freqLoaded()) paintFreq(); else loadFreq().then((d) => { if (d && current?.el === el) paintFreq(); }); }
 
   const save = async (patch) => {
     const before = cur.status;

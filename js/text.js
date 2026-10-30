@@ -53,7 +53,8 @@ const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>'
 // Build HTML for a paragraph: sentences wrap words, words carry their status class.
 // `statusOf(term)` returns 0 (new), 1-4 (learning), 5 (known), -1 (ignored).
 // `phrases` is a Map firstWord -> [{term, parts: [w1, w2, ...]}] (longest first).
-export function paragraphHTML(str, statusOf, phrases) {
+// `isCommon(term)`, if given, marks very common words with `c` (their new-word mark is stronger).
+export function paragraphHTML(str, statusOf, phrases, isCommon) {
   const toks = tokenize(str);
   const words = [];
   toks.forEach((t, i) => { if (t.type === 'w') { t.n = normalize(t.text); words.push(i); } });
@@ -89,7 +90,7 @@ export function paragraphHTML(str, statusOf, phrases) {
       if (t.phStart) { open = t.ph; html += phrOpen(open); }
       const s = statusOf(t.n);
       const cls = s === 0 ? 'w s0' : s >= 1 && s <= 4 ? `w s${s}` : 'w';
-      html += `<span class="${cls}${t.ph ? ' ph' : ''}${t.phStart ? ' ph0' : ''}" data-w="${esc(t.n)}"${t.ph ? ` data-ph="${esc(t.ph)}"` : ''}>${esc(t.text)}</span>`;
+      html += `<span class="${cls}${isCommon?.(t.n) ? ' c' : ''}${t.ph ? ' ph' : ''}${t.phStart ? ' ph0' : ''}" data-w="${esc(t.n)}"${t.ph ? ` data-ph="${esc(t.ph)}"` : ''}>${esc(t.text)}</span>`;
       if (t.phEnd) { open = null; html += '</span>'; }
     } else {
       // Split sentences at terminal punctuation followed by whitespace.

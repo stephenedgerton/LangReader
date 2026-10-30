@@ -1,9 +1,11 @@
-// Daily reading statistics (reading time for the goal ring, words read, new known words, LingQs created).
+// Daily reading statistics (reading time for the goal ring, words read, new known words, LingQs created),
+// plus a snapshot of your vocabulary against the frequency list (lemmas known, fiction coverage) for the trend.
 import { db } from './db.js';
 
 export const todayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 let pending = {};
+let pendingSet = {};
 let timer = null;
 
 export function bump(field, n = 1) {
@@ -13,13 +15,21 @@ export function bump(field, n = 1) {
   timer = setTimeout(flush, 1500);
 }
 
+// Sets fields on today's record instead of adding to them (the daily vocabulary snapshot).
+export function record(fields) {
+  Object.assign(pendingSet, fields);
+  clearTimeout(timer);
+  timer = setTimeout(flush, 1500);
+}
+
 export async function flush() {
   clearTimeout(timer);
-  const p = pending; pending = {};
-  if (!Object.keys(p).length) return;
+  const p = pending, set = pendingSet; pending = {}; pendingSet = {};
+  if (!Object.keys(p).length && !Object.keys(set).length) return;
   const date = todayKey();
   const day = (await db.get('days', date)) || { date, seconds: 0, wordsRead: 0, known: 0, lingqs: 0 };
   for (const [k, v] of Object.entries(p)) day[k] = (day[k] || 0) + v;
+  Object.assign(day, set);
   await db.put('days', day);
 }
 

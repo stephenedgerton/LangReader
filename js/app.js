@@ -14,6 +14,8 @@ import { haptic } from './haptics.js';
 import { bookPct, goalSheet, goalSummary, goalCardHTML } from './goals.js';
 import { fillDifficulty } from './difficulty.js';
 import { checkBadges, achievementsCardHTML, achievementsSheet } from './achievements.js';
+import { loadFreq, recordSnapshot } from './freq.js';
+import { renderStats } from './statsview.js';
 import { requestPersistence, isPersisted, backupDue, backupAge, markBackedUp, snoozeBackup, saveFile } from './storage.js';
 
 let tab = 'home';
@@ -29,6 +31,7 @@ async function boot() {
   $$('#tabbar button').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
   onChange(() => { if (tab === 'vocab' && $('#reader').hidden) renderVocab(); });
   show(location.hash.slice(1) || 'home');
+  loadFreq().then((d) => { if (d) recordSnapshot(); }); // also lets the reader mark common words
 
   requestPersistence();
 
@@ -70,12 +73,12 @@ const NAME_TERMS = new Set(NAMES.map(normalize));
 const savedCount = () => allEntries().filter((w) => !(w.status === -1 && NAME_TERMS.has(w.term))).length;
 
 function show(t) {
-  if (!['home', 'library', 'vocab'].includes(t)) t = 'home';
+  if (!['home', 'library', 'vocab', 'stats'].includes(t)) t = 'home';
   tab = t;
   history.replaceState(null, '', '#' + t);
   $$('#tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === t));
   $$('.view').forEach((v) => { v.hidden = v.dataset.tab !== t; });
-  ({ home: renderHome, library: renderLibrary, vocab: renderVocab })[t]();
+  ({ home: renderHome, library: renderLibrary, vocab: renderVocab, stats: () => renderStats($('#view-stats')) })[t]();
 }
 
 async function refreshBooks() { books = await db.all('books'); }
@@ -84,6 +87,7 @@ function open(book) {
   $('#tabbar').hidden = true;
   openReader(book, async () => {
     $('#tabbar').hidden = false;
+    if (await loadFreq()) recordSnapshot();
     await refreshBooks();
     show(tab);
   });
@@ -188,7 +192,7 @@ function settingsSheet() {
       <button data-act="names"><span>Ignore common Italian names</span></button>
     </div>
     <input type="file" accept=".json,application/json" hidden>
-    <p class="muted" style="font-size:13px;margin-top:14px">Everything is stored privately on this device. Translations by MyMemory (translated.net). Speech uses Riccardo, a Piper neural voice that runs on this device (about 30 MB, downloaded the first time you open a book). Paola and Serena, or your device's Italian voice, are in the reader's Themes &amp; Settings.</p>`);
+    <p class="muted" style="font-size:13px;margin-top:14px">Everything is stored privately on this device. Translations by MyMemory (translated.net). Word frequencies come from 199 Italian novels on Project Gutenberg, with word forms from Morph-it! by Marco Baroni and Eros Zanchetta (CC BY-SA 2.0). Speech uses Riccardo, a Piper neural voice that runs on this device (about 30 MB, downloaded the first time you open a book). Paola and Serena, or your device's Italian voice, are in the reader's Themes &amp; Settings.</p>`);
   body.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.matches('.x')) return closeSheet();

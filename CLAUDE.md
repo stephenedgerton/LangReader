@@ -23,7 +23,7 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 
 ## Architecture
 
-`index.html` holds the static shell: three tab views, the `#reader` overlay, and one shared bottom `#sheet`. `js/app.js` boots the app (loads vocabulary, adds bundled stories, registers the service worker) and renders the Home, Library and Vocabulary tabs as HTML strings. `js/reader.js` owns everything inside the reader.
+`index.html` holds the static shell: four tab views, the `#reader` overlay, and one shared bottom `#sheet`. `js/app.js` boots the app (loads vocabulary, adds bundled stories, registers the service worker) and renders the Home, Library and Vocabulary tabs as HTML strings (the Stats tab is `statsview.js`). `js/reader.js` owns everything inside the reader.
 
 ### Data (`db.js`, `vocab.js`, `settings.js`)
 - IndexedDB `langreader` has these stores: `books` (metadata and progress; `chapterTitles` and `chapterWords` are denormalised here), `chapters` (key `${bookId}:${idx}`, `blocks: [{t:'h'|'p', x}]`), `words` (vocabulary), `tcache` (translation and dictionary cache), and `days` (daily stats). Adding a store means bumping `DB_VERSION` and adding it in `onupgradeneeded`.
@@ -53,6 +53,13 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 ### Difficulty and achievements (`difficulty.js`, `achievements.js`)
 - A book's difficulty is the share of its distinct words that are New (status 0), leaving out Ignored ones, as LingQ rates lessons. Each book's word list is built from its chapters once per session and kept in memory. `fillDifficulty()` fills `[data-diff]` placeholders after a view renders (`data-long` gives the full wording).
 - Badges (known words, words read, best streak of days meeting the minutes goal, books finished) are all derived from data. Only the date each was earned is stored, in `langreader.badges`. `boot()` runs the first check so badges you already had are recorded quietly (date `null`). After that, the reader checks 2 s after each progress save and celebrates new ones in `#r-cheer`.
+
+### Word frequency and the Stats tab (`freq.js`, `themes.js`, `statsview.js`)
+- `data/freq-it-v1.json` ranks the 20,000 most common lemmas in 199 Gutenberg novels: `lemmas: [[lemma, count, "form|form…"]]` plus `total` (all non-name tokens). It's built offline by `tools/build-freq.mjs <morph-it.txt> <corpus dir>` (Morph-it! for form → lemma; `EXTRA` there holds hand-checked forms, and `DUMP_AMBIGUOUS=<n>` prints how frequent ambiguous forms were read). `sw.js` serves `data/` cache-first from the assets cache, so a rebuilt list needs a new file name (`-v2`) and a matching `URL` in `freq.js`.
+- `freq.js` loads it once (boot starts the fetch) into a `Map` form → index. Listed forms win over a lemma spelled the same (*era* is *essere*). A lemma is known when any of its forms is Known; Ignored counts as known for coverage and bands but not for the known count or the level. Phrases don't count. `wordStats()` gives the level, coverage and bands; `themeWords()` a theme's words with their state.
+- `recordSnapshot()` writes `lemmas`, `cover` and `coverL` into today's `days` record through `record()` in `stats.js` (fields that are set, not added). It runs at boot, when the reader closes and when the Stats tab renders; the trend reads these.
+- The bubble's `.wp-freq` tag and the card's `.freq-line` come from `freqTagHTML()` / `freqSentence()`. The reader passes `isCommon` to `paragraphHTML`, which adds `c` to spans of the 2,000 most common lemmas; `#reader.common-hl` (`settings.commonHL`) styles `.s0.c` stronger and other `.s0` lighter. The in-place recolouring keeps `c`.
+- Theme lists in `themes.js` are lemmas; any word that isn't a lemma in the list is dropped silently, so check new ones against the data file.
 
 ### Word lookup (`bubble.js` → `wordcard.js`)
 - Tapping a word opens the small bubble. ⋯ opens the full card in the shared sheet. Phrases open the full card directly.

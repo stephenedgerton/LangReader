@@ -363,6 +363,12 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 #reader[data-hl="underline"] .w.s3 { text-decoration: underline dashed rgba(var(--lq), .85) 2px; }
 #reader[data-hl="underline"] .w.s4 { text-decoration: underline dotted rgba(var(--lq), .9) 2px; }
 #reader.no-hl[data-hl="underline"] .w { text-decoration: none !important; }
+/* Stronger mark on common new words (.c: the 2,000 most common lemmas); rarer new words recede. */
+#reader.common-hl .w.s0.c { box-shadow: inset 0 -.12em var(--new-ul); }
+#reader.common-hl .w.s0:not(.c) { background: color-mix(in srgb, var(--new) 55%, transparent); }
+#reader.common-hl[data-hl="underline"] .w.s0.c { box-shadow: none; text-decoration-thickness: 3.5px; }
+#reader.common-hl[data-hl="underline"] .w.s0:not(.c) { background: none; text-decoration: underline solid color-mix(in srgb, var(--new-ul) 50%, transparent) 1.5px; }
+#reader.no-hl .w.s0 { box-shadow: none !important; }
 .w.sel { background: rgba(0, 122, 255, .35) !important; color: inherit; outline: 2px solid rgba(0, 122, 255, .55); }
 /* A selected phrase is painted as one block (CSS Custom Highlight), so the gaps between words fill in too. */
 #page-content.sel-range .w.sel { background: none !important; outline: 0; }
@@ -517,6 +523,10 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .wp-term { flex: 1; min-width: 0; text-align: left; font: 600 19px/1.25 var(--serif-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wpop.phrase .wp-term { font-size: 16px; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .wp-lemma { font: 600 14px var(--sans); color: var(--tint); }
+.wp-freq { font-size: 13px; opacity: .75; margin: -3px 0 7px; font-variant-numeric: tabular-nums; }
+.wp-freq b { font-weight: 600; }
+.fq-dots { letter-spacing: 1px; font-size: 10px; vertical-align: 1px; color: var(--tint); }
+.fq-dots i { font-style: normal; opacity: .3; color: currentColor; }
 .wp-icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(128, 128, 128, .16); color: var(--tint); display: grid; place-items: center; flex: none; }
 .wp-icon svg { width: 18px; height: 18px; }
 .wp-mean { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; text-align: left; background: rgba(128, 128, 128, .14); border-radius: 10px; padding: 9px 11px; font-size: 16px; line-height: 1.3; margin-bottom: 8px; }
@@ -668,3 +678,50 @@ input[type=date] { background: transparent; border: 0; color: var(--tint); font:
 .ach-item b { font-size: 13px; line-height: 1.2; font-weight: 600; }
 .ach-item small { font-size: 12px; color: var(--label-2); }
 .sheet .shelf { margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+
+/* ============ Stats ============ */
+:root { --known: #248a3d; --learning: #e0a800; }
+@media (prefers-color-scheme: dark) { :root:not([data-appearance="light"]) { --known: #2bb24c; --learning: #9a7400; } }
+:root[data-appearance="dark"] { --known: #2bb24c; --learning: #9a7400; }
+.small { font-size: 13px; }
+.st-level p, .st-cover p, .st-trend p { margin: 8px 0 0; }
+.st-hero { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.st-hero b { font: 700 40px/1 var(--sans); font-variant-numeric: tabular-nums; }
+.st-hero span { color: var(--label-2); font-size: 15px; flex: 1; min-width: 160px; }
+.meter { height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--known) 18%, transparent); margin-top: 12px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--known); border-radius: 4px; }
+/* Known solid, then learning hatched, separated by a 2px gap. */
+.sbar { display: flex; gap: 2px; height: 8px; border-radius: 4px; background: var(--fill); overflow: hidden; flex: 1; }
+.sbar.big { height: 14px; border-radius: 7px; }
+.sbar i { display: block; height: 100%; flex: none; }
+.sbar i:first-child { border-radius: 4px 0 0 4px; }
+.sbar .k { background: var(--known); }
+.sbar .l { background: repeating-linear-gradient(135deg, var(--learning) 0 3px, color-mix(in srgb, var(--learning) 55%, transparent) 3px 6px); }
+.cover-scale { position: relative; margin: 14px 0 4px; display: flex; }
+.cover-scale .tick { position: absolute; top: -3px; bottom: -3px; width: 0; border-left: 1.5px solid var(--label-2); }
+.legend { display: flex; gap: 16px; font-size: 13px; color: var(--label-2); margin-bottom: 10px; }
+.legend i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.legend .k { background: var(--known); }
+.legend .l { background: repeating-linear-gradient(135deg, var(--learning) 0 3px, color-mix(in srgb, var(--learning) 55%, transparent) 3px 6px); }
+.band { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.band .bl { width: 64px; font-size: 14px; color: var(--label-2); flex: none; }
+.bv { width: 72px; text-align: right; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; flex: none; }
+.bv small { font-weight: 500; color: var(--label-2); font-size: 12px; }
+.theme-row .ti { font-size: 22px; width: 28px; text-align: center; flex: none; }
+.theme-row .tn { display: flex; justify-content: space-between; gap: 8px; font-size: 16px; margin-bottom: 6px; }
+.theme-row .tn span { color: var(--label-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.theme-row .bv { width: 48px; }
+.st-source { margin: 14px 4px 0; }
+.st-trend { position: relative; }
+.tt-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.trend { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
+.trend .grid { stroke: var(--sep); stroke-width: 1; }
+.trend .ax { fill: var(--label-2); stroke: none; font: 11px var(--sans); }
+.trend .line { stroke: var(--known); stroke-width: 2; fill: none; }
+.trend .dot { fill: var(--known); stroke: var(--bg-grouped); stroke-width: 2; }
+.trend .end { fill: var(--label); stroke: none; font: 600 12px var(--sans); }
+.trend .cross { stroke: var(--label-3); stroke-width: 1; }
+.trend .hit { stroke: none; }
+.st-trend .tip { position: absolute; top: 34px; transform: translateX(-50%); background: var(--bg-elev); box-shadow: var(--shadow); border-radius: 8px; padding: 4px 8px; font-size: 12px; white-space: nowrap; pointer-events: none; }
+.freq-line { font-size: 14px; color: var(--label-2); margin: 10px 0 2px; }
+.rank { font-size: 13px; font-variant-numeric: tabular-nums; }

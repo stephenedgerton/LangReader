@@ -5,9 +5,13 @@ import { settings } from './settings.js';
 
 let label = null;
 
+// Vibration works from timers too. The iOS switch only clicks during a user gesture, and a touch
+// becomes one when the finger lifts, so a long press can't tick until it's released.
+export const hapticAnytime = typeof navigator.vibrate === 'function';
+
 export function haptic() {
   if (!settings.haptics) return;
-  if (typeof navigator.vibrate === 'function') { navigator.vibrate(8); return; }
+  if (hapticAnytime) { navigator.vibrate(8); return; }
   if (!label) {
     label = document.createElement('label');
     label.setAttribute('aria-hidden', 'true');

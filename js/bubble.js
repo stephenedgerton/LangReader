@@ -14,24 +14,29 @@ let closedAt = -Infinity;
 export const bubbleOpen = () => !!current;
 export const bubbleClosedAt = () => closedAt;
 
-export function closeBubble() {
+// Closing without picking a level is LingQ's default: a New word (or phrase) you looked up
+// becomes LingQ 1. `expand` closes it for the full card, which then decides.
+export function closeBubble({ expand = false } = {}) {
   if (!current) return;
   const c = current;
   current = null;
   closedAt = performance.now();
   c.el.remove();
+  if (!expand) c.dismiss();
   c.onClose?.();
 }
 
-// opts: {anchor (word element), container, term, display, context, onExpand, onClose}
+// opts: {anchor (element, or a function returning it), container, term, display, context, phrase, onExpand, onClose}
 export function openBubble(opts) {
   closeBubble();
-  const { anchor, container, term, display, context } = opts;
+  const { container, term, display, context, phrase = false } = opts;
+  // The reader may re-render under an open bubble (a phrase was saved), so look the anchor up each time.
+  const anchor = () => (typeof opts.anchor === 'function' ? opts.anchor() : opts.anchor);
   let cur = entry(term) || { term, status: 0, meaning: '' };
   let suggestion = null; // {text, lemma}
 
   const el = document.createElement('div');
-  el.className = 'wpop';
+  el.className = phrase ? 'wpop phrase' : 'wpop';
   el.innerHTML = `
     <div class="wp-head">
       <button class="wp-term" data-more>${esc(display)}<span class="wp-lemma"></span></button>
@@ -45,7 +50,9 @@ export function openBubble(opts) {
     </div>
     <div class="wp-arrow"></div>`;
   container.appendChild(el);
-  current = { el, onClose: opts.onClose };
+  current = { el, onClose: opts.onClose, dismiss: () => {
+    if (cur.status === 0 && !entry(term)) save({ status: 1, ...(suggestion && { meaning: suggestion.text }) });
+  } };
 
   const paint = () => {
     el.querySelectorAll('[data-s]').forEach((b) => b.classList.toggle('on', +b.dataset.s === cur.status));
@@ -58,28 +65,28 @@ export function openBubble(opts) {
     el.querySelector('.wp-lemma').textContent = lemma ? ` → ${lemma}` : '';
   };
   paint();
-  position(el, anchor, container);
+  position(el, anchor(), container);
 
   const save = async (patch) => {
     const before = cur.status;
-    cur = await setWord(term, { example: cur.example || context.slice(0, 600), ...patch });
+    cur = await setWord(term, { example: cur.example || context.slice(0, 600), ...(phrase && { phrase, display }), ...patch });
     if ((before === 0 || before === 5 || before === -1) && cur.status >= 1 && cur.status <= 4) bump('lingqs');
-    if (before !== 5 && cur.status === 5) bump('known');
+    if (before !== 5 && cur.status === 5 && !phrase) bump('known');
     if (current?.el === el) paint();
   };
 
   // Best single meaning: Wiktionary gloss (base word's sense for inflected forms), else machine translation.
   (async () => {
     try {
-      if (settings.target === 'en') {
+      if (settings.target === 'en' && !phrase) {
         const r = await lookup(display).catch(() => null);
         const h = r && dictionaryHints(r)[0];
         if (h) { suggestion = { text: h.text, lemma: r.lemma }; return; }
       }
-      const mt = await translate(display, { word: true });
+      const mt = await translate(display, { word: !phrase });
       suggestion = mt.options[0] ? { text: mt.options[0].text } : false;
     } catch { suggestion = false; }
-    finally { if (current?.el === el) { paint(); position(el, anchor, container); } }
+    finally { if (current?.el === el) { paint(); if (anchor()?.isConnected) position(el, anchor(), container); } }
   })();
 
   el.addEventListener('click', (e) => {
@@ -87,9 +94,9 @@ export function openBubble(opts) {
     if (!b) return;
     e.stopPropagation();
     if (b.dataset.speak != null) return speak(display);
-    if (b.dataset.more != null) { closeBubble(); return opts.onExpand(); }
+    if (b.dataset.more != null) { closeBubble({ expand: true }); return opts.onExpand(); }
     if (b.dataset.mean != null) {
-      if (cur.meaning || !suggestion) { closeBubble(); return opts.onExpand(); }
+      if (cur.meaning || !suggestion) { closeBubble({ expand: true }); return opts.onExpand(); }
       haptic();
       return save({ meaning: suggestion.text, status: cur.status >= 1 && cur.status <= 4 ? cur.status : 1 });
     }

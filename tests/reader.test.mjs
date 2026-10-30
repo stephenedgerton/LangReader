@@ -67,6 +67,29 @@ describe('reader', () => {
     assert.ok(await page.$('p .w.s0[data-w="treno"]'), 'Undo made them blue again');
   });
 
+  // Regression: a dragged turn moves the content before the page is measured, which used to count the next page too.
+  for (const how of ['curl drag', 'slide drag', 'edge tap']) {
+    test(`${how} marks only the page you turned off as known`, async () => {
+      const { page } = await openApp(t, srv.url, { settings: { pageTurn: how === 'slide drag' ? 'slide' : 'curl' } });
+      await openBook(page);
+      const onScreen = () => page.evaluate(() => {
+        const a = document.querySelector('#page-area').getBoundingClientRect();
+        return [...document.querySelectorAll('#page-area > #page-content p .w')]
+          .filter((s) => { const r = s.getBoundingClientRect(); return r.left >= a.left && r.right <= a.right; }).map((s) => s.dataset.w);
+      });
+      const blue = () => page.$$eval('#page-area > #page-content p .w.s0', (e) => e.map((x) => x.dataset.w));
+      const firstPage = new Set(await onScreen()), blueBefore = await blue();
+      if (how === 'edge tap') await page.mouse.click(385, 120);
+      else await swipe(page, 360, 100, 400);
+      await sleep(600);
+      assert.equal(await pageNo(page), 2);
+      const blueAfter = new Set(await blue());
+      const marked = [...new Set(blueBefore.filter((w) => !blueAfter.has(w)))];
+      assert.ok(marked.length > 50);
+      assert.deepEqual(marked.filter((w) => !firstPage.has(w)), [], 'only words from the page turned off');
+    });
+  }
+
   for (const style of ['slide', 'none']) {
     test(`page turn style "${style}" turns without a curl`, async () => {
       const { page, errors } = await openApp(t, srv.url, { settings: { pageTurn: style } });

@@ -350,18 +350,23 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .w.s3 { background: rgba(var(--lq), .24); }
 .w.s4 { background: rgba(var(--lq), .12); border-bottom: 1px dashed rgba(var(--lq), .8); border-radius: .18em .18em 0 0; }
 #reader.no-hl .w { background: none !important; border-bottom: 0 !important; }
-.w.ph { text-decoration: underline; text-decoration-color: rgba(var(--lq), .95); text-decoration-thickness: 2px; text-underline-offset: .18em; }
-/* LingQ's underline style: the colour says new or learning, the line style says the level.
-   Saved phrases get a soft tint instead, since the underline already belongs to each word. */
+/* A saved phrase is one block, gaps included, tinted by its level; its words keep their own marks. */
+.phr { background: rgba(var(--lq), .3); border-radius: .2em; box-decoration-break: clone; -webkit-box-decoration-break: clone; box-shadow: 0 0 0 .08em rgba(var(--lq), .3); }
+.phr.s2 { background: rgba(var(--lq), .22); }
+.phr.s3, .phr.s4 { background: rgba(var(--lq), .14); box-shadow: none; }
+#reader.no-hl .phr { background: none; box-shadow: none; }
+/* LingQ's underline style: the colour says new or learning, the line style says the level. */
 #reader[data-hl="underline"] .w { background: none; border-bottom: 0; border-radius: 0; text-decoration: none; text-underline-offset: .2em; text-decoration-skip-ink: none; }
 #reader[data-hl="underline"] .w.s0 { text-decoration: underline solid var(--new-ul) 2px; }
 #reader[data-hl="underline"] .w.s1 { text-decoration: underline solid rgba(var(--lq), 1) 2.5px; }
 #reader[data-hl="underline"] .w.s2 { text-decoration: underline solid rgba(var(--lq), .7) 2px; }
 #reader[data-hl="underline"] .w.s3 { text-decoration: underline dashed rgba(var(--lq), .85) 2px; }
 #reader[data-hl="underline"] .w.s4 { text-decoration: underline dotted rgba(var(--lq), .9) 2px; }
-#reader[data-hl="underline"] .w.ph { background: rgba(var(--lq), .2); }
 #reader.no-hl[data-hl="underline"] .w { text-decoration: none !important; }
 .w.sel { background: rgba(0, 122, 255, .35) !important; color: inherit; outline: 2px solid rgba(0, 122, 255, .55); }
+/* A selected phrase is painted as one block (CSS Custom Highlight), so the gaps between words fill in too. */
+#page-content.sel-range .w.sel { background: none !important; outline: 0; }
+::highlight(lr-sel) { background-color: rgba(0, 122, 255, .3); }
 .sent.speaking { background: rgba(52, 199, 89, .14); border-radius: .2em; }
 
 #reader-bottom {
@@ -500,6 +505,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 @keyframes bubble-in { from { opacity: 0; transform: translateY(4px) scale(.97); } }
 .wp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
 .wp-term { flex: 1; min-width: 0; text-align: left; font: 600 19px/1.25 var(--serif-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wpop.phrase .wp-term { font-size: 16px; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .wp-lemma { font: 600 14px var(--sans); color: var(--tint); }
 .wp-icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(128, 128, 128, .16); color: var(--tint); display: grid; place-items: center; flex: none; }
 .wp-icon svg { width: 18px; height: 18px; }

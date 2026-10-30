@@ -29,12 +29,24 @@ test('paragraphHTML wraps sentences and marks statuses', () => {
   assert.match(html, /class="w s0" data-w="sì"/);
 });
 
-test('paragraphHTML underlines saved phrases', () => {
+test('paragraphHTML marks saved phrases as one block', () => {
   const phrases = new Map([['cuore', [{ term: 'cuore le batteva', parts: ['cuore', 'le', 'batteva'] }]]]);
-  const html = paragraphHTML('e il cuore le batteva forte.', () => 0, phrases);
-  assert.equal((html.match(/ ph"/g) || []).length, 3);
-  assert.match(html, /data-ph="cuore le batteva"/);
+  const html = paragraphHTML('e il cuore le batteva forte.', (w) => (w === 'cuore le batteva' ? 1 : 0), phrases);
+  assert.equal((html.match(/ ph[ "]/g) || []).length, 3);
+  assert.match(html, /class="w s0 ph ph0" data-w="cuore"/);
+  assert.match(html, /<span class="phr s1" data-ph="cuore le batteva"><span [^>]*>cuore<\/span> <span [^>]*>le<\/span> <span [^>]*>batteva<\/span><\/span> /);
   assert.doesNotMatch(html, /data-w="forte" data-ph/);
+});
+
+test('a phrase across a sentence break is split into two blocks that nest', () => {
+  const phrases = new Map([['va', [{ term: 'va bene ciao', parts: ['va', 'bene', 'ciao'] }]]]);
+  const html = paragraphHTML('Va bene. Ciao a tutti.', () => 0, phrases);
+  assert.equal((html.match(/class="phr"/g) || []).length, 2);
+  assert.match(html, /bene<\/span>\. <\/span><\/span><span class="sent"><span class="phr" data-ph="va bene ciao">/);
+  const doc = html.replace(/<span[^>]*>/g, '(').replace(/<\/span>/g, ')').replace(/[^()]/g, '');
+  let depth = 0;
+  for (const c of doc) { depth += c === '(' ? 1 : -1; assert.ok(depth >= 0); }
+  assert.equal(depth, 0);
 });
 
 test('textToChapters splits on Capitolo headings and blank-line paragraphs', () => {

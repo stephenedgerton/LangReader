@@ -58,11 +58,12 @@ export function paragraphHTML(str, statusOf, phrases) {
   const words = [];
   toks.forEach((t, i) => { if (t.type === 'w') { t.n = normalize(t.text); words.push(i); } });
 
-  // Phrase detection over the word sequence.
+  // Phrase detection over the word sequence. Each occurrence is wrapped as one block, so a
+  // phrase that overlaps an earlier one on the page is skipped.
   if (phrases && phrases.size) {
     for (let wi = 0; wi < words.length; wi++) {
       const cands = phrases.get(toks[words[wi]].n);
-      if (!cands) continue;
+      if (!cands || toks[words[wi]].ph) continue;
       for (const p of cands) {
         if (wi + p.parts.length > words.length) continue;
         let ok = true;
@@ -70,27 +71,33 @@ export function paragraphHTML(str, statusOf, phrases) {
           if (toks[words[wi + k]].n !== p.parts[k]) { ok = false; break; }
         }
         if (!ok) continue;
-        for (let k = 0; k < p.parts.length; k++) {
-          const t = toks[words[wi + k]];
-          if (!t.ph) t.ph = p.term;
-        }
+        for (let k = 0; k < p.parts.length; k++) toks[words[wi + k]].ph = p.term;
+        toks[words[wi]].phStart = true;
+        toks[words[wi + p.parts.length - 1]].phEnd = true;
         break;
       }
     }
   }
 
-  let html = '<span class="sent">';
+  let html = '<span class="sent">', open = null;
+  const phrOpen = (term) => {
+    const s = statusOf(term);
+    return `<span class="phr${s >= 1 && s <= 4 ? ' s' + s : ''}" data-ph="${esc(term)}">`;
+  };
   for (const t of toks) {
     if (t.type === 'w') {
+      if (t.phStart) { open = t.ph; html += phrOpen(open); }
       const s = statusOf(t.n);
       const cls = s === 0 ? 'w s0' : s >= 1 && s <= 4 ? `w s${s}` : 'w';
-      html += `<span class="${cls}${t.ph ? ' ph' : ''}" data-w="${esc(t.n)}"${t.ph ? ` data-ph="${esc(t.ph)}"` : ''}>${esc(t.text)}</span>`;
+      html += `<span class="${cls}${t.ph ? ' ph' : ''}${t.phStart ? ' ph0' : ''}" data-w="${esc(t.n)}"${t.ph ? ` data-ph="${esc(t.ph)}"` : ''}>${esc(t.text)}</span>`;
+      if (t.phEnd) { open = null; html += '</span>'; }
     } else {
       // Split sentences at terminal punctuation followed by whitespace.
       const m = t.text.match(SENT_END);
       if (m) {
+        // A phrase running across sentences is closed and reopened so the spans nest.
         const cut = m.index + m[0].length;
-        html += esc(t.text.slice(0, cut)) + '</span><span class="sent">' + esc(t.text.slice(cut));
+        html += esc(t.text.slice(0, cut)) + (open ? '</span>' : '') + '</span><span class="sent">' + (open ? phrOpen(open) : '') + esc(t.text.slice(cut));
       } else {
         html += esc(t.text);
       }

@@ -25,7 +25,7 @@ describe('words', () => {
     assert.match(await text(page, '.wp-mean'), /to arrive, to reach\s*Saved/);
 
     await page.mouse.click(10, 150); await sleep(300); // a tap off the text closes it without turning
-    assert.equal(await page.$('.wpop'), null);
+    assert.equal(await page.$$eval('.wpop', (e) => e.length), 0, 'bubble closed');
     assert.equal(await pageNo(page), 1);
     assert.deepEqual(errors, []);
   });
@@ -73,12 +73,16 @@ describe('words', () => {
       await page.mouse.move(b.x + 4, b.y + 5, { steps: 5 });
     }
     await page.mouse.up(); await sleep(500);
-    assert.equal(await page.textContent('.wcard .term'), 'valigia piccola e un quaderno nuovo');
+    assert.equal(await text(page, '.wpop .wp-term'), 'valigia piccola e un quaderno nuovo');
     assert.equal(await pageNo(page), 1);
-    await page.click('.status-bar [data-s="2"]'); await sleep(400);
-    await page.click('.wcard .x'); await sleep(300);
+    assert.ok(await page.evaluate(() => CSS.highlights.has('lr-sel')), 'selection painted as one block');
+    await page.click('.wpop [data-s="2"]'); await sleep(400);
+    await page.mouse.click(10, 450); await sleep(300); // tap off
+    assert.equal(await page.$$eval('.wpop', (e) => e.length), 0, 'bubble closed');
     assert.equal((await page.$$('.w.sel')).length, 0, 'selection highlight cleared');
-    assert.equal((await page.$$('.w.ph')).length, 6, 'saved phrase is underlined');
+    assert.equal((await page.$$('.w.ph')).length, 6, 'saved phrase is marked');
+    assert.equal(await page.getAttribute('.phr', 'class'), 'phr s2', 'shown as one block at its level');
+    assert.equal(await text(page, '.phr'), 'valigia piccola e un quaderno nuovo');
   });
 
   test('hold, lift, then tap the last word also makes a phrase', async () => {
@@ -87,7 +91,30 @@ describe('words', () => {
     await holdWord(page, 'treno'); await page.mouse.up(); await sleep(200);
     assert.equal(await page.textContent('#r-toast'), 'Drag to select a phrase, or tap its last word');
     await tapWord(page, 'bologna'); await sleep(300);
-    assert.equal(await page.textContent('.wcard .term'), 'treno arrivò a Bologna');
+    assert.equal(await text(page, '.wpop .wp-term'), 'treno arrivò a Bologna');
+  });
+
+  test('closing a new phrase saves it as LingQ 1; a second tap on it drills into the word', async () => {
+    const { page, errors } = await openApp(t, srv.url, { mt: 'a small suitcase' });
+    await openBook(page);
+    await holdWord(page, 'valigia');
+    const b = await (await page.$('.w[data-w="nuovo"]')).boundingBox();
+    await page.mouse.move(b.x + 4, b.y + 5, { steps: 6 });
+    await page.mouse.up(); await sleep(500);
+    await page.mouse.click(10, 450); await sleep(500); // tap off
+    assert.equal(await page.getAttribute('.phr', 'class'), 'phr s1');
+    assert.equal(await page.getAttribute('.phr', 'data-ph'), 'valigia piccola e un quaderno nuovo');
+
+    await tapWord(page, 'quaderno');
+    assert.equal(await text(page, '.wpop .wp-term'), 'valigia piccola e un quaderno nuovo', 'first tap: the phrase');
+    assert.match(await text(page, '.wp-mean'), /a small suitcase\s*Saved/);
+    await tapWord(page, 'quaderno');
+    assert.equal(await text(page, '.wpop .wp-term'), 'quaderno', 'second tap: the word');
+    assert.deepEqual(await page.$$eval('.w.sel', (e) => e.map((x) => x.dataset.w)), ['quaderno']);
+    await page.mouse.click(10, 450); await sleep(300);
+    await tapWord(page, 'quaderno');
+    assert.equal(await text(page, '.wpop .wp-term'), 'valigia piccola e un quaderno nuovo', 'starts over with the phrase');
+    assert.deepEqual(errors, []);
   });
 
   test('a phrase keeps its sentence and the sentence translation, shown in Vocabulary', async () => {
@@ -97,6 +124,7 @@ describe('words', () => {
     const b = await (await page.$('.w[data-w="nuovo"]')).boundingBox();
     await page.mouse.move(b.x + 4, b.y + 5, { steps: 6 });
     await page.mouse.up(); await sleep(500);
+    await page.click('.wpop .wp-more'); await sleep(400);
     await page.click('.hint'); await sleep(300); // save the suggested meaning
     await page.click('.tr-btn'); await sleep(400);
     await page.click('.wcard .x'); await sleep(300);
@@ -124,6 +152,29 @@ describe('words', () => {
     await page.click('.hint'); await sleep(400);
     await page.click('.wcard .x'); await sleep(300);
     assert.equal((await page.$$('.sent:first-of-type .w.ph')).length, 9, 'every word of the sentence is marked');
+    assert.deepEqual(errors, []);
+  });
+
+  test('with the bubble open, a tap anywhere only closes it; a looked-up New word becomes LingQ 1', async () => {
+    const { page, errors } = await openApp(t, srv.url);
+    await openBook(page);
+    await tapWord(page, 'treno'); await sleep(200);
+    await tapWord(page, 'buongiorno'); // a tap on another word just closes the bubble
+    assert.equal(await page.$$eval('.wpop', (e) => e.length), 0, 'bubble closed');
+    assert.match(await page.getAttribute('.w[data-w="treno"]', 'class'), /\bs1\b/, 'treno became LingQ 1');
+    assert.match(await page.getAttribute('.w[data-w="buongiorno"]', 'class'), /\bs0\b/, 'and the other word is untouched');
+    await sleep(200);
+    await page.mouse.click(385, 300); await sleep(600);
+    assert.equal(await pageNo(page), 2, 'the next tap works as usual');
+    await page.keyboard.press('ArrowLeft'); await sleep(600);
+
+    // A known word stays known, and a held press with the bubble open doesn't start a phrase.
+    await tapWord(page, 'valigia'); await page.click('.wpop [data-s="5"]'); await sleep(400);
+    await tapWord(page, 'valigia'); await sleep(200);
+    await holdWord(page, 'buongiorno'); await page.mouse.up(); await sleep(300);
+    assert.equal(await page.$$eval('.wpop', (e) => e.length), 0, 'bubble closed');
+    assert.equal(await page.$$eval('.w.sel', (e) => e.length), 0, 'no phrase selection');
+    assert.match(await page.getAttribute('.w[data-w="valigia"]', 'class'), /^w( |$)/, 'still known');
     assert.deepEqual(errors, []);
   });
 

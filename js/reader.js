@@ -18,7 +18,7 @@ const R = {
   book: null, ch: 0, chapter: null,
   page: 0, pages: 1, step: 0,
   spans: [], pageOf: null, seenPages: new Set(),
-  anchor: null, phraseStart: null, selEnd: null, selSpans: [], onExit: null, speaking: false, busy: false,
+  anchor: null, phraseStart: null, selEnd: null, sel: null, phraseOpen: null, onExit: null, speaking: false, busy: false,
 };
 
 const dark = () => settings.appearance === 'dark' || (settings.appearance === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
@@ -122,6 +122,7 @@ async function loadChapter(idx, { frac = 0, last = false, anchor = null } = {}) 
   R.ch = idx;
   R.chapter = await db.get('chapters', `${R.book.id}:${idx}`);
   R.seenPages = new Set();
+  R.sel = null;
   render();
   await document.fonts?.ready;
   layout();
@@ -152,6 +153,7 @@ function render() {
   R.content.innerHTML = html;
   R.spans = $$('.w', R.content);
   R.spans.forEach((s, k) => { s.dataset.i = k; });
+  paintSel();
   $('#r-running').textContent = R.chapter.title;
 }
 
@@ -180,17 +182,14 @@ function layout() {
 }
 
 function computePageOf() {
-  // Column position of every word, independent of the current translateX.
-  const left0 = R.content.getBoundingClientRect().left - currentOffset();
+  // Column position of every word relative to the content box. Both rects include the
+  // current translateX (even mid-animation), so the result doesn't depend on it.
+  const left0 = R.content.getBoundingClientRect().left;
   R.pageOf = new Int32Array(R.spans.length);
   for (let k = 0; k < R.spans.length; k++) {
     const x = R.spans[k].getBoundingClientRect().left - left0;
     R.pageOf[k] = Math.max(0, Math.floor((x + 2) / R.step));
   }
-}
-function currentOffset() {
-  const m = /translateX\((-?[\d.]+)px\)/.exec(R.content.style.transform);
-  return m ? +m[1] : 0;
 }
 function pageOfIndex(i) {
   if (!R.pageOf) computePageOf();
@@ -376,7 +375,8 @@ function initGestures() {
     dragging = false; longPressed = false;
     target = e.target.closest('.w');
     clearTimeout(lp);
-    if (target) lp = setTimeout(() => { longPressed = true; startPhrase(target); }, 480);
+    // While a lookup is open a press only closes it, so no phrase selection starts.
+    if (target && !bubbleOpen()) lp = setTimeout(() => { longPressed = true; startPhrase(target); }, 480);
   });
   area.addEventListener('pointermove', (e) => {
     if (e.pointerId !== pid) return;
@@ -439,9 +439,21 @@ function initGestures() {
 
 function onTap(e, wordEl) {
   if (sheetOpen()) { closeSheet(); return; }
+  // With a lookup open, a tap only closes it. The exception is a tap on a word of the phrase
+  // being looked up: like LingQ, the first tap shows the phrase and the second drills into the word.
+  if (bubbleOpen()) {
+    const ph = R.phraseOpen, i = wordEl ? +wordEl.dataset.i : -1;
+    closeBubble();
+    if (ph && i >= ph.a && i <= ph.b) openWord(R.spans[i]);
+    return;
+  }
   if (wordEl && R.phraseStart) { finishPhrase(wordEl); return; }
-  if (wordEl) { openWord(wordEl); return; }
-  if (bubbleOpen()) { closeBubble(); return; }
+  if (wordEl) {
+    const ph = phraseAt(wordEl);
+    if (ph) openPhrase(ph.a, ph.b, +wordEl.dataset.i);
+    else openWord(wordEl);
+    return;
+  }
   // A second tap right after the bubble or card closed (say, a double tap on ✓) is meant for them, not the page.
   if (performance.now() - Math.max(bubbleClosedAt(), sheetClosedAt()) < 450) return;
   clearPhrase();
@@ -466,29 +478,61 @@ function textBetween(a, b) {
 }
 const blockOf = (el) => el.closest('p, h1, h2');
 
+// The highlighted words (a tapped word, or a phrase being selected or looked up) are kept as
+// span indices, so the highlight survives a re-render. A range is painted as one block.
+function setSel(a, b = a) {
+  R.sel = a == null ? null : { a: Math.min(a, b), b: Math.max(a, b) };
+  paintSel();
+}
+function unsel(a, b = a) { if (R.sel && R.sel.a === a && R.sel.b === b) setSel(null); }
+function paintSel() {
+  for (const s of R.content.querySelectorAll('.w.sel')) s.classList.remove('sel');
+  const range = !!R.sel && R.sel.b > R.sel.a && !!window.CSS?.highlights;
+  CSS.highlights?.delete('lr-sel');
+  R.content.classList.toggle('sel-range', range);
+  if (!R.sel) return;
+  for (let k = R.sel.a; k <= R.sel.b; k++) R.spans[k]?.classList.add('sel');
+  if (range) {
+    const r = document.createRange();
+    r.setStartBefore(R.spans[R.sel.a]); r.setEndAfter(R.spans[R.sel.b]);
+    CSS.highlights.set('lr-sel', new Highlight(r));
+  }
+}
+
+// The saved-phrase occurrence a word belongs to, as span indices (its first word carries .ph0).
+function phraseAt(el) {
+  const term = el.dataset.ph;
+  if (!term) return null;
+  let a = +el.dataset.i;
+  while (a > 0 && !R.spans[a].classList.contains('ph0')) a--;
+  if (R.spans[a].dataset.ph !== term) return null;
+  return { a, b: Math.min(R.spans.length - 1, a + term.split(' ').length - 1) };
+}
+
 // Tapping a word shows the quick bubble; its "⋯" (or the word itself) opens the full card.
 function openWord(el) {
-  el.classList.add('sel');
+  const i = +el.dataset.i;
+  setSel(i);
   openBubble({
-    anchor: el, container: R.el, term: el.dataset.w,
+    anchor: () => R.spans[i], container: R.el, term: el.dataset.w,
     display: el.textContent.replace(/’/g, "'"), context: sentenceOf(el),
-    onClose: () => el.classList.remove('sel'),
-    onExpand: () => openWordFull(el),
+    onClose: () => unsel(i),
+    onExpand: () => openWordFull(R.spans[i]),
   });
 }
 
 function openWordFull(el) {
-  const term = el.dataset.w;
-  el.classList.add('sel');
+  const term = el.dataset.w, i = +el.dataset.i;
+  setSel(i);
   const inPhrase = el.dataset.ph && el.dataset.ph !== term ? el.dataset.ph : null;
   openWordCard({
     term, display: el.textContent.replace(/’/g, "'"), context: sentenceOf(el), inPhrase,
-    onClose: () => el.classList.remove('sel'),
+    onClose: () => unsel(i),
     onOpenPhrase: () => {
-      const spans = R.content.querySelectorAll(`.w[data-ph="${CSS.escape(inPhrase)}"]`);
-      openPhraseCard(inPhrase, [...spans].filter((s) => blockOf(s) === blockOf(el)), sentenceOf(el));
+      const ph = phraseAt(R.spans[i]);
+      if (ph) openPhraseCard(ph.a, ph.b, sentenceOf(R.spans[i]));
     },
-    onSaveSentence: () => openSentenceCard(el),
+    onSaveSentence: () => openSentenceCard(R.spans[i]),
   });
 }
 
@@ -496,14 +540,14 @@ function openWordFull(el) {
 function openSentenceCard(el) {
   const spans = [...(el.closest('.sent') || blockOf(el)).querySelectorAll('.w')];
   if (spans.length < 2) return;
-  openPhraseCard(spans.map((s) => s.dataset.w).join(' '), spans, sentenceOf(el));
+  openPhraseCard(+spans[0].dataset.i, +spans[spans.length - 1].dataset.i, sentenceOf(el));
 }
 
 // Phrases: hold a word, then drag across the phrase (or lift and tap its last word).
 function startPhrase(el) {
   clearPhrase();
   R.phraseStart = el;
-  paintSelection(+el.dataset.i, +el.dataset.i);
+  setSel(+el.dataset.i);
   closeBubble();
   haptic();
   toast('Drag to select a phrase, or tap its last word');
@@ -516,18 +560,13 @@ function extendSelection(x, y) {
   let b = +el.dataset.i;
   if (Math.abs(b - a) > MAX_PHRASE - 1) b = a + Math.sign(b - a) * (MAX_PHRASE - 1);
   R.selEnd = R.spans[b];
-  paintSelection(Math.min(a, b), Math.max(a, b));
+  setSel(a, b);
 }
 function endSelection() {
   const end = R.selEnd;
   R.selEnd = null;
   // Lifted without dragging: stay in "tap the last word" mode.
   if (end && end !== R.phraseStart) finishPhrase(end);
-}
-function paintSelection(a, b) {
-  for (const s of R.selSpans) s.classList.remove('sel');
-  R.selSpans = R.spans.slice(a, b + 1);
-  for (const s of R.selSpans) s.classList.add('sel');
 }
 // Long enough for a whole sentence or two; phrase underlines are matched within one paragraph.
 const MAX_PHRASE = 60;
@@ -537,20 +576,34 @@ function finishPhrase(el) {
   if (blockOf(el) !== blockOf(R.phraseStart)) { toast('A phrase has to stay inside one paragraph'); clearPhrase(); return; }
   if (b - a > MAX_PHRASE - 1) { toast(`Phrases can be up to ${MAX_PHRASE} words`); clearPhrase(); return; }
   if (a === b) { const s = R.phraseStart; clearPhrase(); openWordFull(s); return; }
-  const spans = R.spans.slice(a, b + 1);
   R.phraseStart = null;
-  R.selSpans = []; // the phrase card owns the highlight from here
-  const term = spans.map((s) => s.dataset.w).join(' ');
-  openPhraseCard(term, spans, contextOf(spans));
+  openPhrase(a, b, +el.dataset.i);
 }
-function openPhraseCard(term, spans, context) {
-  spans.forEach((s) => s.classList.add('sel'));
+// A phrase's quick bubble, the same one words get. Closing it saves a new phrase as LingQ 1.
+function openPhrase(a, b, at = a) {
+  const spans = R.spans.slice(a, b + 1);
+  setSel(a, b);
+  const ph = { a, b };
+  R.phraseOpen = ph;
+  openBubble({
+    anchor: () => R.spans[at], container: R.el, phrase: true,
+    term: spans.map((s) => s.dataset.w).join(' '),
+    display: textBetween(spans[0], spans[spans.length - 1]), context: contextOf(spans),
+    onClose: () => { unsel(a, b); if (R.phraseOpen === ph) R.phraseOpen = null; },
+    onExpand: () => openPhraseCard(a, b),
+  });
+}
+function openPhraseCard(a, b, context) {
+  const spans = R.spans.slice(a, b + 1);
+  setSel(a, b);
   const display = textBetween(spans[0], spans[spans.length - 1]);
-  openWordCard({ term, display, phrase: true, context, onClose: () => spans.forEach((s) => s.classList.remove('sel')) });
+  openWordCard({
+    term: spans.map((s) => s.dataset.w).join(' '), display, phrase: true,
+    context: context || contextOf(spans), onClose: () => unsel(a, b),
+  });
 }
 function clearPhrase() {
-  for (const s of R.selSpans) s.classList.remove('sel');
-  R.selSpans = [];
+  if (R.phraseStart || R.selEnd) setSel(null);
   R.phraseStart = null;
   R.selEnd = null;
 }

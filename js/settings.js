@@ -53,7 +53,7 @@ export const THEMES = {
   quiet: { name: 'Quiet', bg: '#4a4a4d', fg: '#d6d6d6', dbg: '#2c2c2e', dfg: '#d6d6d6' },
   paper: { name: 'Paper', bg: '#efece6', fg: '#2a2a2a', dbg: '#1d1c1a', dfg: '#cfcac0' },
   bold: { name: 'Bold', bg: '#ffffff', fg: '#000000', dbg: '#000000', dfg: '#ffffff', weight: 600 },
-  calm: { name: 'Calm', bg: '#f3e6cc', fg: '#3f2e1c', dbg: '#2b2418', dfg: '#e3d3b3', font: 'palatino' },
+  calm: { name: 'Calm', bg: '#f1e2c9', fg: '#000000', dbg: '#2b2418', dfg: '#e3d3b3', font: 'palatino' },
   focus: { name: 'Focus', bg: '#fbf6e6', fg: '#1f1a10', dbg: '#1e1b14', dfg: '#e8dfc8', font: 'charter' },
 };
 

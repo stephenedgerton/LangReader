@@ -669,6 +669,7 @@ function toggleMenu(force) {
   if (!pop.hidden) {
     const s = R.book && goalSummary(R.book);
     $('[data-act=goal] span', pop).textContent = !s ? 'Reading Goal' : s.met ? 'Reading Goal · done ✓' : `Reading Goal · ${s.today}/${s.pages}`;
+    $('[data-act=complete] span', pop).textContent = R.book?.progress.done?.includes(R.ch) ? 'Mark Chapter Not Complete' : 'Mark Chapter Complete';
   }
 }
 
@@ -833,15 +834,54 @@ function speakPage() {
 }
 
 async function completeChapter() {
+  if (R.book.progress.done?.includes(R.ch)) return uncompleteChapter();
   const blue = new Set();
   for (const s of R.spans) if (statusOf(s.dataset.w) === 0) blue.add(s.dataset.w);
-  const n = settings.autoKnown ? await setMany([...blue], 5) : 0;
+  // The words this marks Known (blue words with no entry), kept so it can be undone later.
+  const marked = settings.autoKnown ? [...blue].filter((w) => !entry(w)) : [];
+  const n = marked.length ? await setMany(marked, 5) : 0;
   bump('known', n);
+  const ch = R.ch, frac = R.pages > 1 ? R.page / R.pages : 0;
+  R.book.progress.marked = { ...R.book.progress.marked, [ch]: marked };
   let unread = 0;
   for (let p = 0; p < R.pages; p++) if (!R.seenPages.has(p)) { unread += spansOnPage(p).length; R.seenPages.add(p); }
   bump('wordsRead', unread);
   markChapterDone(R.ch);
   saveProgress(R.ch === R.book.chapterCount - 1);
-  toast(n ? `Chapter complete · +${n} known` : 'Chapter complete');
-  if (R.ch < R.book.chapterCount - 1) setTimeout(() => transition(() => loadChapter(R.ch + 1), 1), 700);
+  toast(n ? `Chapter complete · +${n} known` : 'Chapter complete', {
+    action: 'Undo',
+    onAction: async () => {
+      haptic();
+      if (R.ch !== ch) await transition(() => loadChapter(ch, { frac }), -1);
+      uncompleteChapter();
+    },
+  });
+  if (R.ch < R.book.chapterCount - 1) setTimeout(() => { if (R.ch === ch && R.book.progress.done.includes(ch)) transition(() => loadChapter(ch + 1), 1); }, 700);
+}
+
+// Mark Chapter Complete, reversed: the chapter is no longer done and the words it marked Known
+// go back to New (unless you've since saved something on them).
+async function uncompleteChapter() {
+  const pr = R.book.progress, ch = R.ch;
+  pr.done = (pr.done || []).filter((i) => i !== ch);
+  const terms = pr.marked?.[ch] || guessMarked();
+  if (pr.marked) delete pr.marked[ch];
+  const back = await revertToNew(terms);
+  bump('known', -back);
+  saveProgress();
+  toast(back ? `Chapter not complete · ${back} word${back === 1 ? '' : 's'} back to new` : 'Chapter not complete');
+}
+
+// For chapters completed before the words were recorded: Mark Chapter Complete saved its words
+// in one batch, so they share one timestamp (and haven't changed since). That batch is the
+// biggest one among this chapter's plain Known words; a page turn only marks one page's.
+function guessMarked() {
+  const batches = new Map();
+  for (const w of new Set(R.spans.map((s) => s.dataset.w))) {
+    const e = entry(w);
+    if (!e || e.status !== 5 || e.created !== e.updated || e.meaning || e.phrase) continue;
+    if (!batches.has(e.created)) batches.set(e.created, []);
+    batches.get(e.created).push(w);
+  }
+  return [...batches.values()].reduce((a, b) => (b.length > a.length ? b : a), []);
 }

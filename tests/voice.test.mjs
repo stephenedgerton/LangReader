@@ -29,13 +29,14 @@ describe('voice', () => {
     const out = await page.evaluate(async () => {
       const m = await import('./js/piper.js');
       const stats = ({ samples, sampleRate }) => ({ secs: samples.length / sampleRate, sampleRate, peak: samples.reduce((p, x) => Math.max(p, Math.abs(x)), 0) });
-      return { word: stats(await m.synth('treno')), two: stats(await m.synth('Il treno arrivò a Bologna. Che bella giornata!')), slow: stats(await m.synth('treno', 0.5)) };
+      return { word: stats(await m.synth('treno')), two: stats(await m.synth('Il treno arrivò a Bologna. Che bella giornata!')), slow: stats(await m.synth('Il treno arrivò a Bologna. Che bella giornata!', 0.5)) };
     });
     assert.equal(out.word.sampleRate, 16000);
     assert.ok(out.word.secs > 0.25 && out.word.secs < 2, `one word lasts ${out.word.secs}s`);
     assert.ok(out.word.peak > 0.05, 'and is audible');
     assert.ok(out.two.secs > 2.5, `two sentences last ${out.two.secs}s`);
-    assert.ok(out.slow.secs > out.word.secs * 1.4, 'a slower rate stretches it');
+    // Piper varies timing at random, so compare a whole passage, not one short word.
+    assert.ok(out.slow.secs > out.two.secs * 1.4, `half speed stretches it: ${out.two.secs}s → ${out.slow.secs}s`);
     assert.deepEqual(errors, []);
   });
 

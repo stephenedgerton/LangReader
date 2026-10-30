@@ -124,4 +124,42 @@ describe('reader', () => {
     assert.equal(await page.textContent('#r-running'), 'Capitolo 3 · La lettera');
     assert.ok(await page.$eval('#sheet', (e) => e.hidden), 'no stray sheet opens afterwards');
   });
+
+  test('Mark Chapter Complete can be undone, from its toast or later from the menu', async () => {
+    const { page, errors } = await openApp(t, srv.url);
+    await openBook(page);
+    const ch1 = () => page.textContent('#r-running');
+    const known = () => page.evaluate(() => import('./js/vocab.js').then((m) => m.statusOf('valigia')));
+    const complete = async () => { await page.click('#r-menu'); await page.click('[data-act=complete]'); await sleep(300); };
+
+    await complete();
+    assert.match(await page.textContent('#r-toast'), /Chapter complete · \+\d+ known/);
+    assert.equal(await known(), 5);
+    await page.click('#r-toast button'); await sleep(1500);
+    assert.match(await ch1(), /Capitolo 1/, 'Undo stays on (or returns to) the chapter');
+    assert.match(await page.textContent('#r-toast'), /Chapter not complete · \d+ words back to new/);
+    assert.equal(await known(), 0);
+
+    // A chapter completed before the app recorded which words it marked: the menu reverses it.
+    await complete(); await sleep(1200);
+    assert.match(await ch1(), /Capitolo 2/);
+    await page.evaluate(async () => {
+      const db = await new Promise((r) => { const q = indexedDB.open('langreader'); q.onsuccess = () => r(q.result); });
+      const all = await new Promise((r) => { const q = db.transaction('books').objectStore('books').getAll(); q.onsuccess = () => r(q.result); });
+      const b = all.find((x) => x.title === 'Un caffè a Bologna');
+      delete b.progress.marked;
+      b.progress.chapter = 0; b.progress.frac = 0;
+      await new Promise((r) => { const tx = db.transaction('books', 'readwrite'); tx.objectStore('books').put(b); tx.oncomplete = r; });
+    });
+    await page.reload(); await page.waitForSelector('#view-library .book');
+    await openBook(page);
+    await page.click('#r-menu');
+    assert.equal(await page.textContent('[data-act=complete] span'), 'Mark Chapter Not Complete');
+    await page.click('[data-act=complete]'); await sleep(300);
+    assert.match(await page.textContent('#r-toast'), /Chapter not complete · \d+ words back to new/);
+    assert.equal(await known(), 0);
+    await page.click('#r-menu');
+    assert.equal(await page.textContent('[data-act=complete] span'), 'Mark Chapter Complete');
+    assert.deepEqual(errors, []);
+  });
 });

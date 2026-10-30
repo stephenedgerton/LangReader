@@ -1,6 +1,7 @@
 // Translation + speech services.
 import { db } from './db.js';
 import { settings } from './settings.js';
+import { piperSupported, warmUp, unlockAudio, speakPiper, stopPiper } from './piper.js';
 
 // ---------- Translation (MyMemory: free, CORS-enabled, no key needed) ----------
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -65,7 +66,10 @@ export function dictionaryLinks(term) {
   ];
 }
 
-// ---------- Speech (Web Speech API, Italian voice) ----------
+// ---------- Speech ----------
+// settings.voice: '' is Riccardo (the bundled Piper voice), 'system' the best device voice,
+// anything else a device voice by name. Riccardo needs a moment to load, so until he's ready
+// (or if he can't run here) the device voice speaks instead.
 let voice = null;
 function pickVoice() {
   const voices = speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith(settings.lang));
@@ -82,9 +86,22 @@ export function voicesForLang() {
   return speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith(settings.lang));
 }
 
+const useRiccardo = () => piperSupported && !settings.voice && settings.lang === 'it';
+// Start loading Riccardo ahead of the first tap (the reader calls this when it opens).
+export function prepareVoice() { if (useRiccardo()) warmUp(); }
+
 export function speak(text, { onend, onboundary } = {}) {
+  stopSpeaking();
+  // Unlock audio on every tap, even while Riccardo loads, so later clips can play outside a tap.
+  if (useRiccardo()) unlockAudio();
+  if (useRiccardo() && warmUp() === 'ready') {
+    speakPiper(text, { rate: settings.rate, onend }).catch(() => speakSystem(text, { onend, onboundary }));
+    return;
+  }
+  speakSystem(text, { onend, onboundary });
+}
+function speakSystem(text, { onend, onboundary }) {
   if (!('speechSynthesis' in window)) return;
-  speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   voice = pickVoice() || voice;
   if (voice) u.voice = voice;
@@ -94,4 +111,7 @@ export function speak(text, { onend, onboundary } = {}) {
   if (onboundary) u.onboundary = onboundary;
   speechSynthesis.speak(u);
 }
-export function stopSpeaking() { if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+export function stopSpeaking() {
+  stopPiper();
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}

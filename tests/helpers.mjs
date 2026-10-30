@@ -14,7 +14,7 @@ export const FIXTURES = join(ROOT, 'tests', 'fixtures');
 
 const TYPES = {
   '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css',
-  '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml',
+  '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.wasm': 'application/wasm', '.svg': 'image/svg+xml',
 };
 
 export function startServer() {
@@ -45,7 +45,8 @@ export const WIKTIONARY = {
 const json = (status, body) => ({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
 
 // opts.wiktionary: map of title -> response (default WIKTIONARY); opts.mt: translation text, or null to fail.
-export async function openApp(t, base, { hash = 'library', tipsSeen = true, settings = null, wiktionary = WIKTIONARY, mt = 'mock translation', context = {} } = {}) {
+// opts.voice: settings.voice; the device voice by default, so tests don't load Riccardo (pass '' for him).
+export async function openApp(t, base, { hash = 'library', tipsSeen = true, settings = null, wiktionary = WIKTIONARY, mt = 'mock translation', voice = 'system', context = {} } = {}) {
   const browser = t.browser || (t.browser = await chromium.launch());
   const ctx = await browser.newContext({ ...devices['iPhone 13'], acceptDownloads: true, ...context });
   const page = await ctx.newPage();
@@ -53,10 +54,11 @@ export async function openApp(t, base, { hash = 'library', tipsSeen = true, sett
   page.on('pageerror', (e) => errors.push(e.message));
   // 404s are how Wiktionary says "no entry", so they're expected.
   page.on('console', (m) => { if (m.type() === 'error' && !/404/.test(m.text())) errors.push(m.text()); });
-  await page.addInitScript(({ tipsSeen, settings }) => {
+  await page.addInitScript(({ tipsSeen, settings, voice }) => {
     if (tipsSeen) localStorage.setItem('langreader.tipsSeen', '1');
-    if (settings) localStorage.setItem('langreader.settings', JSON.stringify(settings));
-  }, { tipsSeen, settings });
+    if (settings) localStorage.setItem('langreader.settings', JSON.stringify({ voice, ...settings }));
+    else if (!localStorage.getItem('langreader.settings')) localStorage.setItem('langreader.settings', JSON.stringify({ voice }));
+  }, { tipsSeen, settings, voice });
   const wikt = [];
   await page.route('https://en.wiktionary.org/**', (r) => {
     const title = decodeURIComponent(new URL(r.request().url()).pathname.split('/').pop());

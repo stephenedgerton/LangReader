@@ -18,6 +18,7 @@ const defaults = {
   haptics: true,
   highlights: true,
   hlStyle: 'underline',    // underline | background (LingQ's two highlight styles)
+  commonHL: true,          // new words among the 2,000 most common get a stronger mark
   rate: 0.9,
   voice: '',               // '' Riccardo | piper:paola | piper:serena | system | a device voice's name
   speakOnTap: true,        // tapping a word also says it

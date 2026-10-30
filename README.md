@@ -25,6 +25,13 @@ A web app for reading Italian on your phone. It looks and feels like **Apple Boo
 - Words on this page, Translate Page, Listen to Page (text-to-speech), and Mark Chapter Complete
 - Vocabulary list (LingQs, Phrases, Known, Ignored), flashcard review, and CSV export for Anki
 - Stats for known words, LingQs, words read today and new known words today
+
+**Stats tab: your vocabulary against real Italian**
+- Tapping a word shows **how common it is**: its dictionary form's rank among the 20,000 most common words in Italian fiction (*arrivò* → *arrivare · #268 · Top 500 ●●●●●*)
+- A rough **level** (A1–C1) from how many common words you know, and your **coverage of a typical novel** (the share of its words you know, with LingQs shown apart), against the 95% and 98% comfort lines
+- **Frequency bands** (top 100 / 500 / 1k / 2k / 5k / 10k / 20k), a daily **trend** with a forecast of when you'd reach 95%, and 26 **themes** (food, travel, the body …) that list the words you're missing
+- Knowing any form of a word counts its dictionary form: knowing *arrivò* means you know *arrivare*
+- In the reader, new words among the 2,000 most common get a **stronger mark** (Themes & Settings › Stronger mark on common new words)
 - Elisions split the way LingQ does: *dell'anno* becomes *dell'* + *anno*
 
 **Import**: paste text, or open `.txt` or `.epub` files. Lines like "Capitolo 2" split pasted text into chapters.
@@ -57,5 +64,6 @@ Browser tests use [Playwright](https://playwright.dev) with Chromium at iPhone s
 
 ## Notes
 - Word lookups use [Wiktionary](https://en.wiktionary.org) (free, no key): parts of speech, definitions, and the base form of inflected words (*arrivò* → *arrivare*). Wiktionary lookups apply when translating into English.
+- Word frequencies come from 199 Italian novels on [Project Gutenberg](https://www.gutenberg.org), with word forms from [Morph-it!](https://docs.sslmit.unibo.it/doku.php?id=resources:morph-it) (Baroni & Zanchetta, CC BY-SA 2.0). `tools/build-freq.mjs` builds `data/freq-it-v1.json` from them; only the counts ship. The novels are about a century old, so modern words rank lower than they would today (*telefono* is #7020).
 - Sentence translations, and words Wiktionary doesn't have, use the free [MyMemory](https://mymemory.translated.net) API. Results from both are cached on the device. Adding your email in Settings raises MyMemory's daily free limit.
 - All data lives in IndexedDB on the device. Use Settings → Export to back it up or move it to another device.

@@ -4,7 +4,7 @@
 //   chapters  {key: `${bookId}:${idx}`, bookId, idx, title, blocks: [{t:'h'|'p', x}]}
 //   words     {term, status, meaning, phrase, example, created, updated}
 //   tcache    {key, value}   translation cache
-//   days      {date, seconds, wordsRead, known, lingqs}
+//   days      {date, seconds, wordsRead, known, lingqs, lemmas?, cover?, coverL?}
 
 const DB_NAME = 'langreader';
 const DB_VERSION = 1;

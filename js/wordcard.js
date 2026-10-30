@@ -7,6 +7,7 @@ import { lookup, gloss } from './dictionary.js';
 import { settings } from './settings.js';
 import { normalize, tokenize } from './text.js';
 import { haptic } from './haptics.js';
+import { freqSentence } from './freq.js';
 
 // Like LingQ, every LingQ keeps the sentence it was saved from (`example`), plus that sentence's
 // translation (`exampleTr`) once you've translated it. Phrases also keep `display`, the text as printed.
@@ -34,6 +35,7 @@ export function openWordCard(opts) {
         <button class="x" aria-label="Close">${icons.close}</button>
       </div>
       ${ctxHTML}
+      ${!phrase && freqSentence(term) ? `<div class="freq-line">${freqSentence(term)}</div>` : ''}
       <div class="dict" hidden></div>
       <div class="hints"><div class="loading">Looking up translations…</div></div>
       <form class="meaning-input">

@@ -61,3 +61,11 @@ test('textToChapters without headings uses the fallback title', () => {
   assert.equal(chapters[0].title, 'Appunti');
   assert.equal(chapters[0].blocks.length, 2); // no blank lines: each line is a paragraph
 });
+
+test('paragraphHTML marks very common words with c when asked', () => {
+  const html = paragraphHTML('Il treno parte.', () => 0, new Map(), (w) => w === 'treno');
+  assert.match(html, /<span class="w s0 c" data-w="treno">treno<\/span>/);
+  assert.match(html, /<span class="w s0" data-w="il">/);
+  assert.doesNotMatch(paragraphHTML('Il treno parte.', () => 0, new Map()), /\bc\b/);
+});
+

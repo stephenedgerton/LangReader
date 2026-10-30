@@ -1,6 +1,6 @@
 // Offline support: app shell is cached; translation requests always go to the network.
-const VERSION = 'langreader-v13';
-// The Piper voice and its runtime (~43 MB) never change in place (a new version gets a new
+const VERSION = 'langreader-v14';
+// The Piper voices and their runtime never change in place (a new version gets a new
 // file name), so they're cache-first in a cache of their own that survives app updates.
 const ASSETS = 'langreader-assets-v1';
 const isAsset = (url) => /\/(voices|vendor)\//.test(url.pathname);

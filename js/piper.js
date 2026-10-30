@@ -1,16 +1,22 @@
-// Riccardo, an Italian Piper neural voice that runs on the device (see js/tts-worker.js).
-// The model and runtime (~32 MB over the wire) load on first use and are kept by the service worker.
-const VOICE = new URL('../voices/it_IT-riccardo-x_low.onnx', import.meta.url).href;
+// Italian Piper neural voices that run on the device (see js/tts-worker.js). A voice's model,
+// plus the shared runtime (~4 MB over the wire), loads on first use and is kept by the service worker.
+// The worker holds one voice at a time; switching voices loads the new one.
+export const VOICES = {
+  riccardo: { name: 'Riccardo', sex: 'male', file: 'it_IT-riccardo-x_low', mb: 28 },
+  paola: { name: 'Paola', sex: 'female', file: 'it_IT-paola-medium', mb: 64 },
+  serena: { name: 'Serena', sex: 'female', file: 'it_IT-serena-medium', mb: 64 },
+};
+const url = (voice) => new URL(`../voices/${VOICES[voice].file}.onnx`, import.meta.url).href;
 
 const AC = window.AudioContext || window.webkitAudioContext;
 export const piperSupported = !!(AC && window.Worker && window.WebAssembly);
 
 let worker = null, ctx = null, source = null, seq = 0, nextId = 0;
-let state = 'idle';             // idle | loading | ready | failed
+let loaded = { voice: null, state: 'idle' };   // state: loading | ready | failed
 const pending = new Map();
-const cache = new Map();        // `${rate}|${text}` -> {samples, sampleRate}, most recent last
+const cache = new Map();        // `${voice}|${rate}|${text}` -> {samples, sampleRate}, most recent last
 
-function call(msg) {
+function call(voice, msg) {
   if (!worker) {
     worker = new Worker(new URL('./tts-worker.js', import.meta.url));
     worker.onmessage = ({ data }) => {
@@ -19,24 +25,24 @@ function call(msg) {
     };
   }
   const id = ++nextId;
-  return new Promise((resolve, reject) => { pending.set(id, { resolve, reject }); worker.postMessage({ id, voice: VOICE, ...msg }); });
+  return new Promise((resolve, reject) => { pending.set(id, { resolve, reject }); worker.postMessage({ id, voice: url(voice), ...msg }); });
 }
 
-// Start loading the voice. Resolves true once Riccardo can speak.
-export function warmUp() {
-  if (state === 'idle') {
-    state = 'loading';
-    call({}).then(() => { state = 'ready'; }, (e) => { state = 'failed'; console.warn('Piper voice unavailable:', e.message); });
+// Start loading a voice; returns its state (ready once it can speak).
+export function warmUp(voice) {
+  if (loaded.voice !== voice) {
+    const mine = loaded = { voice, state: 'loading' };
+    call(voice, {}).then(() => { mine.state = 'ready'; }, (e) => { mine.state = 'failed'; console.warn(`Piper voice ${voice} unavailable:`, e.message); });
   }
-  return state;
+  return loaded.state;
 }
-export const piperReady = () => state === 'ready';
+export const piperReady = (voice) => loaded.voice === voice && loaded.state === 'ready';
 
-export async function synth(text, rate = 1) {
-  const key = `${rate}|${text}`;
+export async function synth(text, rate = 1, voice = 'riccardo') {
+  const key = `${voice}|${rate}|${text}`;
   let hit = cache.get(key);
   if (hit) { cache.delete(key); cache.set(key, hit); return hit; }
-  hit = await call({ text, rate });
+  hit = await call(voice, { text, rate });
   cache.set(key, hit);
   if (cache.size > 60) cache.delete(cache.keys().next().value);
   return hit;
@@ -57,15 +63,16 @@ export function stopPiper() {
   source = null;
 }
 
-// Speaks with Riccardo. onend fires when the audio finishes, not when it's cut off by another call.
-export async function speakPiper(text, { rate = 1, onend } = {}) {
+// onend fires when the audio finishes, not when it's cut off by another call.
+export async function speakPiper(text, { voice, rate = 1, onend } = {}) {
   stopPiper();
   const mine = seq;
   unlockAudio();
-  const { samples, sampleRate } = await synth(text, rate);
+  let clip;
+  try { clip = await synth(text, rate, voice); } catch (e) { if (mine !== seq) return; throw e; }
   if (mine !== seq) return;
-  const buf = ctx.createBuffer(1, samples.length, sampleRate);
-  buf.copyToChannel(samples, 0);
+  const buf = ctx.createBuffer(1, clip.samples.length, clip.sampleRate);
+  buf.copyToChannel(clip.samples, 0);
   source = ctx.createBufferSource();
   source.buffer = buf;
   source.connect(ctx.destination);

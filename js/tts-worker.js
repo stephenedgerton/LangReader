@@ -4,21 +4,26 @@
 importScripts('../vendor/piper/piper_phonemize.js', '../vendor/onnxruntime/ort.wasm.min.js');
 
 const PIPER = '../vendor/piper/';
-let engine = null;
+const get = async (url, as) => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r[as](); };
+let phonemizer = null;          // the phonemizer's wasm and data, shared by every voice
+let engine = null;              // {voice, ready}: one voice in memory at a time
 
 function load(voice) {
-  return engine ||= (async () => {
-    const get = async (url, as) => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r[as](); };
+  if (engine?.voice === voice) return engine.ready;
+  const old = engine;
+  const mine = engine = { voice };
+  mine.ready = (async () => {
     // Threads need cross-origin isolation, which GitHub Pages can't give us.
     ort.env.wasm.numThreads = 1;
     ort.env.wasm.wasmPaths = new URL('../vendor/onnxruntime/', location.href).href;
-    const [config, model, wasm, data] = await Promise.all([
-      get(voice + '.json', 'json'), get(voice, 'arrayBuffer'),
-      get(PIPER + 'piper_phonemize.wasm', 'arrayBuffer'), get(PIPER + 'piper_phonemize.data', 'arrayBuffer'),
-    ]);
+    phonemizer ||= Promise.all([get(PIPER + 'piper_phonemize.wasm', 'arrayBuffer'), get(PIPER + 'piper_phonemize.data', 'arrayBuffer')])
+      .catch((e) => { phonemizer = null; throw e; });
+    const [config, model, [wasm, data]] = await Promise.all([get(voice + '.json', 'json'), get(voice, 'arrayBuffer'), phonemizer]);
     const session = await ort.InferenceSession.create(model, { executionProviders: ['wasm'] });
     return { config, session, wasm, data };
-  })().catch((e) => { engine = null; throw e; });
+  })().catch((e) => { if (engine === mine) engine = null; throw e; });
+  old?.ready.then((e) => e.session.release(), () => {});
+  return mine.ready;
 }
 
 // piper_phonemize is a command-line program: one fresh instance per call (it's small, and

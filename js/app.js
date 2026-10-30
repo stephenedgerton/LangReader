@@ -188,7 +188,7 @@ function settingsSheet() {
       <button data-act="names"><span>Ignore common Italian names</span></button>
     </div>
     <input type="file" accept=".json,application/json" hidden>
-    <p class="muted" style="font-size:13px;margin-top:14px">Everything is stored privately on this device. Translations by MyMemory (translated.net). Speech uses Riccardo, a Piper neural voice that runs on this device (about 30 MB, downloaded the first time you open a book). You can switch to your device's Italian voice in the reader's Themes &amp; Settings.</p>`);
+    <p class="muted" style="font-size:13px;margin-top:14px">Everything is stored privately on this device. Translations by MyMemory (translated.net). Speech uses Riccardo, a Piper neural voice that runs on this device (about 30 MB, downloaded the first time you open a book). Paola and Serena, or your device's Italian voice, are in the reader's Themes &amp; Settings.</p>`);
   body.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.matches('.x')) return closeSheet();

@@ -16,6 +16,10 @@ From the npm package `@diffusionstudio/piper-wasm@1.0.0` (MIT), `build/`. It con
 and the file table in `piper_phonemize.js` matches it. `trim-espeak-data.py` does this:
 `python3 trim-espeak-data.py <package>/build <out-dir>`.
 
-## `../voices/` (Piper voice `it_IT-riccardo-x_low`)
-From [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/it/it_IT/riccardo/x_low)
-on Hugging Face. Trained on the M-AILABS speech dataset; see its model card. The only male Italian Piper voice.
+## `../voices/` (Piper voices)
+From [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/it/it_IT) on Hugging Face;
+each has its model card beside it.
+- `it_IT-riccardo-x_low`: male, 16 kHz, trained on the M-AILABS speech dataset. The only male Italian Piper voice.
+- `it_IT-paola-medium`: female, 22 kHz, fine-tuned from the English lessac voice.
+- `it_IT-serena-medium`: female, 22 kHz, trained on a synthetic dataset (CC-BY-4.0). Her `high`
+  model is 114 MB, over GitHub's 100 MB file limit, so it isn't included.

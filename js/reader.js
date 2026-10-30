@@ -6,7 +6,7 @@ import { statusOf, phrases, onChange, setMany, entry, revertToNew } from './voca
 import { openSheet, closeSheet, sheetOpen, sheetClosedAt, toast, esc, icons, $, $$ } from './ui.js';
 import { openWordCard } from './wordcard.js';
 import { translate, speak, stopSpeaking, voicesForLang, googleTranslateURL, prepareVoice } from './services.js';
-import { piperSupported } from './piper.js';
+import { VOICES, piperSupported } from './piper.js';
 import { bump, startReadingClock, stopReadingClock } from './stats.js';
 import { openBubble, closeBubble, bubbleOpen, bubbleClosedAt } from './bubble.js';
 import { createCurl } from './curl.js';
@@ -479,6 +479,8 @@ function onTap(e, wordEl) {
     const ph = phraseAt(wordEl);
     if (ph) openPhrase(ph.a, ph.b, +wordEl.dataset.i);
     else openWord(wordEl);
+    // Synchronously, inside the tap, so iOS lets the audio start.
+    if (settings.speakOnTap) speak(ph ? textBetween(R.spans[ph.a], R.spans[ph.b]) : wordEl.textContent.replace(/’/g, "'"));
     return;
   }
   // A second tap right after the bubble or card closed (say, a double tap on ✓) is meant for them, not the page.
@@ -715,7 +717,8 @@ function themesSheet() {
       <label class="ts-item"><span class="lbl">Haptics</span><span class="switch"><input type="checkbox" data-set="haptics" ${settings.haptics ? 'checked' : ''}><i></i></span></label>
       <label class="ts-item"><span class="lbl">Translate into</span><select data-set="target">${Object.entries(TARGETS).map(([k, n]) => `<option value="${k}" ${settings.target === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="ts-item"><span class="lbl">Speech Rate</span><input type="range" min="0.5" max="1.3" step="0.05" value="${settings.rate}" data-set="rate"></label>
-      ${voices.length || piperSupported ? `<label class="ts-item"><span class="lbl">Voice</span><select data-set="voice">${piperSupported ? '<option value="">Riccardo (natural)</option>' : ''}<option value="${piperSupported ? 'system' : ''}" ${settings.voice === 'system' ? 'selected' : ''}>Device voice</option>${voices.map((v) => `<option ${settings.voice === v.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label>` : ''}
+      <label class="ts-item"><span class="lbl">Speak words when tapped</span><span class="switch"><input type="checkbox" data-set="speakOnTap" ${settings.speakOnTap ? 'checked' : ''}><i></i></span></label>
+      ${voices.length || piperSupported ? `<label class="ts-item"><span class="lbl">Voice</span><select data-set="voice">${voiceOptions(voices)}</select></label>` : ''}
     </div>`, { transparent: true });
 
   body.addEventListener('click', (e) => {
@@ -747,6 +750,13 @@ function themesSheet() {
     if (k === 'hlStyle') applyAppearance();
     if (k === 'voice') prepareVoice();
   });
+}
+// The bundled Piper voices first, with their download sizes, then the device's.
+function voiceOptions(voices) {
+  const opt = (value, label) => `<option value="${esc(value)}" ${settings.voice === value ? 'selected' : ''}>${esc(label)}</option>`;
+  const piper = piperSupported ? Object.entries(VOICES).map(([k, v]) => opt(k === 'riccardo' ? '' : `piper:${k}`,
+    `${v.name} (natural, ${v.sex}, ${v.mb} MB)`)) : [];
+  return [...piper, opt(piperSupported ? 'system' : '', 'Device voice'), ...voices.map((v) => opt(v.name, v.name))].join('');
 }
 let rl;
 function relayoutSoon() { clearTimeout(rl); rl = setTimeout(() => relayout(true), 120); }

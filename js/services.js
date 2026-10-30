@@ -1,7 +1,7 @@
 // Translation + speech services.
 import { db } from './db.js';
 import { settings } from './settings.js';
-import { piperSupported, warmUp, unlockAudio, speakPiper, stopPiper } from './piper.js';
+import { VOICES, piperSupported, warmUp, unlockAudio, speakPiper, stopPiper } from './piper.js';
 
 // ---------- Translation (MyMemory: free, CORS-enabled, no key needed) ----------
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -67,9 +67,9 @@ export function dictionaryLinks(term) {
 }
 
 // ---------- Speech ----------
-// settings.voice: '' is Riccardo (the bundled Piper voice), 'system' the best device voice,
-// anything else a device voice by name. Riccardo needs a moment to load, so until he's ready
-// (or if he can't run here) the device voice speaks instead.
+// settings.voice: '' is Riccardo and 'piper:paola' / 'piper:serena' the other bundled Piper voices,
+// 'system' the best device voice, anything else a device voice by name. A Piper voice needs a
+// moment to load, so until it's ready (or if it can't run here) the device voice speaks instead.
 let voice = null;
 function pickVoice() {
   const voices = speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith(settings.lang));
@@ -86,16 +86,23 @@ export function voicesForLang() {
   return speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith(settings.lang));
 }
 
-const useRiccardo = () => piperSupported && !settings.voice && settings.lang === 'it';
-// Start loading Riccardo ahead of the first tap (the reader calls this when it opens).
-export function prepareVoice() { if (useRiccardo()) warmUp(); }
+// The Piper voice to use, or null for a device voice.
+export function piperVoice() {
+  if (!piperSupported || settings.lang !== 'it') return null;
+  const s = settings.voice;
+  const v = !s ? 'riccardo' : s.startsWith('piper:') ? s.slice(6) : null;
+  return VOICES[v] ? v : null;
+}
+// Start loading the Piper voice ahead of the first tap (the reader calls this when it opens).
+export function prepareVoice() { const v = piperVoice(); if (v) warmUp(v); }
 
 export function speak(text, { onend, onboundary } = {}) {
   stopSpeaking();
-  // Unlock audio on every tap, even while Riccardo loads, so later clips can play outside a tap.
-  if (useRiccardo()) unlockAudio();
-  if (useRiccardo() && warmUp() === 'ready') {
-    speakPiper(text, { rate: settings.rate, onend }).catch(() => speakSystem(text, { onend, onboundary }));
+  // Unlock audio on every tap, even while the voice loads, so later clips can play outside a tap.
+  const v = piperVoice();
+  if (v) unlockAudio();
+  if (v && warmUp(v) === 'ready') {
+    speakPiper(text, { voice: v, rate: settings.rate, onend }).catch(() => speakSystem(text, { onend, onboundary }));
     return;
   }
   speakSystem(text, { onend, onboundary });

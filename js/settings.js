@@ -19,7 +19,8 @@ const defaults = {
   highlights: true,
   hlStyle: 'underline',    // underline | background (LingQ's two highlight styles)
   rate: 0.9,
-  voice: '',
+  voice: '',               // '' Riccardo | piper:paola | piper:serena | system | a device voice's name
+  speakOnTap: true,        // tapping a word also says it
   goalMinutes: 15,
 };
 

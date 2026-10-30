@@ -11,6 +11,7 @@ import { openBubble, closeBubble, bubbleOpen, bubbleClosedAt } from './bubble.js
 import { createCurl } from './curl.js';
 import { haptic } from './haptics.js';
 import { trackProgress, goalSheet, goalSummary } from './goals.js';
+import { checkBadges } from './achievements.js';
 
 const R = {
   el: null, area: null, content: null,
@@ -333,6 +334,18 @@ function saveProgress(finished = false) {
   const cheers = trackProgress(R.book);
   db.put('books', R.book);
   cheers.forEach(cheer);
+  badgesSoon();
+}
+
+// Badges depend on words just marked known and on the day's stats, so check once things settle.
+let badgeTimer;
+function badgesSoon() {
+  clearTimeout(badgeTimer);
+  badgeTimer = setTimeout(async () => {
+    const { fresh } = await checkBadges();
+    if (R.el.hidden) return;
+    for (const b of fresh) cheer({ icon: b.icon, title: 'Achievement unlocked!', sub: esc(b.title) });
+  }, 2000);
 }
 
 // Goal and milestone celebrations drop in from the top, one after another, clear of the toasts.

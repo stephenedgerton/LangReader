@@ -12,6 +12,8 @@ import { SAMPLE } from '../samples/sample.js';
 import { STORIES } from '../samples/stories.js';
 import { haptic } from './haptics.js';
 import { bookPct, goalSheet, goalSummary, goalCardHTML } from './goals.js';
+import { fillDifficulty } from './difficulty.js';
+import { checkBadges, achievementsCardHTML, achievementsSheet } from './achievements.js';
 import { requestPersistence, isPersisted, backupDue, backupAge, markBackedUp, snoozeBackup, saveFile } from './storage.js';
 
 let tab = 'home';
@@ -21,6 +23,7 @@ async function boot() {
   await loadVocab();
   await ignoreNames();
   await addBundledStories();
+  await checkBadges(); // the first check quietly records what you'd already earned
   initReader();
   initSheetGestures();
   $$('#tabbar button').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
@@ -101,6 +104,7 @@ async function renderHome() {
   const frac = Math.min(1, today.seconds / goal);
   const st = streak(days, goal);
   const goalBooks = recent.concat(books.filter((b) => !b.lastOpened)).filter((b) => b.goal);
+  const achievements = await achievementsCardHTML();
 
   v.innerHTML = `
     <div class="view-head"><h1 class="large-title">Home</h1>
@@ -112,6 +116,7 @@ async function renderHome() {
           <div class="kicker">${current.lastOpened ? 'Continue' : 'Start reading'} · ${bookPct(current)}%</div>
           <h3>${esc(current.title)}</h3>
           <div class="author">${esc(current.author || '')}</div>
+          <div class="diff" data-diff="${current.id}"></div>
           <button class="resume" data-open="${current.id}">${current.lastOpened ? 'Resume' : 'Read'}</button>
         </div>
       </div>` : ''}
@@ -130,6 +135,8 @@ async function renderHome() {
     </button>
     ${goalBooks.map(goalCardHTML).join('')}
     ${!goalBooks.length && current ? `<button class="card bgoal-add" data-goal="${current.id}">🎯 <span>Set a pages-a-day goal for <b>${esc(current.title)}</b></span></button>` : ''}
+    <div class="section-title">Achievements</div>
+    ${achievements}
     <div class="section-title">Your Italian</div>
     <div class="stats-grid">
       <div class="stat known"><div class="n">${c.known.toLocaleString()}</div><div class="l">Known words</div></div>
@@ -141,11 +148,13 @@ async function renderHome() {
       <div class="shelf">${recent.slice(1, 12).map((b) => `<button class="book" data-open="${b.id}">${coverHTML(b)}
         <div class="book-info"><span class="pct">${bookPct(b)}%</span></div></button>`).join('')}</div>` : ''}
   `;
+  fillDifficulty(v, books);
   v.onclick = (e) => {
     const b = e.target.closest('[data-open],[data-act],[data-goal]'); if (!b) return;
     if (b.dataset.open) return open(books.find((x) => x.id === b.dataset.open));
     if (b.dataset.goal) return goalSheet(books.find((x) => x.id === b.dataset.goal), { onChange: renderHome });
     if (b.dataset.act === 'goal') return minutesSheet();
+    if (b.dataset.act === 'achievements') return achievementsSheet();
     if (b.dataset.act === 'settings') return settingsSheet();
     if (b.dataset.act === 'backup') return exportAll().then(renderHome);
     if (b.dataset.act === 'snooze') { snoozeBackup(); return renderHome(); }
@@ -239,12 +248,14 @@ async function renderLibrary() {
         <button data-open="${b.id}" style="width:100%">${coverHTML(b)}</button>
         <div class="book-info">
           ${b.lastOpened ? `<span class="pct">${bookPct(b)}%</span>` : '<span class="pct new">NEW</span>'}
+          <span class="diff" data-diff="${b.id}"></span>
           <button class="more" data-more="${b.id}" aria-label="More">${icons.more}</button>
         </div>
         <div class="newwords">${libLine(b)}</div>
       </div>`).join('')}</div>`
       : `<div class="empty"><h3>Your library is empty</h3><p>Tap + to paste Italian text or import a .txt or .epub book.</p></div>`}
   `;
+  fillDifficulty(v, books);
   v.onclick = (e) => {
     const b = e.target.closest('[data-open],[data-more],[data-act]'); if (!b) return;
     if (b.dataset.open) return open(books.find((x) => x.id === b.dataset.open));
@@ -262,6 +273,7 @@ function libLine(b) {
 function bookActions(book) {
   const g = goalSummary(book);
   const body = openSheet(`<h2>${esc(book.title)}<button class="x">${icons.close}</button></h2>
+    <p class="diff-line"><span data-diff="${book.id}" data-long></span></p>
     <div class="action-list">
       <button data-a="read"><span>${book.lastOpened ? 'Resume' : 'Read'}</span></button>
       <button data-a="goal"><span>Reading Goal</span><small class="muted">${g ? `${g.pages} pages a day` : 'Not set'}</small></button>
@@ -269,6 +281,7 @@ function bookActions(book) {
       <button data-a="rename"><span>Rename</span></button>
       <button data-a="delete" class="danger"><span>Remove from library</span>${icons.trash}</button>
     </div>`);
+  fillDifficulty(body, [book]);
   body.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.a === 'goal') return goalSheet(book, { onChange: renderLibrary }); // replaces this sheet

@@ -46,6 +46,7 @@ async function store(name, mode = 'readonly') {
 export const db = {
   async get(name, key) { return wrap((await store(name)).get(key)); },
   async all(name) { return wrap((await store(name)).getAll()); },
+  async byIndex(name, index, key) { return wrap((await store(name)).index(index).getAll(key)); },
   async put(name, value) { return wrap((await store(name, 'readwrite')).put(value)); },
   async del(name, key) { return wrap((await store(name, 'readwrite')).delete(key)); },
   async clear(name) { return wrap((await store(name, 'readwrite')).clear()); },

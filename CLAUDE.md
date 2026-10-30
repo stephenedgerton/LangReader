@@ -31,7 +31,7 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 - `vocab.js` keeps every word in an in-memory `Map` loaded at boot, and notifies `onChange` listeners. The reader recolours matching `.w[data-w]` spans in place, and re-renders the whole chapter when a phrase changes, because phrase underlines are computed at render time.
 - A word entry keeps `example` (the sentence it was saved from, set once) and `exampleTr` (that sentence's translation, once the user translates it). Phrase entries also keep `display`, the text as printed with its punctuation.
 - `names.js` lists names that `ignoreNames()` in `app.js` marks Ignored on first launch through `setMany` (which never touches existing entries). Bump `NAMES_VERSION` after adding names. Leave out names that are also ordinary words. These pre-seeded names don't count toward the backup reminder.
-- Settings live in localStorage `langreader.settings`, behind a Proxy that saves on every write (avoid writing in hot paths). Other localStorage keys: `langreader.seeded`, `langreader.samplesAdded`, `langreader.tipsSeen`, `langreader.lastBackup`, `langreader.backupSnooze`, `langreader.namesIgnored`.
+- Settings live in localStorage `langreader.settings`, behind a Proxy that saves on every write (avoid writing in hot paths). Other localStorage keys: `langreader.seeded`, `langreader.samplesAdded`, `langreader.tipsSeen`, `langreader.lastBackup`, `langreader.backupSnooze`, `langreader.namesIgnored`, `langreader.badges`.
 
 ### Text and rendering (`text.js`)
 - `tokenize` splits elisions the way LingQ does (*dell'anno* → *dell'* + *anno*) and keeps the apostrophe only on known truncations (*po'*). `paragraphHTML` wraps sentences in `.sent` and words in `.w` spans carrying status classes `s0`–`s4`, plus `ph` for words inside a saved phrase. Phrases match within one paragraph only, so a selection can't cross paragraphs. How the classes look depends on `#reader[data-hl]`: `underline` (LingQ's style, the default) or `background`.
@@ -48,6 +48,10 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 - `trackProgress()` runs on every `saveProgress()` in the reader: it keeps `book.log[date] = {from, to}` (today's pages = to − from) and `book.milestones` (25/50/75/100% → date reached; `null` for ones passed before tracking started, which aren't celebrated). It returns celebrations, which the reader shows one at a time in `#r-cheer` at the top, clear of the bottom toasts.
 - A "page" is `settings.wordsPerPage`, measured by `layout()` from the current chapter (only when it has 3+ pages), so it follows text size.
 - The goal sheet opens from the reader menu, the Library ⋯ menu and Home's goal cards.
+
+### Difficulty and achievements (`difficulty.js`, `achievements.js`)
+- A book's difficulty is the share of its distinct words that are New (status 0), leaving out Ignored ones, as LingQ rates lessons. Each book's word list is built from its chapters once per session and kept in memory. `fillDifficulty()` fills `[data-diff]` placeholders after a view renders (`data-long` gives the full wording).
+- Badges (known words, words read, best streak of days meeting the minutes goal, books finished) are all derived from data. Only the date each was earned is stored, in `langreader.badges`. `boot()` runs the first check so badges you already had are recorded quietly (date `null`). After that, the reader checks 2 s after each progress save and celebrates new ones in `#r-cheer`.
 
 ### Word lookup (`bubble.js` → `wordcard.js`)
 - Tapping a word opens the small bubble. ⋯ opens the full card in the shared sheet. Phrases open the full card directly.

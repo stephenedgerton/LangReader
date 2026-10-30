@@ -538,3 +538,82 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .tips ul { margin: 0 0 14px; padding-left: 18px; }
 .tips li + li { margin-top: 6px; }
 .tips .primary { padding: 11px; font-size: 16px; }
+
+/* ============ Book reading goals ============ */
+.bgoal { display: block; width: 100%; text-align: left; margin-top: 10px; }
+.bgoal .bg-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.bgoal .bg-top b { font: 600 16px/1.25 var(--serif-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bgoal .bg-top span { display: flex; align-items: center; gap: 3px; font-size: 15px; font-weight: 600; color: var(--tint); font-variant-numeric: tabular-nums; flex: none; }
+.bgoal .bg-top svg { width: 16px; height: 16px; stroke-width: 2.6; }
+.bgoal .progress-line { margin-bottom: 8px; height: 6px; border-radius: 3px; }
+.bgoal p { margin: 0; color: var(--label-2); font-size: 14px; }
+.bgoal-add { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; margin-top: 10px; font-size: 15px; color: var(--label-2); }
+.bgoal-add b { color: var(--label); font-weight: 600; }
+.goal-line { color: var(--tint); font-weight: 600; }
+.goal-line.met { color: var(--green); }
+
+.gs-book { display: flex; flex-direction: column; gap: 2px; margin: -6px 0 14px; }
+.gs-book b { font: 600 17px/1.25 var(--serif-ui); }
+.gs-book span { font-size: 14px; color: var(--label-2); }
+.gs-intro { font-size: 15px; line-height: 1.4; margin: 0 0 14px; }
+.gs-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.gs-presets button { display: flex; flex-direction: column; align-items: center; gap: 2px; background: var(--fill); border-radius: 12px; padding: 12px 6px 10px; }
+.gs-presets b { font-size: 26px; font-weight: 700; color: var(--tint); line-height: 1; }
+.gs-presets span { font-size: 12px; color: var(--label-2); }
+.gs-presets small { font-size: 12px; color: var(--label); margin-top: 4px; font-weight: 500; }
+.gs-date input { font: inherit; }
+input[type=date] { background: transparent; border: 0; color: var(--tint); font: 500 16px var(--sans); text-align: right; min-width: 0; }
+.gs-date input[type=date] { width: 100%; background: var(--fill); border-radius: 10px; padding: 11px 12px; text-align: left; }
+
+.gs-today { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.gs-today h4 { margin: 0 0 3px; font-size: 18px; }
+.gs-today p { margin: 0; font-size: 15px; color: var(--label-2); }
+.ring.sm { width: 76px; height: 76px; position: relative; }
+.ring.sm svg { width: 76px; height: 76px; }
+.ring.sm circle { stroke-width: 8; }
+.ring .prog.met { stroke: var(--green); }
+.ring-n { position: absolute; inset: 0; display: grid; place-items: center; font: 700 22px var(--sans); font-variant-numeric: tabular-nums; }
+.ring-n svg { width: 30px; height: 30px; stroke: var(--green); stroke-width: 3; transform: none; }
+
+/* Last seven days: a bar per day, the dashed line is the goal. */
+.gs-week { --h: 64px; position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background: var(--fill); border-radius: 12px; padding: 12px 14px 8px; margin-bottom: 14px; }
+.gs-week > div { display: flex; flex-direction: column; align-items: center; }
+.gs-week em { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: var(--h); }
+.gs-week i { display: block; width: 100%; max-width: 26px; min-height: 3px; border-radius: 4px 4px 2px 2px; background: var(--fill-2); }
+.gs-week .met i { background: var(--tint); }
+.gs-week span { font-size: 11px; color: var(--label-2); height: 18px; line-height: 18px; }
+.gs-week .today span { color: var(--label); font-weight: 700; }
+.gs-week::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: calc(8px + 18px + var(--h) * var(--goal)); border-top: 1.5px dashed var(--label-3); pointer-events: none; }
+
+.stepper { display: flex; align-items: center; background: var(--fill-2); border-radius: 9px; }
+.stepper button { width: 44px; height: 32px; font-size: 22px; line-height: 1; color: var(--tint); }
+.stepper b { min-width: 34px; text-align: center; font-size: 17px; font-variant-numeric: tabular-nums; }
+.gs-proj { font-size: 15px; line-height: 1.45; margin: 0 0 6px; }
+.gs-proj b { color: var(--tint); }
+.gs-title { font-size: 17px; margin: 18px 0 8px; }
+.gs-ms { list-style: none; margin: 0 0 16px; padding: 0; background: var(--fill); border-radius: 12px; }
+.gs-ms li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; position: relative; }
+.gs-ms li + li::before { content: ""; position: absolute; top: 0; left: 50px; right: 0; border-top: .5px solid var(--sep); }
+.gs-ms i { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--label-3); display: grid; place-items: center; flex: none; }
+.gs-ms li.got i { background: var(--green); border-color: var(--green); color: #fff; }
+.gs-ms i svg { width: 15px; height: 15px; stroke-width: 3; }
+.gs-ms span { flex: 1; font-weight: 600; display: flex; flex-direction: column; }
+.gs-ms small { font-weight: 400; font-size: 13px; color: var(--label-2); }
+.gs-ms em { font-style: normal; font-size: 13px; color: var(--label-2); text-align: right; }
+.gs-ms li.got em { color: var(--green); }
+
+/* Celebrations in the reader */
+.cheer {
+  position: absolute; z-index: 46; left: 50%; top: calc(var(--safe-top) + 12px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px);
+  background: var(--pop-bg, rgba(250,250,250,.94)); color: var(--pop-fg, #000);
+  -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  border-radius: 18px; padding: 10px 18px 10px 12px; box-shadow: 0 8px 30px rgba(0,0,0,.22);
+  animation: cheer-in .45s cubic-bezier(.2,.9,.3,1.3); pointer-events: none;
+}
+.cheer.out { opacity: 0; transform: translate(-50%, -20px); transition: opacity .3s, transform .3s; }
+.cheer i { font-style: normal; font-size: 30px; line-height: 1; animation: cheer-pop .6s .15s cubic-bezier(.2,.9,.3,1.6) both; }
+.cheer b { display: block; font: 700 16px/1.25 var(--sans); }
+.cheer span { display: block; font-size: 13px; opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes cheer-in { from { transform: translate(-50%, -30px) scale(.9); opacity: 0; } }
+@keyframes cheer-pop { from { transform: scale(.3) rotate(-20deg); } }

@@ -5,7 +5,8 @@ import { paragraphHTML } from './text.js';
 import { statusOf, phrases, onChange, setMany, entry, revertToNew } from './vocab.js';
 import { openSheet, closeSheet, sheetOpen, sheetClosedAt, toast, esc, icons, $, $$ } from './ui.js';
 import { openWordCard } from './wordcard.js';
-import { translate, speak, stopSpeaking, voicesForLang, googleTranslateURL } from './services.js';
+import { translate, speak, stopSpeaking, voicesForLang, googleTranslateURL, prepareVoice } from './services.js';
+import { piperSupported } from './piper.js';
 import { bump, startReadingClock, stopReadingClock } from './stats.js';
 import { openBubble, closeBubble, bubbleOpen, bubbleClosedAt } from './bubble.js';
 import { createCurl } from './curl.js';
@@ -75,6 +76,7 @@ export async function openReader(book, onExit) {
   R.el.hidden = false;
   R.el.classList.add('immersive');
   applyAppearance();
+  prepareVoice();
   $('#r-title').textContent = book.title;
   await loadChapter(book.progress?.chapter || 0, { frac: book.progress?.frac || 0 });
   startReadingClock();
@@ -713,7 +715,7 @@ function themesSheet() {
       <label class="ts-item"><span class="lbl">Haptics</span><span class="switch"><input type="checkbox" data-set="haptics" ${settings.haptics ? 'checked' : ''}><i></i></span></label>
       <label class="ts-item"><span class="lbl">Translate into</span><select data-set="target">${Object.entries(TARGETS).map(([k, n]) => `<option value="${k}" ${settings.target === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="ts-item"><span class="lbl">Speech Rate</span><input type="range" min="0.5" max="1.3" step="0.05" value="${settings.rate}" data-set="rate"></label>
-      ${voices.length ? `<label class="ts-item"><span class="lbl">Voice</span><select data-set="voice"><option value="">Automatic</option>${voices.map((v) => `<option ${settings.voice === v.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label>` : ''}
+      ${voices.length || piperSupported ? `<label class="ts-item"><span class="lbl">Voice</span><select data-set="voice">${piperSupported ? '<option value="">Riccardo (natural)</option>' : ''}<option value="${piperSupported ? 'system' : ''}" ${settings.voice === 'system' ? 'selected' : ''}>Device voice</option>${voices.map((v) => `<option ${settings.voice === v.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label>` : ''}
     </div>`, { transparent: true });
 
   body.addEventListener('click', (e) => {
@@ -743,6 +745,7 @@ function themesSheet() {
     settings[k] = v;
     if (['font', 'lineHeight', 'margin', 'paraSpace', 'justify'].includes(k)) { applyAppearance(); relayoutSoon(); }
     if (k === 'hlStyle') applyAppearance();
+    if (k === 'voice') prepareVoice();
   });
 }
 let rl;

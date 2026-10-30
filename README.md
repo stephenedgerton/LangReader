@@ -53,7 +53,7 @@ Browser tests use [Playwright](https://playwright.dev) with Chromium at iPhone s
 ### On your iPhone
 1. Host the folder over HTTPS. The easiest way is **GitHub Pages**: repo Settings → Pages → Deploy from branch → `main` / root.
 2. Open the URL in Safari → Share → **Add to Home Screen**. It then opens full-screen and works offline.
-3. For better pronunciation, download an enhanced Italian voice in iOS Settings → Accessibility → Spoken Content → Voices → Italian.
+3. Pronunciation uses Riccardo, a natural-sounding Piper voice bundled with the app that runs on the phone (about 30 MB, downloaded the first time you open a book, then available offline). Until he has loaded, and if you pick "Device voice" in Themes & Settings, your iPhone's Italian voice speaks instead; download an enhanced one in iOS Settings → Accessibility → Spoken Content → Voices → Italian.
 
 ## Notes
 - Word lookups use [Wiktionary](https://en.wiktionary.org) (free, no key): parts of speech, definitions, and the base form of inflected words (*arrivò* → *arrivare*). Wiktionary lookups apply when translating into English.

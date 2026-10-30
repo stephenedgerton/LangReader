@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-LangReader is a phone-first web app (PWA) for reading Italian. It copies the look and gestures of Apple Books (paginated pages, themes, page curl) and the learning features of LingQ (blue/yellow word statuses, LingQs, phrases, "page turn marks blue words known"). It's plain HTML/CSS/ES modules: **no build step, no package.json, no dependencies, no CDN**. All user data stays on the device.
+LangReader is a phone-first web app (PWA) for reading Italian. It copies the look and gestures of Apple Books (paginated pages, themes, page curl) and the learning features of LingQ (blue/yellow word statuses, LingQs, phrases, "page turn marks blue words known"). It's plain HTML/CSS/ES modules: **no build step, no package.json, no CDN**. The only third-party code is the vendored Piper voice runtime in `vendor/`. All user data stays on the device.
 
 ## Running and deploying
 
@@ -56,6 +56,12 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 ### Word lookup (`bubble.js` → `wordcard.js`)
 - Tapping a word opens the small bubble. ⋯ opens the full card in the shared sheet. Phrases open the full card directly.
 - Lookup order: the saved meaning, then Wiktionary (`dictionary.js`, used only when the translation language is English; it follows "… of *lemma*" links to the base form), then MyMemory (`services.js`). Both are cached in `tcache`. Google Translate links are plain URLs built by `googleTranslateURL`.
+
+### Speech (`services.js` → `piper.js` → `tts-worker.js`)
+- `speak()` uses Riccardo, a Piper neural voice that runs on the device, when `settings.voice` is `''` (the default). `'system'` picks the best device voice, and any other value is a device voice's name. Until Riccardo has loaded, or if he fails, the Web Speech voice speaks instead.
+- `prepareVoice()` (called when the reader opens) starts the worker loading. `tts-worker.js` is a classic worker: `piper_phonemize` (espeak-ng in WebAssembly, one fresh instance per call) turns text into phoneme ids, one line per sentence, and ONNX Runtime runs the voice model. `piper.js` caches the last 60 clips and plays them through Web Audio. `unlockAudio()` has to run synchronously in the tap, for iOS.
+- The model and runtime live in `voices/` and `vendor/` (see `vendor/README.md`), about 43 MB. `sw.js` serves those two folders cache-first from their own `langreader-assets-v1` cache, which survives `VERSION` bumps. So never change one of those files in place: give it a new name.
+- `openApp()` sets the device voice unless you pass `voice: ''`, so only `tests/voice.test.mjs` loads Riccardo.
 
 ### UI conventions (`ui.js`)
 - `openSheet()` **replaces `#sheet-body` with a fresh element** every time, so a sheet's listeners never leak into the next one. Attach handlers to the returned body.

@@ -9,7 +9,7 @@ import { translate, speak, stopSpeaking, voicesForLang, googleTranslateURL } fro
 import { bump, startReadingClock, stopReadingClock } from './stats.js';
 import { openBubble, closeBubble, bubbleOpen, bubbleClosedAt } from './bubble.js';
 import { createCurl } from './curl.js';
-import { haptic } from './haptics.js';
+import { haptic, hapticAnytime } from './haptics.js';
 import { trackProgress, goalSheet, goalSummary } from './goals.js';
 import { checkBadges } from './achievements.js';
 
@@ -428,7 +428,13 @@ function initGestures() {
       else goTo(R.page);
       return;
     }
-    if (longPressed) { if (e.type !== 'pointercancel') endSelection(); return; }
+    if (longPressed) {
+      if (e.type === 'pointercancel') return;
+      // On iOS the hold's tick has to wait for this lift (see haptics.js).
+      if (!hapticAnytime) haptic();
+      endSelection();
+      return;
+    }
     if (e.type === 'pointercancel') return;
     onTap(e, target);
   };
@@ -549,7 +555,7 @@ function startPhrase(el) {
   R.phraseStart = el;
   setSel(+el.dataset.i);
   closeBubble();
-  haptic();
+  if (hapticAnytime) haptic();
   toast('Drag to select a phrase, or tap its last word');
 }
 function extendSelection(x, y) {

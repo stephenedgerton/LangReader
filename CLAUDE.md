@@ -31,7 +31,7 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 - `vocab.js` keeps every word in an in-memory `Map` loaded at boot, and notifies `onChange` listeners. The reader recolours matching `.w[data-w]` spans in place, and re-renders the whole chapter when a phrase changes, because phrase underlines are computed at render time.
 - A word entry keeps `example` (the sentence it was saved from, set once) and `exampleTr` (that sentence's translation, once the user translates it). Phrase entries also keep `display`, the text as printed with its punctuation.
 - `names.js` lists names that `ignoreNames()` in `app.js` marks Ignored on first launch through `setMany` (which never touches existing entries). Bump `NAMES_VERSION` after adding names. Leave out names that are also ordinary words. These pre-seeded names don't count toward the backup reminder.
-- Settings live in localStorage `langreader.settings`, behind a Proxy that saves on every write. Other localStorage keys: `langreader.seeded`, `langreader.samplesAdded`, `langreader.tipsSeen`, `langreader.lastBackup`, `langreader.backupSnooze`, `langreader.namesIgnored`.
+- Settings live in localStorage `langreader.settings`, behind a Proxy that saves on every write (avoid writing in hot paths). Other localStorage keys: `langreader.seeded`, `langreader.samplesAdded`, `langreader.tipsSeen`, `langreader.lastBackup`, `langreader.backupSnooze`, `langreader.namesIgnored`.
 
 ### Text and rendering (`text.js`)
 - `tokenize` splits elisions the way LingQ does (*dell'anno* → *dell'* + *anno*) and keeps the apostrophe only on known truncations (*po'*). `paragraphHTML` wraps sentences in `.sent` and words in `.w` spans carrying status classes `s0`–`s4`, plus `ph` for words inside a saved phrase. Phrases match within one paragraph only, so a selection can't cross paragraphs. How the classes look depends on `#reader[data-hl]`: `underline` (LingQ's style, the default) or `background`.
@@ -42,6 +42,12 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 - One pointer pipeline in `initGestures()` decides between a tap (open the bubble, turn at the edges, toggle the controls), a long press (≈480 ms; then dragging extends a phrase selection, up to `MAX_PHRASE` words), and a horizontal drag (page curl or slide). A flick needs at least 30 px, and a tap within 450 ms of the bubble or a sheet closing does nothing, so taps on them can't fall through and turn the page. `#page-area` has `touch-action: none` so iOS can't cancel these gestures. `R.busy` blocks input while a turn animates.
 - Page curl (`curl.js`): `beginCurl` **clones `#page-content`** for the turning page, and the real element moves to show the page underneath. The clone keeps the duplicate id on purpose, because the reading styles are keyed on `#page-content`. The curl is skipped on wide two-column layouts (≥900px) and at chapter boundaries, which use a slide or fade instead.
 - `leavePage()` runs on every forward turn: it bumps the stats and marks the page's blue words Known, with Undo through `revertToNew`. Words inside `h1`/`h2` are excluded.
+
+### Reading goals (`goals.js`)
+- Each book can have `goal: {pages, since, cheered}` (pages a day). Progress is the reading *position* in words (`wordsAt`), so jumping ahead counts and re-reading doesn't count twice. `progress.frac` says which page to reopen at; `progress.read` (page / pages, or 1 once the book is finished) is how much of the chapter is behind you, and is what goals and `bookPct` use.
+- `trackProgress()` runs on every `saveProgress()` in the reader: it keeps `book.log[date] = {from, to}` (today's pages = to − from) and `book.milestones` (25/50/75/100% → date reached; `null` for ones passed before tracking started, which aren't celebrated). It returns celebrations, which the reader shows one at a time in `#r-cheer` at the top, clear of the bottom toasts.
+- A "page" is `settings.wordsPerPage`, measured by `layout()` from the current chapter (only when it has 3+ pages), so it follows text size.
+- The goal sheet opens from the reader menu, the Library ⋯ menu and Home's goal cards.
 
 ### Word lookup (`bubble.js` → `wordcard.js`)
 - Tapping a word opens the small bubble. ⋯ opens the full card in the shared sheet. Phrases open the full card directly.

@@ -10,6 +10,7 @@ import { bump, startReadingClock, stopReadingClock } from './stats.js';
 import { openBubble, closeBubble, bubbleOpen, bubbleClosedAt } from './bubble.js';
 import { createCurl } from './curl.js';
 import { haptic } from './haptics.js';
+import { trackProgress, goalSheet, goalSummary } from './goals.js';
 
 const R = {
   el: null, area: null, content: null,
@@ -32,7 +33,7 @@ export function initReader() {
   $('#r-menu-pop').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     toggleMenu(false);
-    ({ contents: contentsSheet, themes: themesSheet, 'translate-page': translatePage, 'speak-page': speakPage, complete: completeChapter })[b.dataset.act]();
+    ({ contents: contentsSheet, themes: themesSheet, goal: () => goalSheet(R.book), 'translate-page': translatePage, 'speak-page': speakPage, complete: completeChapter })[b.dataset.act]();
   });
 
   initGestures();
@@ -170,6 +171,11 @@ function layout() {
   const x = end.getBoundingClientRect().left - base;
   R.pages = Math.max(1, Math.floor((x + 1) / R.step) + 1);
   R.pageOf = null; // computed lazily
+  // What a "page" means for reading goals: the words that fit on one at this text size.
+  if (R.pages >= 3) {
+    const wpp = Math.round(R.spans.length / (R.pages - 0.5));
+    if (Math.abs(wpp - (settings.wordsPerPage || 0)) > 3) settings.wordsPerPage = wpp;
+  }
 }
 
 function computePageOf() {
@@ -237,6 +243,7 @@ async function next(session) {
   } else {
     markChapterDone(R.ch);
     goTo(R.page);
+    saveProgress(true);
     toast('You finished the book! 🎉');
   }
 }
@@ -317,11 +324,31 @@ function markChapterDone(idx) {
   if (!pr.done.includes(idx)) pr.done.push(idx);
 }
 
-function saveProgress() {
+// frac says which page to reopen at; read is how much of the chapter is behind you (for goals).
+function saveProgress(finished = false) {
   if (!R.book) return;
   const frac = R.pages > 1 ? R.page / (R.pages - 1) : 0;
-  R.book.progress = { ...R.book.progress, chapter: R.ch, page: R.page, frac };
+  const read = finished ? 1 : R.page / R.pages;
+  R.book.progress = { ...R.book.progress, chapter: R.ch, page: R.page, frac, read };
+  const cheers = trackProgress(R.book);
   db.put('books', R.book);
+  cheers.forEach(cheer);
+}
+
+// Goal and milestone celebrations drop in from the top, one after another, clear of the toasts.
+const cheerQueue = [];
+function cheer(c) {
+  cheerQueue.push(c);
+  if (cheerQueue.length === 1) showCheer();
+}
+function showCheer() {
+  const c = cheerQueue[0]; if (!c) return;
+  const el = $('#r-cheer');
+  el.innerHTML = `<i>${c.icon}</i><div><b>${c.title}</b><span>${c.sub}</span></div>`;
+  el.hidden = false;
+  el.classList.remove('out');
+  setTimeout(() => el.classList.add('out'), 2600);
+  setTimeout(() => { el.hidden = true; cheerQueue.shift(); showCheer(); }, 2900);
 }
 
 // ---------- Gestures ----------
@@ -544,6 +571,10 @@ function showTipsOnce() {
 function toggleMenu(force) {
   const pop = $('#r-menu-pop');
   pop.hidden = force === undefined ? !pop.hidden : !force;
+  if (!pop.hidden) {
+    const s = R.book && goalSummary(R.book);
+    $('[data-act=goal] span', pop).textContent = !s ? 'Reading Goal' : s.met ? 'Reading Goal · done ✓' : `Reading Goal · ${s.today}/${s.pages}`;
+  }
 }
 
 function contentsSheet() {
@@ -706,7 +737,7 @@ async function completeChapter() {
   for (let p = 0; p < R.pages; p++) if (!R.seenPages.has(p)) { unread += spansOnPage(p).length; R.seenPages.add(p); }
   bump('wordsRead', unread);
   markChapterDone(R.ch);
-  saveProgress();
+  saveProgress(R.ch === R.book.chapterCount - 1);
   toast(n ? `Chapter complete · +${n} known` : 'Chapter complete');
   if (R.ch < R.book.chapterCount - 1) setTimeout(() => transition(() => loadChapter(R.ch + 1), 1), 700);
 }

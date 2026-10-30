@@ -222,9 +222,10 @@ function goTo(p, animate = true) {
   updateFooter();
 }
 
-function updateFooter() {
-  const left = R.pages - R.page - 1;
-  $('#r-pageno').textContent = `${R.page + 1} of ${R.pages}` + (left > 0 ? `  ·  ${left} ${left === 1 ? 'page' : 'pages'} left in chapter` : '');
+function updateFooter(p = R.page) { $('#r-pageno').textContent = footerText(p); }
+function footerText(p) {
+  const left = R.pages - p - 1;
+  return `${p + 1} of ${R.pages}` + (left > 0 ? `  ·  ${left} ${left === 1 ? 'page' : 'pages'} left in chapter` : '');
 }
 
 // ---------- Navigation ----------
@@ -262,18 +263,36 @@ async function turnWithin(dir, session) {
   goTo(R.page + dir, settings.pageTurn !== 'none');
 }
 
-// Page curl: a copy of the turning page curls over the real content, which already shows the page beneath.
+// Page curl: a copy of the turning page curls over the real content, which already shows the page
+// beneath. Like Books, the whole screen turns, running head and page number included.
 function beginCurl(dir, corner = 'bottom') {
   const turning = dir > 0 ? R.page : R.page - 1;
-  const clone = R.content.cloneNode(true);
-  clone.classList.remove('animate');
-  clone.style.transform = `translateX(${-turning * R.step}px)`;
-  clone.querySelectorAll('.sel').forEach((n) => n.classList.remove('sel'));
   R.content.classList.remove('animate');
   R.content.style.transform = `translateX(${-(dir > 0 ? R.page + 1 : R.page) * R.step}px)`;
-  const curl = createCurl(R.area, clone, corner);
+  const curl = createCurl(R.el, curlPage(turning), curlPage(turning), corner);
+  updateFooter(dir > 0 ? R.page + 1 : R.page);
   if (dir < 0) curl.set(-curl.W, curl.C.y); // the previous page starts fully turned away
   return { dir, curl };
+}
+// A full-screen picture of page `p`: its text where #page-area is, plus the running head and page number.
+function curlPage(p) {
+  const el = document.createElement('div');
+  el.className = 'curl-page';
+  const area = document.createElement('div');
+  area.className = 'curl-area';
+  area.style.cssText = `top:${R.area.offsetTop}px;height:${R.area.offsetHeight}px`;
+  const clone = R.content.cloneNode(true);
+  clone.classList.remove('animate');
+  clone.style.transform = `translateX(${-p * R.step}px)`;
+  clone.querySelectorAll('.sel').forEach((n) => n.classList.remove('sel'));
+  area.appendChild(clone);
+  const running = $('#r-running').cloneNode(true);
+  running.removeAttribute('id');
+  const no = document.createElement('div');
+  no.className = 'curl-pageno';
+  no.textContent = footerText(p);
+  el.append(area, running, no);
+  return el;
 }
 async function endCurl({ dir, curl }, complete, { ms = 300, lift = 0 } = {}) {
   // Forward turns finish with the corner pulled all the way left; backward turns finish flat.

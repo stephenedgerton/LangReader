@@ -21,9 +21,10 @@ function clipHalf(poly, h) {
 
 const polygon = (pts) => pts.length >= 3 ? `polygon(${pts.map((p) => `${p.x.toFixed(1)}px ${p.y.toFixed(1)}px`).join(',')})` : 'polygon(0 0,0 0,0 0)';
 
-// topPage: the element showing the page that turns (a clone of the content, already positioned).
-export function createCurl(area, topPage, corner = 'bottom') {
-  const W = area.clientWidth, H = area.clientHeight;
+// front: the turning page as it looks now; back: another copy of it, seen through the paper
+// mirrored on the curled-over flap, as in Books. Both fill `host` and are already positioned.
+export function createCurl(host, front, back, corner = 'bottom') {
+  const W = host.clientWidth, H = host.clientHeight;
   const C = { x: W, y: corner === 'top' ? 0 : H };
   const rect = [{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }];
 
@@ -31,16 +32,20 @@ export function createCurl(area, topPage, corner = 'bottom') {
   root.className = 'curl';
   const top = document.createElement('div');
   top.className = 'curl-top';
-  top.appendChild(topPage);
+  top.appendChild(front);
   const shadow = document.createElement('div');
   shadow.className = 'curl-shadow';
   const flapWrap = document.createElement('div');
   flapWrap.className = 'curl-flap-wrap';
   const flap = document.createElement('div');
   flap.className = 'curl-flap';
+  back.classList.add('curl-back');
+  const shade = document.createElement('div');
+  shade.className = 'curl-shade';
+  flap.append(back, shade);
   flapWrap.appendChild(flap);
   root.append(top, shadow, flapWrap);
-  area.appendChild(root);
+  host.appendChild(root);
 
   // A linear-gradient whose stops are measured in px from point `o` along direction (dx, dy).
   const gradient = (o, dx, dy, stops) => {
@@ -71,11 +76,17 @@ export function createCurl(area, topPage, corner = 'bottom') {
 
     top.style.clipPath = polygon(kept);
     shadow.style.clipPath = polygon(folded);
-    shadow.style.background = gradient(M, ux, uy, [[0, 'rgba(0,0,0,.30)'], [Math.min(48, depth), 'rgba(0,0,0,0)']]);
+    // The page casts a soft shadow on the page underneath, just past the fold.
+    shadow.style.background = gradient(M, ux, uy, [[0, 'rgba(0,0,0,.22)'], [Math.min(36, depth), 'rgba(0,0,0,0)']]);
     flap.style.clipPath = polygon(mirrored);
-    flap.style.backgroundImage = gradient(M, -ux, -uy, [
-      [0, 'rgba(0,0,0,.20)'], [4, 'rgba(0,0,0,.08)'],
-      [Math.max(8, depth * 0.35), 'rgba(255,255,255,.22)'], [Math.max(10, depth), 'rgba(0,0,0,.10)'],
+    // The back of the page is the turning page reflected across the fold line.
+    const k = 2 * (M.x * ux + M.y * uy);
+    back.style.transform = `matrix(${1 - 2 * ux * ux},${-2 * ux * uy},${-2 * ux * uy},${1 - 2 * uy * uy},${k * ux},${k * uy})`;
+    // Paper colour with a bright band where it rolls over at the fold, darkening a touch at the crease.
+    shade.style.backgroundImage = gradient(M, -ux, -uy, [
+      [0, 'rgba(0,0,0,.10)'], [3, 'rgba(255,255,255,.18)'],
+      [Math.max(6, Math.min(40, depth * 0.3)), 'rgba(255,255,255,.28)'],
+      [Math.max(10, depth * 0.8), 'rgba(255,255,255,.06)'], [Math.max(12, depth), 'rgba(0,0,0,.05)'],
     ]);
   }
 

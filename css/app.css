@@ -270,7 +270,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 #reader[data-theme="quiet"]  { --new-ul: rgba(120, 175, 255, .9); --r-bg: #4a4a4d; --r-fg: #d6d6d6; --r-muted: rgba(255,255,255,.45); --r-chrome: rgba(255,255,255,.14); --new: rgba(110, 170, 255, .30); --pop-bg: rgba(60,60,62,.9); --pop-fg: #eee; }
 #reader[data-theme="paper"]  { --r-bg: #efece6; --r-fg: #2a2a2a; --r-muted: rgba(0,0,0,.42); }
 #reader[data-theme="bold"]   { --r-bg: #ffffff; --r-fg: #000000; --weight: 600; }
-#reader[data-theme="calm"]   { --r-bg: #f3e6cc; --r-fg: #3f2e1c; --r-muted: rgba(63,46,28,.5); --pop-bg: rgba(250,240,220,.92); }
+#reader[data-theme="calm"]   { --r-bg: #f1e2c9; --r-fg: #000000; --r-muted: rgba(60,40,20,.55); --pop-bg: rgba(250,240,220,.92); }
 #reader[data-theme="focus"]  { --r-bg: #fbf6e6; --r-fg: #1f1a10; --r-muted: rgba(0,0,0,.42); }
 #reader[data-theme="original"].dark { --r-bg: #000; --r-fg: #e6e6e6; --r-muted: rgba(255,255,255,.42); --r-chrome: rgba(255,255,255,.14); --new: rgba(70, 140, 255, .36); --lq: 230, 170, 0; --pop-bg: rgba(40,40,40,.9); --pop-fg: #eee; }
 #reader[data-theme="paper"].dark  { --r-bg: #1d1c1a; --r-fg: #cfcac0; --r-muted: rgba(255,255,255,.4); --r-chrome: rgba(255,255,255,.14); --new: rgba(70, 140, 255, .34); --lq: 230, 170, 0; --pop-bg: rgba(45,44,42,.92); --pop-fg: #eee; }
@@ -374,8 +374,8 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   padding: 0 14px var(--safe-bottom);
   display: flex; align-items: center; justify-content: center;
 }
-#r-pageno { font: 500 12px/1 var(--sans); color: var(--r-muted); font-variant-numeric: tabular-nums; letter-spacing: .2px; }
-#r-menu { position: absolute; right: 14px; bottom: calc(var(--safe-bottom) + 4px); }
+#r-pageno, .curl-pageno { font: 500 12px/1 var(--sans); color: var(--r-muted); font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+#r-menu { position: absolute; z-index: 5; right: 14px; bottom: calc(var(--safe-bottom) + 4px); }
 #reader .popover { right: 14px; }
 
 /* Word card (LingQ-style) */
@@ -488,11 +488,21 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .progress-line i { display: block; height: 100%; background: var(--tint); }
 
 /* Page curl (Apple Books "Curl" page turn) */
-.curl { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+/* It covers the whole reader, above the page number and running head but below the buttons. */
+.curl { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .curl-top { position: absolute; inset: 0; overflow: hidden; background: var(--r-bg); }
+.curl-page { position: absolute; inset: 0; transform-origin: 0 0; }
+.curl-area { position: absolute; left: 0; right: 0; overflow: hidden; }
+.curl-pageno {
+  position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--safe-bottom) + 46px); padding-bottom: var(--safe-bottom);
+  display: flex; align-items: center; justify-content: center;
+}
 .curl-shadow { position: absolute; inset: 0; }
-.curl-flap-wrap { position: absolute; inset: 0; filter: drop-shadow(0 0 10px rgba(0, 0, 0, .28)); }
-.curl-flap { position: absolute; inset: 0; background-color: var(--r-bg); }
+.curl-flap-wrap { position: absolute; inset: 0; filter: drop-shadow(0 0 6px rgba(0, 0, 0, .18)); }
+.curl-flap { position: absolute; inset: 0; overflow: hidden; background-color: var(--r-bg); }
+/* The text on the front shows faintly through the paper, mirrored. */
+.curl-back { opacity: .2; }
+.curl-shade { position: absolute; inset: 0; }
 
 /* Quick lookup bubble */
 .wpop {

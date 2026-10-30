@@ -47,7 +47,15 @@ export function openWordCard(opts) {
       </div>
       <div class="status-legend"><span>New</span><span>Recognized</span><span>Familiar</span><span>Learned</span><span>Known</span><span>Ignore</span></div>
       <div class="dicts">${dictionaryLinks(term).filter((d) => !long || /Reverso|Google/.test(d.name)).map((d) => `<a href="${d.url}" target="_blank" rel="noopener">${d.name}</a>`).join('')}</div>
-    </div>`, { onClose: opts.onClose, transparent: true });
+    </div>`, { onClose: () => { dismiss(); opts.onClose?.(); }, transparent: true });
+
+  // Like the bubble: closing the card on a New word or phrase you looked up makes it LingQ 1.
+  let removed = false;
+  function dismiss() {
+    if (removed || entry(term)) return;
+    const best = cur.meaning ? null : [...dictHints, ...mtHints][0];
+    save({ status: 1, ...(best && { meaning: best.text }) });
+  }
 
   let cur = entry(term) || e;
   const paintStatus = () => {
@@ -117,7 +125,7 @@ export function openWordCard(opts) {
     if (t.matches('.status-bar button')) {
       haptic();
       const s = +t.dataset.s;
-      if (s === cur.status && phrase) { await deleteWord(term); return closeSheet(); }
+      if (s === cur.status && phrase) { removed = true; await deleteWord(term); return closeSheet(); }
       await save({ status: s });
       if (s === 5 || s === -1) setTimeout(closeSheet, 220);
       return;

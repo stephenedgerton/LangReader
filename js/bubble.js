@@ -56,12 +56,19 @@ export function openBubble(opts) {
     if (cur.status === 0 && !entry(term)) save({ status: 1, ...(suggestion && { meaning: suggestion.text }) });
   } };
 
+  let shown = cur.meaning ? null : '';
   const paint = () => {
     el.querySelectorAll('[data-s]').forEach((b) => b.classList.toggle('on', +b.dataset.s === cur.status));
     const mean = el.querySelector('[data-mean]');
-    if (cur.meaning) mean.innerHTML = `<span>${esc(cur.meaning)}</span><small>Saved</small>`;
-    else if (suggestion) mean.innerHTML = `<span>${esc(suggestion.text)}</span><b class="plus">+</b>`;
-    else if (suggestion === false) mean.innerHTML = '<span class="wp-loading">No quick meaning — tap ⋯ for dictionaries</span>';
+    // A meaning that arrives (or changes) after the bubble opened slides in like the rest of the text.
+    const html = cur.meaning ? `<span>${esc(cur.meaning)}</span><small>Saved</small>`
+      : suggestion ? `<span>${esc(suggestion.text)}</span><b class="plus">+</b>`
+      : suggestion === false ? '<span class="wp-loading">No quick meaning — tap ⋯ for dictionaries</span>' : null;
+    if (html && html !== shown) {
+      mean.innerHTML = html;
+      if (shown != null) mean.querySelectorAll(':scope > *').forEach((c, i) => { c.classList.add('enter'); c.style.setProperty('--i', i); });
+    }
+    if (html) shown = html;
     mean.classList.toggle('saved', !!cur.meaning);
     const lemma = suggestion?.lemma;
     el.querySelector('.wp-lemma').textContent = lemma ? ` → ${lemma}` : '';

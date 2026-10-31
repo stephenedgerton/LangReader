@@ -151,6 +151,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   background: linear-gradient(90deg, rgba(0,0,0,.18) 0, rgba(255,255,255,.18) 2.5%, rgba(0,0,0,.05) 5%, transparent 9%);
   pointer-events: none;
 }
+.cover-fly { position: fixed; z-index: 200; margin: 0; aspect-ratio: auto; pointer-events: none; transform-origin: 0 0; will-change: transform, opacity; }
 .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cover .ct { font: 600 clamp(13px, 4.2vw, 19px)/1.15 var(--serif-ui); text-wrap: balance; }
 .cover .ca { font: 500 11px/1.2 var(--sans); opacity: .85; letter-spacing: .4px; text-transform: uppercase; }
@@ -528,6 +529,19 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   font-family: var(--sans); animation: bubble-in .16s ease-out;
 }
 @keyframes bubble-in { from { opacity: 0; transform: translateY(4px) scale(.97); } }
+/* Text in the bubble and the word card slides in from the left and fades up, one line after another. */
+@keyframes text-in { from { opacity: 0; transform: translateX(-10px); } }
+.wpop > :not(.wp-arrow), .wcard > *, .enter { animation: text-in .42s cubic-bezier(.2, .75, .25, 1) both; animation-delay: calc(var(--i, 0) * 45ms + 30ms); }
+.wpop > :nth-child(2), .wcard > :nth-child(2) { --i: 1; }
+.wpop > :nth-child(3), .wcard > :nth-child(3) { --i: 2; }
+.wpop > :nth-child(4), .wcard > :nth-child(4) { --i: 3; }
+.wcard > :nth-child(5) { --i: 4; }
+.wcard > :nth-child(6) { --i: 5; }
+.wcard > :nth-child(7) { --i: 6; }
+.wcard > :nth-child(8) { --i: 7; }
+.wcard > :nth-child(n+9) { --i: 8; }
+.enter { animation-duration: .36s; }
+@media (prefers-reduced-motion: reduce) { .wpop > *, .wcard > *, .enter { animation: none; } }
 .wp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
 .wp-term { flex: 1; min-width: 0; text-align: left; font: 600 19px/1.25 var(--serif-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wpop.phrase .wp-term { font-size: 16px; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }

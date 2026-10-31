@@ -1,4 +1,5 @@
-// Achievements: badges for known words, words read, reading streaks and finished books.
+// Achievements, shown as bookmarks (silk ribbons, one colour per kind): for known words, words
+// read, reading streaks and finished books. Internally they're still "badges".
 // They're all worked out from your data, so a restored backup earns them back; only the date
 // each one was earned is kept, in localStorage langreader.badges ({id: date, or null when it was
 // already earned the first time we looked}).
@@ -77,7 +78,12 @@ function nextUp(values, earned) {
   return best;
 }
 
-const medal = (b, earned, cls = '') => `<span class="medal${b.id in earned ? '' : ' locked'}${earned[b.id] === todayKey() ? ' new' : ''} ${cls}" title="${esc(b.title)}"><i>${b.icon}</i></span>`;
+// A bookmark ribbon. `earned` omitted means draw it as earned (for the reader's celebration).
+export const bookmarkHTML = (b, earned) => {
+  const got = !earned || b.id in earned;
+  const fresh = earned && earned[b.id] === todayKey();
+  return `<span class="bookmark k-${b.kind}${got ? '' : ' locked'}${fresh ? ' new' : ''}" title="${esc(b.title)}"><i>${b.icon}</i></span>`;
+};
 
 // Home's "Achievements" card.
 export async function achievementsCardHTML() {
@@ -87,8 +93,8 @@ export async function achievementsCardHTML() {
   const recent = got.slice().sort((a, b) => (earned[b.id] || '').localeCompare(earned[a.id] || '') || b.step - a.step).slice(0, 5);
   const nx = nextUp(values, earned);
   return `<button class="card ach" data-act="achievements">
-    <div class="ach-top"><b>${got.length} of ${BADGES.length} earned</b><span class="muted">See all ›</span></div>
-    ${recent.length ? `<div class="ach-row">${recent.map((b) => medal(b, earned)).join('')}</div>` : ''}
+    <div class="ach-top"><b>${got.length} of ${BADGES.length} collected</b><span class="muted">See all ›</span></div>
+    ${recent.length ? `<div class="ach-row">${recent.map((b) => bookmarkHTML(b, earned)).join('')}</div>` : ''}
     ${nx ? `<div class="ach-next"><span>Next: ${nx.badge.icon} ${esc(nx.badge.title)}</span><small>${n(Math.floor(nx.have))} / ${n(nx.badge.step)}</small></div>
       <div class="progress-line"><i style="width:${nx.frac * 100}%"></i></div>` : ''}
   </button>`;
@@ -96,12 +102,12 @@ export async function achievementsCardHTML() {
 
 export async function achievementsSheet() {
   const { earned, values, finished } = await checkBadges();
-  const when = (d) => (d ? new Date(d + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Earned');
-  const body = openSheet(`<h2>Achievements<button class="x">${icons.close}</button></h2>
+  const when = (d) => (d ? new Date(d + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Collected');
+  const body = openSheet(`<h2>Bookmarks<button class="x">${icons.close}</button></h2>
     ${GROUPS.map((g) => `
       <div class="section-title ach-title">${g.name}<small>${n(Math.floor(values[g.kind]))}${g.kind === 'streak' ? ' days best' : ''}</small></div>
       <div class="ach-grid">${BADGES.filter((b) => b.kind === g.kind).map((b) => `
-        <div class="ach-item">${medal(b, earned)}<b>${esc(b.title)}</b>
+        <div class="ach-item">${bookmarkHTML(b, earned)}<b>${esc(b.title)}</b>
           <small>${b.id in earned ? when(earned[b.id]) : `${Math.floor(Math.min(1, values[g.kind] / b.step) * 100)}%`}</small></div>`).join('')}
       </div>`).join('')}
     ${finished.length ? `<div class="section-title ach-title">Finished</div>

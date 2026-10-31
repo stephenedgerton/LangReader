@@ -12,7 +12,7 @@ import { openBubble, closeBubble, bubbleOpen, bubbleClosedAt } from './bubble.js
 import { createCurl } from './curl.js';
 import { haptic, hapticAnytime } from './haptics.js';
 import { trackProgress, goalSheet, goalSummary } from './goals.js';
-import { checkBadges } from './achievements.js';
+import { checkBadges, bookmarkHTML } from './achievements.js';
 import { freqLoaded, loadFreq, isCommon } from './freq.js';
 
 const R = {
@@ -368,7 +368,7 @@ function badgesSoon() {
   badgeTimer = setTimeout(async () => {
     const { fresh } = await checkBadges();
     if (R.el.hidden) return;
-    for (const b of fresh) cheer({ icon: b.icon, title: 'Achievement unlocked!', sub: esc(b.title) });
+    for (const b of fresh) cheer({ icon: bookmarkHTML(b), title: 'New bookmark!', sub: esc(b.title) });
   }, 2000);
 }
 

@@ -508,6 +508,24 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .review-btns button { padding: 14px; border-radius: 12px; font-weight: 600; }
 .review-btns .no { background: var(--fill); color: var(--red); }
 .review-btns .yes { background: var(--green); color: #fff; }
+.review-btns.four { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.review-btns.four button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; background: var(--fill); }
+.review-btns.four small { font-size: 12px; font-weight: 500; color: var(--label-2); }
+.review-btns .again { color: var(--red); }
+.review-btns .hard { color: #ff9500; }
+.review-btns .good { color: var(--green); }
+.review-btns .easy { color: #007aff; }
+.flash { position: relative; }
+.flash .new-tag { position: absolute; top: 12px; left: 14px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tint); }
+.flash.done { cursor: default; }
+.more-btn { width: 100%; margin-top: 10px; }
+.review-card { display: flex; gap: 14px; align-items: center; width: 100%; text-align: left; margin-top: 10px; }
+.review-card .rv-ico { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--fill); color: var(--tint); flex: none; font-weight: 700; }
+.review-card .rv-ico svg { width: 22px; height: 22px; }
+.review-card.done .rv-ico { color: var(--green); }
+.review-card h4 { margin: 0 0 2px; }
+.review-card p { margin: 0; font-size: 14px; color: var(--label-2); }
+.review-card .chev { margin-left: auto; font-size: 22px; color: var(--label-3); }
 .progress-line { height: 4px; border-radius: 2px; background: var(--fill); margin-bottom: 14px; overflow: hidden; }
 .progress-line i { display: block; height: 100%; background: var(--tint); }
 

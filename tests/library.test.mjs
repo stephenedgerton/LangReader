@@ -91,7 +91,7 @@ describe('library', () => {
     assert.match(await page.textContent('.storage-status'), /Last backup: today/);
   });
 
-  test('review moves a LingQ up a level', async () => {
+  test('review: Good on a new LingQ moves it up a level', async () => {
     const { page } = await openApp(t, srv.url);
     await openBook(page);
     const b = await (await page.$('.w[data-w="treno"]')).boundingBox();
@@ -101,8 +101,8 @@ describe('library', () => {
     await page.click('#tabbar button[data-tab=vocab]'); await sleep(300);
     await page.click('[data-act=review]'); await sleep(300);
     assert.equal(await page.textContent('.flash .fw'), 'treno');
-    await page.click('[data-flip]'); await page.click('[data-r="1"]'); await sleep(300);
-    assert.match(await page.textContent('.flash'), /1 \/ 1/);
+    await page.click('[data-flip]'); await page.click('[data-r="3"]'); await sleep(300);
+    assert.match(await page.textContent('.flash'), /1 card reviewed · 1 remembered/);
     await page.click('[data-done]'); await sleep(300);
     assert.match(await page.textContent('.row[data-t="treno"] .pill'), /^2$/);
   });

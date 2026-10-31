@@ -79,6 +79,27 @@ export async function setMany(terms, status) {
   return changed.length;
 }
 
+// Merge patches ([{term, ...fields}]) into existing entries in one write, e.g. the review credits a
+// page turn gives the LingQs on it. Terms without an entry are skipped.
+export async function updateMany(patches) {
+  const now = Date.now();
+  const changed = [];
+  let phraseGone = false;
+  for (const { term, ...patch } of patches) {
+    const prev = words.get(term);
+    if (!prev) continue;
+    const next = { ...prev, ...patch, updated: now };
+    if (prev.phrase && next.status !== prev.status) { phraseIndex = null; phraseGone ||= next.status === 5; }
+    words.set(term, next);
+    changed.push(next);
+  }
+  if (!changed.length) return 0;
+  await db.putMany('words', changed);
+  // A phrase that became Known loses its underline, which only a re-render removes.
+  for (const fn of listeners) phraseGone ? fn(changed.map((e) => e.term), { phrase: true }, null) : fn(changed.map((e) => e.term));
+  return changed.length;
+}
+
 // Undo a bulk "mark as known": drop entries that are still plain Known words with nothing saved on them.
 export async function revertToNew(terms) {
   const reverted = [];

@@ -16,6 +16,7 @@ import { fillDifficulty } from './difficulty.js';
 import { checkBadges, achievementsCardHTML, achievementsSheet } from './achievements.js';
 import { loadFreq, recordSnapshot } from './freq.js';
 import { renderStats } from './statsview.js';
+import { reviewSheet, todaysCount, reviewedToday } from './review.js';
 import { requestPersistence, isPersisted, backupDue, backupAge, markBackedUp, snoozeBackup, saveFile } from './storage.js';
 
 let tab = 'home';
@@ -166,6 +167,7 @@ async function renderHome() {
       <div><h4>Today's Reading</h4><div class="big">${mins}:${String(today.seconds % 60).padStart(2, '0')}</div>
         <p>of your ${settings.goalMinutes}-minute goal${st ? ` · 🔥 ${st}-day streak` : ''}</p></div>
     </button>
+    ${reviewCardHTML(c)}
     ${goalBooks.map(goalCardHTML).join('')}
     ${!goalBooks.length && current ? `<button class="card bgoal-add" data-goal="${current.id}">🎯 <span>Set a pages-a-day goal for <b>${esc(current.title)}</b></span></button>` : ''}
     <div class="section-title">Bookmarks</div>
@@ -187,11 +189,21 @@ async function renderHome() {
     if (b.dataset.open) return open(books.find((x) => x.id === b.dataset.open), b);
     if (b.dataset.goal) return goalSheet(books.find((x) => x.id === b.dataset.goal), { onChange: renderHome });
     if (b.dataset.act === 'goal') return minutesSheet();
+    if (b.dataset.act === 'review') return reviewSheet({ onClose: renderHome });
     if (b.dataset.act === 'achievements') return achievementsSheet();
     if (b.dataset.act === 'settings') return settingsSheet();
     if (b.dataset.act === 'backup') return exportAll().then(renderHome);
     if (b.dataset.act === 'snooze') { snoozeBackup(); return renderHome(); }
   };
+}
+
+// Today's reviews: only today's share, never the backlog, and about 6 s a card.
+function reviewCardHTML(c) {
+  if (!c.lingqs) return '';
+  const n = todaysCount(), done = reviewedToday();
+  if (!n) return done ? `<div class="card review-card done"><div class="rv-ico">✓</div><div><h4>Reviews done for today</h4><p>${done} card${done === 1 ? '' : 's'} reviewed. Reading keeps the rest fresh.</p></div></div>` : '';
+  return `<button class="card review-card" data-act="review"><div class="rv-ico">${icons.cards}</div>
+    <div><h4>Today's Review</h4><p>${n} card${n === 1 ? '' : 's'} · about ${Math.max(1, Math.round(n / 10))} min</p></div><span class="chev">›</span></button>`;
 }
 
 function minutesSheet() {
@@ -209,6 +221,11 @@ function settingsSheet() {
   const body = openSheet(`<h2>Settings<button class="x">${icons.close}</button></h2>
     <label class="field"><span>Translate into</span><select name="target">${Object.entries(TARGETS).map(([k, n]) => `<option value="${k}" ${settings.target === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <label class="field"><span>Email for MyMemory (optional, raises the free daily quota)</span><input name="email" type="email" value="${esc(settings.email)}" placeholder="you@example.com"></label>
+    <div class="section-title" style="font-size:17px;margin-top:18px">Reviews</div>
+    <label class="field"><span>Memory target</span><select name="retention">${[['relaxed', 'Relaxed · keep about 80%, fewest reviews'], ['normal', 'Normal · keep about 85%'], ['intense', 'Intense · keep about 90%, most reviews']].map(([k, n]) => `<option value="${k}" ${settings.retention === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <label class="field"><span>Reviews a day (the rest wait, most useful first)</span><select name="reviewsPerDay" data-num>${[10, 20, 30, 50, 100].map((n) => `<option ${+settings.reviewsPerDay === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <label class="field"><span>New cards a day</span><select name="newPerDay" data-num>${[0, 5, 10, 20].map((n) => `<option ${+settings.newPerDay === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <p class="muted" style="font-size:13px;margin:-4px 0 0">Reading counts as review: LingQs you read past without tapping move forward, ones you look up come back sooner.</p>
     <div class="section-title" style="font-size:17px;margin-top:18px">Backup</div>
     <p class="muted storage-status" style="font-size:13px;margin:-4px 0 10px">Last backup: ${backupAge()}.</p>
     <div class="action-list">
@@ -243,7 +260,7 @@ function settingsSheet() {
     el.textContent = (p ? 'Storage is protected on this device. ' : 'Storage isn’t protected yet: iOS may clear it if the phone runs out of space. Open the app from your Home Screen, and back up regularly. ')
       + `Last backup: ${backupAge()}.`;
   });
-  body.oninput = (e) => { if (e.target.name) settings[e.target.name] = e.target.value.trim(); };
+  body.oninput = (e) => { if (e.target.name) settings[e.target.name] = e.target.dataset.num != null ? +e.target.value : e.target.value.trim(); };
   $('input[type=file]', body).onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
     try {
@@ -373,7 +390,7 @@ function renderVocab() {
   const list = all.filter(filters[vFilter]).filter((w) => !q || w.term.includes(q) || (w.meaning || '').toLowerCase().includes(q) || (w.example || '').toLowerCase().includes(q))
     .sort((a, b) => b.updated - a.updated);
   const n = (k) => all.filter(filters[k]).length;
-  const due = all.filter((w) => w.status >= 1 && w.status <= 4).length;
+  const due = todaysCount();
   const pill = (s) => s === 5 ? '<span class="pill s5">Known</span>' : s === -1 ? '<span class="pill si">Ignored</span>' : `<span class="pill s${s}">${s}</span>`;
   const shown = list.slice(0, 300);
 
@@ -403,52 +420,10 @@ function renderVocab() {
       const w = entry(b.dataset.t);
       return openWordCard({ term: w.term, display: w.display, phrase: !!w.phrase, context: w.example || '', onClose: () => renderVocab() });
     }
-    if (b.dataset.act === 'review') return review();
+    if (b.dataset.act === 'review') return reviewSheet({ onClose: () => renderVocab() });
     if (b.dataset.act === 'csv') return exportCSV();
   };
   $('input[name=q]', v).oninput = (e) => { vQuery = e.target.value; renderVocab(); };
-}
-
-// Flashcard review of LingQs: lower levels and older cards first.
-function review() {
-  const queue = allEntries().filter((w) => w.status >= 1 && w.status <= 4)
-    .sort((a, b) => a.status - b.status || a.updated - b.updated).slice(0, 20);
-  let i = 0, revealed = false, right = 0;
-  const body = openSheet('', { onClose: () => renderVocab() });
-  const card = () => {
-    if (i >= queue.length) {
-      body.innerHTML = `<h2>Review complete<button class="x">${icons.close}</button></h2>
-        <div class="flash"><div class="fw">${right} / ${queue.length}</div><div class="fc">words moved up a level</div></div>
-        <button class="primary" data-done>Done</button>`;
-      return;
-    }
-    const w = queue[i];
-    const ctx = w.example ? highlight(w.example, w.display || w.term) : '';
-    body.innerHTML = `<h2>Review <span class="muted" style="font-size:15px;font-weight:500">${i + 1} of ${queue.length}</span><button class="x">${icons.close}</button></h2>
-      <div class="progress-line"><i style="width:${(i / queue.length) * 100}%"></i></div>
-      <div class="flash" data-flip><div class="fw${(w.display || w.term).length > 40 ? ' long' : ''}">${esc(w.display || w.term)}</div>${ctx ? `<div class="fc">${ctx}</div>` : ''}
-        ${revealed ? `<div class="fm">${esc(w.meaning || '—')}</div>${w.exampleTr ? `<div class="ft">${esc(w.exampleTr)}</div>` : ''}` : '<div class="hint-tap">Tap to show meaning</div>'}</div>
-      <div class="review-btns"><button class="no" data-r="0">Still learning</button><button class="yes" data-r="1">Got it</button></div>`;
-  };
-  card();
-  body.onclick = async (e) => {
-    const b = e.target.closest('button,[data-flip]'); if (!b) return;
-    if (b.matches('.x') || b.dataset.done != null) return closeSheet();
-    if (b.dataset.flip != null) { revealed = true; return card(); }
-    if (b.dataset.r != null) {
-      haptic();
-      const w = queue[i];
-      if (b.dataset.r === '1') {
-        right++;
-        const s = Math.min(5, w.status + 1);
-        await setWord(w.term, { status: s });
-        if (s === 5 && !w.phrase) bump('known');
-      } else {
-        await setWord(w.term, { status: Math.max(1, w.status - (w.status > 2 ? 1 : 0)) });
-      }
-      i++; revealed = false; card();
-    }
-  };
 }
 
 boot();

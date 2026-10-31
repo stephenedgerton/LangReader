@@ -31,7 +31,7 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 - `vocab.js` keeps every word in an in-memory `Map` loaded at boot, and notifies `onChange` listeners. The reader recolours matching `.w[data-w]` spans in place, and re-renders the whole chapter when a phrase changes, because phrase underlines are computed at render time.
 - A word entry keeps `example` (the sentence it was saved from, set once) and `exampleTr` (that sentence's translation, once the user translates it). Phrase entries also keep `display`, the text as printed with its punctuation.
 - `names.js` lists names that `ignoreNames()` in `app.js` marks Ignored on first launch through `setMany` (which never touches existing entries). Bump `NAMES_VERSION` after adding names. Leave out names that are also ordinary words. These pre-seeded names don't count toward the backup reminder.
-- Settings live in localStorage `langreader.settings`, behind a Proxy that saves on every write (avoid writing in hot paths). Other localStorage keys: `langreader.seeded`, `langreader.samplesAdded`, `langreader.tipsSeen`, `langreader.lastBackup`, `langreader.backupSnooze`, `langreader.namesIgnored`, `langreader.badges`.
+- Settings live in localStorage `langreader.settings`, behind a Proxy that saves on every write (avoid writing in hot paths). Other localStorage keys: `langreader.seeded`, `langreader.samplesAdded`, `langreader.tipsSeen`, `langreader.lastBackup`, `langreader.backupSnooze`, `langreader.namesIgnored`, `langreader.badges`, `langreader.srsDay`.
 
 ### Text and rendering (`text.js`)
 - `tokenize` splits elisions the way LingQ does (*dell'anno* → *dell'* + *anno*) and keeps the apostrophe only on known truncations (*po'*). `paragraphHTML` wraps sentences in `.sent` and words in `.w` spans carrying status classes `s0`–`s4`, plus `ph` for words inside a saved phrase. Phrases match within one paragraph only, so a selection can't cross paragraphs. How the classes look depends on `#reader[data-hl]`: `underline` (LingQ's style, the default) or `background`.
@@ -60,6 +60,12 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 - `recordSnapshot()` writes `lemmas`, `cover` and `coverL` into today's `days` record through `record()` in `stats.js` (fields that are set, not added). It runs at boot, when the reader closes and when the Stats tab renders; the trend reads these.
 - The bubble's `.wp-freq` tag and the card's `.freq-line` come from `freqTagHTML()` / `freqSentence()`. The reader passes `isCommon` to `paragraphHTML`, which adds `c` to spans of the 2,000 most common lemmas; `#reader.common-hl` (`settings.commonHL`) styles `.s0.c` stronger and other `.s0` lighter. The in-place recolouring keeps `c`.
 - Theme lists in `themes.js` are lemmas; any word that isn't a lemma in the list is dropped silently, so check new ones against the data file.
+
+### Reviews (`srs.js`, `review.js`)
+- LingQs (status 1–4) are spaced-repetition cards scheduled by FSRS-5 with default weights. `srs.js` is pure (unit-tested in `tests/srs.test.mjs`); the card lives on the word entry as `srs: {s, d, last, due, reps, lapses, tap}`. A LingQ without `srs` is a new card.
+- Reading is review: `leavePage()` passes the page's LingQs (words, plus phrases via `.ph0`) and `R.tapped` (terms tapped in this chapter) to `creditReading()`. Each card gets one credit a day: read past → Good, tapped → Again (once a day, `srs.tap`). A LingQ saved today is left alone. Writes go through `updateMany()` in `vocab.js`.
+- Levels follow stability up (`levelFor`) but never down, except Again drops one level. A card with stability ≥ 180 days becomes Known and leaves the reviews.
+- The day is capped (`settings.reviewsPerDay`, `settings.newPerDay`); `buildQueue()` orders due cards by (1 − recall) × word weight (frequency dots; phrases 3) and new cards by weight. Counts done today are in localStorage `langreader.srsDay`. The UI only shows today's share, never the backlog; "Review 10 more" raises today's cap for the session. `settings.retention` (relaxed/normal/intense = 80/85/90%) sets intervals.
 
 ### Word lookup (`bubble.js` → `wordcard.js`)
 - Tapping a word opens the small bubble. ⋯ opens the full card in the shared sheet. Phrases open the full card directly.

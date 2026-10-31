@@ -14,12 +14,13 @@ import { haptic, hapticAnytime } from './haptics.js';
 import { trackProgress, goalSheet, goalSummary } from './goals.js';
 import { checkBadges, bookmarkHTML } from './achievements.js';
 import { freqLoaded, loadFreq, isCommon } from './freq.js';
+import { creditReading } from './review.js';
 
 const R = {
   el: null, area: null, content: null,
   book: null, ch: 0, chapter: null,
   page: 0, pages: 1, step: 0,
-  spans: [], pageOf: null, seenPages: new Set(),
+  spans: [], pageOf: null, seenPages: new Set(), tapped: new Set(),
   anchor: null, phraseStart: null, selEnd: null, sel: null, phraseOpen: null, onExit: null, speaking: false, busy: false,
 };
 
@@ -137,6 +138,7 @@ async function loadChapter(idx, { frac = 0, last = false, anchor = null } = {}) 
   R.ch = idx;
   R.chapter = await db.get('chapters', `${R.book.id}:${idx}`);
   R.seenPages = new Set();
+  R.tapped = new Set();
   R.sel = null;
   render();
   await document.fonts?.ready;
@@ -333,6 +335,14 @@ function leavePage(p) {
   // Chapter titles aren't reading, so they never count.
   const spans = spansOnPage(p).filter((s) => !s.closest('h1, h2'));
   bump('wordsRead', spans.length);
+  // Reading is review: the LingQs (words and phrases) you read past move forward, ones you looked up come back sooner.
+  const lingqs = new Set();
+  for (const s of spans) {
+    const st = statusOf(s.dataset.w);
+    if (st >= 1 && st <= 4) lingqs.add(s.dataset.w);
+    if (s.classList.contains('ph0')) lingqs.add(s.dataset.ph);
+  }
+  if (lingqs.size) creditReading(lingqs, R.tapped);
   if (!settings.autoKnown) return;
   const blue = [...new Set(spans.filter((s) => statusOf(s.dataset.w) === 0).map((s) => s.dataset.w))];
   if (!blue.length) return;
@@ -571,6 +581,7 @@ function phraseAt(el) {
 // Tapping a word shows the quick bubble; its "⋯" (or the word itself) opens the full card.
 function openWord(el) {
   const i = +el.dataset.i;
+  R.tapped.add(el.dataset.w);
   setSel(i);
   openBubble({
     anchor: () => R.spans[i], container: R.el, term: el.dataset.w,
@@ -644,6 +655,7 @@ function openPhrase(a, b, at = a) {
   setSel(a, b);
   const ph = { a, b };
   R.phraseOpen = ph;
+  R.tapped.add(spans.map((s) => s.dataset.w).join(' '));
   openBubble({
     anchor: () => R.spans[at], container: R.el, phrase: true,
     term: spans.map((s) => s.dataset.w).join(' '),

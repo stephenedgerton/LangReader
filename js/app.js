@@ -110,9 +110,13 @@ function zoomCover(book, from) {
   const reader = $('#reader');
   reader.style.opacity = '0';
   const done = () => { fly.remove(); cover.style.visibility = ''; reader.style.opacity = ''; };
+  // One scale for both axes, so the cover keeps its shape: big enough to cover the screen, centred,
+  // with whatever spills past the sides cut off by the edges of the screen.
+  const k = Math.max(innerWidth / r.width, innerHeight / r.height);
+  const x = (innerWidth - r.width * k) / 2 - r.left, y = (innerHeight - r.height * k) / 2 - r.top;
   fly.animate([
     { transform: 'none', borderRadius: '3px 6px 6px 3px' },
-    { transform: `translate(${-r.left}px, ${-r.top}px) scale(${innerWidth / r.width}, ${innerHeight / r.height})`, borderRadius: '0' },
+    { transform: `translate(${x}px, ${y}px) scale(${k})`, borderRadius: '0' },
   ], { duration: 440, easing: 'cubic-bezier(.32, .72, .16, 1)', fill: 'forwards' }).finished
     .then(() => { reader.style.opacity = ''; return fly.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: 'ease-out', fill: 'forwards' }).finished; })
     .then(done, done);

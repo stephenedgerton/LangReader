@@ -95,6 +95,7 @@ export function closeReader() {
   R.el.hidden = true;
   R.content.innerHTML = '';
   delete document.documentElement.dataset.appearance;
+  statusBar(null);
   R.onExit && R.onExit();
 }
 
@@ -116,10 +117,18 @@ function applyAppearance() {
   st.setProperty('--align', settings.justify ? 'justify' : 'left');
   st.setProperty('--para', settings.paraSpace);
   st.setProperty('--weight', th.weight || 400);
-  document.querySelector('meta[name=theme-color]:not([media])')?.remove();
-  const m = document.createElement('meta');
-  m.name = 'theme-color'; m.content = dark() ? th.dbg : th.bg;
-  document.head.appendChild(m);
+  if (!R.el.hidden) statusBar(getComputedStyle(R.el).backgroundColor);
+}
+
+// iOS colours the status bar from the page background and theme-color, so while a book is open both
+// follow the reading theme. Every theme-color tag changes: a media-matched one would win over a new one.
+// `null` puts back the app's own colours.
+function statusBar(color) {
+  for (const m of document.querySelectorAll('meta[name=theme-color]')) {
+    m.dataset.app ??= m.content;
+    m.content = color || m.dataset.app;
+  }
+  document.documentElement.style.background = document.body.style.background = color || '';
 }
 
 // ---------- Rendering & pagination ----------

@@ -83,7 +83,8 @@ function show(t) {
 
 async function refreshBooks() { books = await db.all('books'); }
 
-function open(book) {
+function open(book, from) {
+  zoomCover(book, from);
   $('#tabbar').hidden = true;
   openReader(book, async () => {
     $('#tabbar').hidden = false;
@@ -91,6 +92,30 @@ function open(book) {
     await refreshBooks();
     show(tab);
   });
+}
+
+// Like Books: the tapped cover grows to fill the screen, then fades to show the page. The reader opens
+// underneath straight away (transparent until the cover has grown), so input goes to it as usual.
+function zoomCover(book, from) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cover = from?.querySelector('.cover') || $(`.view:not([hidden]) [data-open="${CSS.escape(book.id)}"] .cover`);
+  const r = cover?.getBoundingClientRect();
+  if (!r?.width) return;
+  const fly = cover.cloneNode(true);
+  fly.classList.add('cover-fly');
+  // The cover's padding is a percentage of its width, so pin it before the clone leaves its shelf.
+  Object.assign(fly.style, { padding: getComputedStyle(cover).padding, left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  document.body.appendChild(fly);
+  cover.style.visibility = 'hidden';
+  const reader = $('#reader');
+  reader.style.opacity = '0';
+  const done = () => { fly.remove(); cover.style.visibility = ''; reader.style.opacity = ''; };
+  fly.animate([
+    { transform: 'none', borderRadius: '3px 6px 6px 3px' },
+    { transform: `translate(${-r.left}px, ${-r.top}px) scale(${innerWidth / r.width}, ${innerHeight / r.height})`, borderRadius: '0' },
+  ], { duration: 440, easing: 'cubic-bezier(.32, .72, .16, 1)', fill: 'forwards' }).finished
+    .then(() => { reader.style.opacity = ''; return fly.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: 'ease-out', fill: 'forwards' }).finished; })
+    .then(done, done);
 }
 
 // ---------------- Home ----------------
@@ -155,7 +180,7 @@ async function renderHome() {
   fillDifficulty(v, books);
   v.onclick = (e) => {
     const b = e.target.closest('[data-open],[data-act],[data-goal]'); if (!b) return;
-    if (b.dataset.open) return open(books.find((x) => x.id === b.dataset.open));
+    if (b.dataset.open) return open(books.find((x) => x.id === b.dataset.open), b);
     if (b.dataset.goal) return goalSheet(books.find((x) => x.id === b.dataset.goal), { onChange: renderHome });
     if (b.dataset.act === 'goal') return minutesSheet();
     if (b.dataset.act === 'achievements') return achievementsSheet();
@@ -262,7 +287,7 @@ async function renderLibrary() {
   fillDifficulty(v, books);
   v.onclick = (e) => {
     const b = e.target.closest('[data-open],[data-more],[data-act]'); if (!b) return;
-    if (b.dataset.open) return open(books.find((x) => x.id === b.dataset.open));
+    if (b.dataset.open) return open(books.find((x) => x.id === b.dataset.open), b);
     if (b.dataset.more) return bookActions(books.find((x) => x.id === b.dataset.more));
     if (b.dataset.act === 'add') return addSheet();
   };

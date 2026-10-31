@@ -77,6 +77,7 @@ export function openWordCard(opts) {
 
   // Hints come from two sources: Wiktionary glosses first, then machine translation.
   let dictHints = [], mtHints = [], pending = 0, failed = '';
+  const seenHints = new Set();
   const paintHints = () => {
     const box = $('.hints', body);
     const list = [];
@@ -90,7 +91,10 @@ export function openWordCard(opts) {
         : `<div class="loading">${failed ? esc(failed) + ' — the dictionaries below still work.' : 'No suggestions — add your own meaning below.'}</div>`;
       return;
     }
-    box.innerHTML = list.map((h) => `<button class="hint${h.on ? ' on' : ''}" data-t="${esc(h.text)}"><span>${esc(h.text)}${h.note ? ` <small>${esc(h.note)}</small>` : ''}</span>${h.on ? '<small>Saved</small>' : '<span class="plus">+</span>'}</button>`).join('')
+    // Hints that arrive after the card opened slide in, one after another; ones already shown stay put.
+    let n = 0;
+    const enter = (h) => { const k = h.text.toLowerCase(); if (seenHints.has(k)) return ''; seenHints.add(k); return ` enter" style="--i:${n++}`; };
+    box.innerHTML = list.map((h) => `<button class="hint${h.on ? ' on' : ''}${enter(h)}" data-t="${esc(h.text)}"><span>${esc(h.text)}${h.note ? ` <small>${esc(h.note)}</small>` : ''}</span>${h.on ? '<small>Saved</small>' : '<span class="plus">+</span>'}</button>`).join('')
       + (pending ? '<div class="loading">Looking up…</div>' : '');
   };
 

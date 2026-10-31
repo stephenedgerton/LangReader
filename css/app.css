@@ -369,10 +369,19 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 #reader.common-hl[data-hl="underline"] .w.s0.c { box-shadow: none; text-decoration-thickness: 3.5px; }
 #reader.common-hl[data-hl="underline"] .w.s0:not(.c) { background: none; text-decoration: underline solid color-mix(in srgb, var(--new-ul) 50%, transparent) 1.5px; }
 #reader.no-hl .w.s0 { box-shadow: none !important; }
-.w.sel { background: rgba(0, 122, 255, .35) !important; color: inherit; outline: 2px solid rgba(0, 122, 255, .55); }
-/* A selected phrase is painted as one block (CSS Custom Highlight), so the gaps between words fill in too. */
-#page-content.sel-range .w.sel { background: none !important; outline: 0; }
-::highlight(lr-sel) { background-color: rgba(0, 122, 255, .3); }
+.w.sel { --sel-bg: rgba(0, 122, 255, .35); --sel-line: color-mix(in srgb, rgb(0, 122, 255) 55%, var(--r-bg)); background: var(--sel-bg) !important; color: inherit; outline: 2px solid var(--sel-line); transition: none; }
+/* A selected phrase looks like a tapped word stretched over the phrase: the same fill and outline,
+   one box per line. paintSel() marks where each line's run starts (.sel-l) and ends (.sel-r), and
+   sets --gap, the width of the space after a word, which ::after fills in. The outline is drawn
+   with box-shadows in an opaque colour, so where the pieces overlap it doesn't get darker. */
+#page-content.sel-range .w.sel { position: relative; outline: 0; --t: 0 -2px 0 var(--sel-line), 0 2px 0 var(--sel-line); box-shadow: var(--t) !important; }
+#page-content.sel-range .w.sel.sel-l { box-shadow: var(--t), -2px 0 0 var(--sel-line), -2px -2px 0 var(--sel-line), -2px 2px 0 var(--sel-line) !important; }
+#page-content.sel-range .w.sel.sel-r { box-shadow: var(--t), 2px 0 0 var(--sel-line), 2px -2px 0 var(--sel-line), 2px 2px 0 var(--sel-line) !important; }
+#page-content.sel-range .w.sel.sel-l.sel-r { box-shadow: 0 0 0 2px var(--sel-line) !important; }
+#page-content.sel-range .w.sel:not(.sel-r)::after {
+  content: ''; position: absolute; left: 100%; top: 0; bottom: 0; width: var(--gap, 0);
+  background: var(--sel-bg); box-shadow: var(--t); pointer-events: none;
+}
 .sent.speaking { background: rgba(52, 199, 89, .14); border-radius: .2em; }
 
 #reader-bottom {

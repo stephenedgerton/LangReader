@@ -1,5 +1,5 @@
 // Offline support: app shell is cached; translation requests always go to the network.
-const VERSION = 'langreader-v17';
+const VERSION = 'langreader-v18';
 // The Piper voices, their runtime and the word-frequency list never change in place (a new version gets
 // a new file name), so they're cache-first in a cache of their own that survives app updates.
 const ASSETS = 'langreader-assets-v1';

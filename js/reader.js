@@ -64,7 +64,7 @@ export function initReader() {
       const s = statusOf(t);
       const cls = s === 0 ? ' s0' : s >= 1 && s <= 4 ? ` s${s}` : '';
       for (const sp of R.content.querySelectorAll(`.w[data-w="${CSS.escape(t)}"]`)) {
-        sp.className = 'w' + cls + (sp.classList.contains('c') ? ' c' : '') + (sp.dataset.ph ? ' ph' : '') + (sp.classList.contains('sel') ? ' sel' : '');
+        sp.className = 'w' + cls + (sp.classList.contains('c') ? ' c' : '') + (sp.dataset.ph ? ' ph' : '') + ['sel', 'sel-l', 'sel-r'].filter((c) => sp.classList.contains(c)).map((c) => ' ' + c).join('');
       }
     }
   });
@@ -180,6 +180,7 @@ function layout() {
   const x = end.getBoundingClientRect().left - base;
   R.pages = Math.max(1, Math.floor((x + 1) / R.step) + 1);
   R.pageOf = null; // computed lazily
+  if (R.sel && R.sel.b > R.sel.a) paintSel(); // a phrase's line breaks may have moved
   // What a "page" means for reading goals: the words that fit on one at this text size.
   if (R.pages >= 3) {
     const wpp = Math.round(R.spans.length / (R.pages - 0.5));
@@ -519,17 +520,33 @@ function setSel(a, b = a) {
 }
 function unsel(a, b = a) { if (R.sel && R.sel.a === a && R.sel.b === b) setSel(null); }
 function paintSel() {
-  for (const s of R.content.querySelectorAll('.w.sel')) s.classList.remove('sel');
-  const range = !!R.sel && R.sel.b > R.sel.a && !!window.CSS?.highlights;
-  CSS.highlights?.delete('lr-sel');
+  for (const s of R.content.querySelectorAll('.w.sel')) {
+    s.classList.remove('sel', 'sel-l', 'sel-r');
+    s.style.removeProperty('--gap');
+  }
+  const range = !!R.sel && R.sel.b > R.sel.a;
   R.content.classList.toggle('sel-range', range);
   if (!R.sel) return;
   for (let k = R.sel.a; k <= R.sel.b; k++) R.spans[k]?.classList.add('sel');
-  if (range) {
-    const r = document.createRange();
-    r.setStartBefore(R.spans[R.sel.a]); r.setEndAfter(R.spans[R.sel.b]);
-    CSS.highlights.set('lr-sel', new Highlight(r));
+  if (!range) return;
+  // Split the phrase into runs, one per line, and size the fill for the space after each word.
+  let prev = null;
+  for (let k = R.sel.a; k <= R.sel.b; k++) {
+    const s = R.spans[k];
+    if (!s) continue;
+    const rects = s.getClientRects();
+    const first = rects[0], last = rects[rects.length - 1];
+    if (!first) continue;
+    if (!prev || Math.abs(first.top - prev.rect.top) > first.height / 2) {
+      s.classList.add('sel-l');
+      prev?.span.classList.add('sel-r');
+    } else {
+      prev.span.style.setProperty('--gap', Math.max(0, first.left - prev.rect.right) + 'px');
+    }
+    if (rects.length > 1) { s.classList.add('sel-r'); prev = null; continue; } // hyphenated across lines
+    prev = { span: s, rect: last };
   }
+  prev?.span.classList.add('sel-r');
 }
 
 // The saved-phrase occurrence a word belongs to, as span indices (its first word carries .ph0).

@@ -139,7 +139,7 @@ async function renderHome() {
     </button>
     ${goalBooks.map(goalCardHTML).join('')}
     ${!goalBooks.length && current ? `<button class="card bgoal-add" data-goal="${current.id}">🎯 <span>Set a pages-a-day goal for <b>${esc(current.title)}</b></span></button>` : ''}
-    <div class="section-title">Achievements</div>
+    <div class="section-title">Bookmarks</div>
     ${achievements}
     <div class="section-title">Your Italian</div>
     <div class="stats-grid">

@@ -35,18 +35,18 @@ describe('difficulty and achievements', () => {
     assert.deepEqual(await badges(page), {}, 'a new user starts with none');
     await openBook(page);
     for (let i = 0; i < 3; i++) { await page.keyboard.press('ArrowRight'); await sleep(700); }
-    await page.waitForFunction(() => /Achievement unlocked!.*100 known words/.test(document.querySelector('#r-cheer').textContent), null, { timeout: 8000 });
+    await page.waitForFunction(() => /New bookmark!.*100 known words/.test(document.querySelector('#r-cheer').textContent), null, { timeout: 8000 });
     assert.match((await badges(page))['known-100'], /^\d{4}-\d\d-\d\d$/);
     await sleep(3200);
     await closeReader(page);
     await page.click('#tabbar button[data-tab=home]');
     await page.waitForSelector('.ach');
-    assert.match(await page.textContent('.ach-top'), /^1 of \d+ earned/);
+    assert.match(await page.textContent('.ach-top'), /^1 of \d+ collected/);
     assert.match(await page.textContent('.ach-next'), /Next: 🧠 500 known words/);
-    assert.ok(await page.$('.ach .medal.new'), 'earned today: marked new');
+    assert.ok(await page.$('.ach .bookmark.new'), 'earned today: marked new');
     await page.click('.ach'); await sleep(300);
     assert.match(await page.textContent('.ach-item:has-text("100 known words") small'), /\d{4}/, 'shows the date earned');
-    assert.equal(await page.$$eval('.ach-item .medal:not(.locked)', (e) => e.length), 1);
+    assert.equal(await page.$$eval('.ach-item .bookmark:not(.locked)', (e) => e.length), 1);
     assert.deepEqual(errors, []);
   });
 

@@ -75,7 +75,11 @@ describe('words', () => {
     await page.mouse.up(); await sleep(500);
     assert.equal(await text(page, '.wpop .wp-term'), 'valigia piccola e un quaderno nuovo');
     assert.equal(await pageNo(page), 1);
-    assert.ok(await page.evaluate(() => CSS.highlights.has('lr-sel')), 'selection painted as one block');
+    // Painted like a tapped word, as one box per line: the phrase wraps onto a second line here.
+    assert.equal((await page.$$('.w.sel')).length, 6);
+    assert.equal((await page.$$('.w.sel.sel-l')).length, 2, 'one box per line');
+    assert.equal((await page.$$('.w.sel.sel-r')).length, 2);
+    assert.ok(await page.$eval('.w.sel[data-w="valigia"]', (e) => parseFloat(e.style.getPropertyValue('--gap')) > 0), 'space after a word is filled');
     await page.click('.wpop [data-s="2"]'); await sleep(400);
     await page.mouse.click(10, 450); await sleep(300); // tap off
     assert.equal(await page.$$eval('.wpop', (e) => e.length), 0, 'bubble closed');

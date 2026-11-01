@@ -2,7 +2,7 @@
 // Names that are also everyday words are left out on purpose: Rosa, Bianca, Chiara, Felice,
 // Serena, Stella, Franco, Bruno, Massimo, Guido, Rossi, Conti, Russo, Mancini, Fabbri …
 // Bump NAMES_VERSION after adding names, so existing installs pick up the new ones.
-export const NAMES_VERSION = 1;
+export const NAMES_VERSION = 2;
 
 const FIRST = `Achille Adele Adriana Agnese Alberto Aldo Alessandra Alessandro Alessia Alessio Alfonso Alfredo
   Alice Amedeo Andrea Angela Anna Annalisa Annamaria Antonella Antonio Arianna Arturo Augusto Bartolomeo
@@ -28,6 +28,7 @@ const SURNAMES = `Basile Bellini Bernardi Caputo Caruso Cattaneo Coppola Costant
   Rizzi Rizzo Sanna Santoro Sartori Sorrentino Valentini`;
 
 // Characters and places in the bundled stories (samples/).
-const STORIES = `Moser Varga Okafor Ulisse Galileo Bologna Torino Milano Napoli Sicilia Giove Dolomiti Vallerosa`;
+const STORIES = `Moser Varga Okafor Ulisse Galileo Bologna Torino Milano Napoli Sicilia Giove Dolomiti Vallerosa
+  Kate Morley Montemare Bristol Genova Liguria Inghilterra Italia Weber`;
 
 export const NAMES = [...new Set(`${FIRST} ${SURNAMES} ${STORIES}`.split(/\s+/).filter(Boolean))];

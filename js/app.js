@@ -10,6 +10,7 @@ import { getDays, streak, todayKey, bump } from './stats.js';
 import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, $, $$ } from './ui.js';
 import { SAMPLE } from '../samples/sample.js';
 import { STORIES } from '../samples/stories.js';
+import { SERIES, seriesBookId, loadSeriesBook } from '../samples/series/index.js';
 import { haptic } from './haptics.js';
 import { bookPct, goalSheet, goalSummary, goalCardHTML } from './goals.js';
 import { fillDifficulty } from './difficulty.js';
@@ -54,6 +55,16 @@ async function addBundledStories() {
     if (added.includes(s.id)) continue;
     if (!titles.has(s.title)) await saveBook(s);
     added.push(s.id);
+  }
+  // The graded series, each book loaded only if it hasn't been added yet. Book 1 gets the newest date,
+  // so a fresh install starts there and the books line up in order.
+  const now = Date.now();
+  for (let n = 1; n <= SERIES.books; n++) {
+    const id = seriesBookId(n);
+    if (added.includes(id)) continue;
+    const b = await loadSeriesBook(n);
+    if (!titles.has(b.title)) await saveBook({ ...b, added: now + SERIES.books - n + 1 });
+    added.push(id);
   }
   try { localStorage.setItem(KEY, JSON.stringify(added)); localStorage.setItem('langreader.seeded', '1'); } catch {}
   books = await db.all('books');

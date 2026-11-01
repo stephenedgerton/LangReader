@@ -4,7 +4,7 @@ import { textToChapters, countWords } from './text.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-export async function saveBook({ title, author = '', chapters, cover = null, coverColors = null }) {
+export async function saveBook({ title, author = '', chapters, cover = null, coverColors = null, series = null, added = Date.now() }) {
   const id = uid();
   const split = splitLong(chapters);
   const book = {
@@ -13,8 +13,9 @@ export async function saveBook({ title, author = '', chapters, cover = null, cov
     chapterTitles: split.map((c) => c.title),
     chapterWords: split.map((c) => c.blocks.reduce((n, b) => n + countWords(b.x), 0)),
     progress: { chapter: 0, page: 0, frac: 0, done: [] },
-    added: Date.now(), lastOpened: 0,
+    added, lastOpened: 0,
   };
+  if (series) book.series = series; // {id, n}: a book of a bundled graded series
   book.wordCount = book.chapterWords.reduce((a, b) => a + b, 0);
   await db.putMany('chapters', split.map((c, idx) => ({ key: `${id}:${idx}`, bookId: id, idx, title: c.title, blocks: c.blocks })));
   await db.put('books', book);

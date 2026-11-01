@@ -112,6 +112,9 @@ her sister) and the 1880s (a forbidden love and the portrait itself).
 
 ## The books
 
+The word and lemma columns are the first estimates. The live targets are `PLAN` in
+`tools/series-words.mjs`, which the checker prints next to each book.
+
 | # | Title | Story | Words | Target lemmas by the end |
 |---|---|---|---|---|
 | 1 | Una casa a Montemare | Kate arrives by train. Giulia's bar, the lawyer, the key, the yellow house, the cat. | 1,500 | 160 |
@@ -158,3 +161,60 @@ What later books must stay consistent with:
   "perdonami" twice.
 - Tonino promised at Christmas to tell everything after Christmas (book 6).
 - Still owed after book 5: about 110 words from books 1–5 are under 4 uses; book 6 should work them down.
+
+Open threads and small facts to keep straight:
+
+- **Still unresolved:** the locked wooden box from under the bed (book 2), whose small key isn't found
+  until book 10; the light square in the salotto (where the portrait hung).
+- **Kate's letter:** two pages, not finished.
+- **Season:** book 5 ends on Christmas Day, so book 6 starts in the days after Christmas.
+- **Kate's habits:** a floor plan every morning in her drawing book, with notes on it ("Il metro c'è",
+  "Bottone. Sogno?"); her picture book about a grey city cat who goes to the sea; two lessons a week
+  with Elena.
+- **Elena's promise:** "there's another form for very old stories, but that's for another day". That's
+  the passato remoto, so pay it off when the diary starts (book 11).
+- **People:** Giulia and Kate use *tu*; Tonino uses *tu* to Kate and she uses *tu* back since book 3.
+  Kate and Elena use *tu*; the lawyer, Bellini and the antique dealer use *Lei*.
+- **Matteo:** gave Kate a small grey wooden cat (on the kitchen table, under the clock). He worked ten
+  years in an office in Milan, and has restored houses for fifteen years (book 5 says so). His
+  grandfather watched the German ships from the tower as a boy and said "non tutti erano amici".
+- **Unexplained so far:** the ticking at night is always the kitchen clock, which never moves.
+  Nobody has explained the notes "Per Kate" (Kate thinks Margherita prepared them before she died).
+
+## How to write the next book
+
+What worked for books 1–5:
+
+1. **Plan the scenes.** Work from this file and `node tools/check-series.mjs --next 150` (the most
+   common unused target words). Pick the ones the story's subject brings naturally.
+2. **Plan more scenes than feels necessary.** Drafts have come out at about 60% of the planned word
+   count every time.
+3. **Write, then run the checker.** `node tools/check-series.mjs <n>` lists the book's new words, its
+   thin ones, and every earlier word still under 4 uses.
+4. **Fix the owed words with scenes, not lists.** Write one or two extra scenes that use the owed words
+   naturally: the bar, the market, an errand, a dinner, a dream, a walk. Don't add filler sentences.
+5. **Proofread the whole book** (print it with the snippet below), then run the checker again. Mistakes
+   caught so far:
+   - Present tense where Italian needs a past: "ieri sera Kate ha paura" (→ aveva), "forse Margherita
+     prepara tutto" (→ ha preparato), "il bottone cade" (→ è caduto), "chi la scrive?" (→ chi l'ha
+     scritta?). Look-backs need the passato prossimo; dead people's habits need the imperfetto.
+   - Subjunctives sneaking in before book 10 ("prima che suoni", "credo che sia"). Rephrase them.
+   - Wrong verbs and idioms: getting out of a car is *scendere*, not *uscire*; a knock is *bussare*;
+     "aprire gli occhi grandi" isn't Italian (say *è molto sorpresa*).
+   - Continuity: who uses *tu* or *Lei*; what's in each room; dates; ages.
+   - Dialogue in English (Kate and her mother) is still written in Italian, as a convention.
+6. **Ship it** (see `CLAUDE.md`, "Bundled content"):
+   - add the book to `SERIES.books` and `REVS` in `index.js`, to `SHELL` in `sw.js`, and to the title
+     list in `tests/library.test.mjs`;
+   - add new names to `js/names.js` and bump `NAMES_VERSION`;
+   - bump `VERSION` in `sw.js`;
+   - raise a book's `REVS` number whenever a released book's text changes;
+   - update "Written so far" above.
+7. **Run `node --test`.** `tests/voice.test.mjs` sometimes times out under the full run; when it fails,
+   run it on its own (`node --test tests/voice.test.mjs`) to confirm it passes.
+
+To print a book for proofreading:
+`node --input-type=module -e "import {loadSeriesBook} from './samples/series/index.js'; const b=await loadSeriesBook(5); for (const c of b.chapters) for (const x of c.blocks) console.log(x.x)"`
+
+Workflow with the owner: write on branch `langreader-app`; merge to `main` (open a PR, then merge) only
+when asked, since merging is the deploy.

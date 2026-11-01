@@ -8,6 +8,7 @@ import { settings } from './settings.js';
 import { normalize, tokenize } from './text.js';
 import { haptic } from './haptics.js';
 import { freqSentence } from './freq.js';
+import { parseForm, inflect, formLabel } from './english.js';
 
 // Like LingQ, every LingQ keeps the sentence it was saved from (`example`), plus that sentence's
 // translation (`exampleTr`) once you've translated it. Phrases also keep `display`, the text as printed.
@@ -157,16 +158,43 @@ export function openWordCard(opts) {
   });
 }
 
-// Meanings to offer as one-tap LingQ hints. For an inflected form, use the base word's senses.
+// Meanings to offer as one-tap LingQ hints. For an inflected form, the base word's sense put into
+// that form comes first ("arrivò": "he/she arrived"), then the base word's senses as they are.
 export function dictionaryHints(r) {
   const src = r.lemma && r.lemmaEntries.length ? r.lemmaEntries : r.entries;
   const out = [];
+  if (r.lemma && r.lemmaEntries.length) out.push(...inflectedHints(r));
   for (const e of src) {
     for (const d of e.defs) {
       if (d.lemma) continue; // "plural of …" isn't a meaning
       const g = gloss(d.text);
       if (g) out.push({ text: g, note: r.lemma ? r.lemma : '' });
       if (out.length >= 4) return out;
+    }
+  }
+  return out;
+}
+
+// Each reading Wiktionary gives for the form (at most two), in English, from the base word's first
+// sense that can take it: a verb's "to …" sense, or a noun's sense for a plural.
+function inflectedHints(r) {
+  const out = [];
+  const seen = new Set();
+  for (const e of r.entries) {
+    for (const d of e.defs) {
+      if (!d.lemma) continue;
+      for (const f of parseForm(d.text)) {
+        if (f.tense === 'plural' && !/noun/i.test(e.pos)) continue; // an adjective's plural reads the same in English
+        const kind = f.tense === 'plural' ? /noun/i : /verb/i;
+        const senses = r.lemmaEntries.filter((l) => kind.test(l.pos)).flatMap((l) => l.defs).filter((x) => !x.lemma);
+        for (const s of senses) {
+          const text = inflect(gloss(s.text), f);
+          if (!text) continue;
+          if (!seen.has(text)) { seen.add(text); out.push({ text, note: `${r.lemma} · ${formLabel(f)}` }); }
+          break;
+        }
+        if (out.length >= 2) return out;
+      }
     }
   }
   return out;

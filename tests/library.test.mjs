@@ -102,7 +102,7 @@ describe('library', () => {
     await page.click('[data-act=review]'); await sleep(300);
     assert.equal(await page.textContent('.flash .fw'), 'treno');
     await page.click('[data-flip]'); await page.click('[data-r="3"]'); await sleep(300);
-    assert.match(await page.textContent('.flash'), /1 card reviewed · 1 remembered/);
+    assert.match(await page.textContent('.rv-done'), /1 card reviewed · 1 remembered/);
     await page.click('[data-done]'); await sleep(300);
     assert.match(await page.textContent('.row[data-t="treno"] .pill'), /^2$/);
   });

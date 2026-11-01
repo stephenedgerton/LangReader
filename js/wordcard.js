@@ -175,20 +175,24 @@ export function dictionaryHints(r) {
 function paintDict(body, r) {
   const box = $('.dict', body);
   if (!box) return;
+  box.innerHTML = dictHTML(r);
+  box.hidden = false;
+}
+
+// Wiktionary's senses as HTML. lemmaButton: false prints the base word without the "Open base word" button.
+export function dictHTML(r, { lemmaButton = true } = {}) {
   const section = (entries, max) => entries.slice(0, 2).map((e) => `
     <div class="pos"><span>${esc(e.pos)}</span><ol>${e.defs.slice(0, max).map((d) => `<li>${esc(d.text)}</li>`).join('')}</ol></div>`).join('');
   let html = '';
   const formDefs = r.entries.flatMap((e) => e.defs).filter((d) => d.lemma);
   if (r.lemma) {
-    html += `<div class="form-of">${esc(formDefs[0]?.text || 'Form of ' + r.lemma)}</div>
-      <button class="lemma-btn" data-lemma="${esc(r.lemma)}"><b>${esc(r.lemma)}</b><span>Open base word ›</span></button>`;
+    html += `<div class="form-of">${esc(formDefs[0]?.text || 'Form of ' + r.lemma)}</div>`;
+    if (lemmaButton) html += `<button class="lemma-btn" data-lemma="${esc(r.lemma)}"><b>${esc(r.lemma)}</b><span>Open base word ›</span></button>`;
     html += section(r.lemmaEntries, 3);
   } else {
     html += section(r.entries, 3);
   }
-  html += '<div class="src">Wiktionary</div>';
-  box.innerHTML = html;
-  box.hidden = false;
+  return html + '<div class="src">Wiktionary</div>';
 }
 
 export function highlight(context, display) {

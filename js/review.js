@@ -7,11 +7,12 @@
 // Today's counts live in localStorage langreader.srsDay = {date, reviews, fresh}.
 import { settings } from './settings.js';
 import { allEntries, entry, setWord, updateMany } from './vocab.js';
-import { buildQueue, rate, readingCredit, preview, ivlLabel, AGAIN, HARD, GOOD, EASY } from './srs.js';
+import { buildQueue, isLingq, rate, readingCredit, preview, ivlLabel, AGAIN, HARD, GOOD, EASY } from './srs.js';
 import { lookupFreq, dotsFor, loadFreq } from './freq.js';
 import { todayKey, bump } from './stats.js';
 import { openSheet, closeSheet, esc, icons, $, $$ } from './ui.js';
-import { highlight, dictHTML, dictionaryHints } from './wordcard.js';
+import { dictHTML, dictionaryHints } from './wordcard.js';
+import { tokenize, normalize } from './text.js';
 import { lookup } from './dictionary.js';
 import { haptic } from './haptics.js';
 import { speak, translate, dictionaryLinks } from './services.js';
@@ -82,6 +83,7 @@ function interleave(due, fresh) {
 const ICON = {
   undo: '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
   edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></svg>',
+  globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
   book: '<svg viewBox="0 0 24 24"><path d="M12 6.5C10.5 5 8 4.5 4 4.5v14c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2v-14c-4 0-6.5.5-8 2zm0 0v14"/></svg>',
 };
 const GRADES = [[AGAIN, 'Again', 'again'], [HARD, 'Hard', 'hard'], [GOOD, 'Good', 'good'], [EASY, 'Easy', 'easy']];
@@ -101,6 +103,32 @@ export function findWord(context, display) {
     if (!L.test(c[at - 1] || '') && (d.endsWith("'") || !L.test(c[at + d.length] || ''))) return at;
   }
   return -1;
+}
+
+// The card's sentence with every other word tappable and coloured by status (blue New, yellow LingQ), so
+// words you don't know in the context can be looked up too. The card's own word is bold, or a gap.
+function sentenceHTML(ex, at, len, gap = false) {
+  let pos = 0, out = '', gapDone = false;
+  for (const t of tokenize(ex)) {
+    const s = pos, e = pos + t.text.length;
+    pos = e;
+    if (at >= 0 && s < at + len && e > at) {
+      if (!gap) out += `<b>${esc(t.text)}</b>`;
+      else if (!gapDone) { gapDone = true; out += '<span class="gap"></span>'; }
+      continue;
+    }
+    if (t.type !== 'w') { out += esc(t.text); continue; }
+    const st = entry(normalize(t.text))?.status ?? 0;
+    out += `<span class="cw${st >= 0 && st <= 4 ? ' s' + st : ''}" data-w="${esc(t.text)}">${esc(t.text)}</span>`;
+  }
+  return out;
+}
+
+// Cards to practise once today's are done: LingQs not due yet, the ones due soonest first.
+function aheadCards(n, skip) {
+  const end = new Date(); end.setHours(23, 59, 59, 999);
+  return allEntries().filter((w) => isLingq(w) && w.srs && w.srs.due > +end && todayKey(new Date(w.srs.last)) !== todayKey() && !skip.has(w.term))
+    .sort((a, b) => a.srs.due - b.srs.due).slice(0, n);
 }
 
 // Multiple choice: the card's meaning among three others from your vocabulary (same kind first: words or phrases).
@@ -135,7 +163,7 @@ function clozeChoices(w, pool) {
 // Quizlet-style variety: new cards (and forgotten ones coming back) are plain flashcards, so you see the
 // answer; known cards take turns between a flashcard, picking the meaning, and filling the gap in their sentence.
 function cardMode(w, item, pool) {
-  if (settings.reviewStyle === 'flip' || item.fresh || item.again || !w.srs || !w.meaning) return { mode: 'flip' };
+  if (settings.reviewStyle === 'flip' || item.fresh || item.again || item.practice || !w.srs || !w.meaning) return { mode: 'flip' };
   const turn = (w.srs.reps || 0) % 3;
   if (turn === 1) { const c = clozeChoices(w, pool); if (c) return { mode: 'cloze', ...c }; }
   if (turn !== 0) { const c = meaningChoices(w, pool); if (c) return { mode: 'choice', ...c }; }
@@ -148,11 +176,16 @@ export async function reviewSheet({ onClose } = {}) {
   const body = openSheet('', { onClose: () => { removeEventListener('keydown', onKey); onClose?.(); } });
   addEventListener('keydown', onKey);
 
-  let queue, i, pool, stats, cur = null, revealed = false, extra = 0, streak = 0, busy = false, swipedAt = -1e9;
+  let queue, i, pool, stats, cur = null, revealed = false, extra = 0, streak = 0, busy = false, swipedAt = -1e9, glossSeq = 0;
+  // session: 'today' (today's cards), 'ahead' (extra practice, not due yet) or 'missed' (today's misses again,
+  // which doesn't touch their schedule).
+  let session = 'today';
+  const seen = new Set();
   const undo = [];
-  const start = () => {
-    const q = todaysQueue(extra);
-    queue = interleave(q.due, q.fresh);
+  const start = (items) => {
+    if (items) queue = items;
+    else { const q = todaysQueue(extra); queue = interleave(q.due, q.fresh); session = 'today'; }
+    queue.forEach((it) => seen.add(it.term));
     i = 0;
     pool = allEntries().filter((e) => e.status >= 1 && e.status <= 5 && e.meaning && e.meaning.trim());
     stats = stats || { n: 0, right: 0, known: 0, best: 0, tricky: [] };
@@ -168,22 +201,23 @@ export async function reviewSheet({ onClose } = {}) {
 
   const cardHTML = () => {
     const w = cur.w, s = shown(), ex = w.example || '', long = s.length > 40 ? ' long' : '';
+    const at = findWord(ex, s), sent = ex ? sentenceHTML(ex, at, s.length) : '';
     let front;
     if (cur.mode === 'cloze') {
       front = `<div class="q-label">Fill in the gap</div>
-        <div class="fc cloze">${esc(ex.slice(0, cur.at))}<span class="gap"></span>${esc(ex.slice(cur.at + s.length))}</div>
+        <div class="fc cloze">${sentenceHTML(ex, cur.at, s.length, true)}</div>
         <div class="q-hint">${esc(w.meaning)}</div>`;
     } else {
       front = `${cur.mode === 'choice' ? '<div class="q-label">What does it mean?</div>' : cur.item.fresh ? '<span class="new-tag">New</span>' : ''}
         <div class="fw-row"><div class="fw${long}">${esc(s)}</div>${say('word')}</div>
-        ${ex ? `<div class="fc">${highlight(ex, s)}${say('sentence')}</div>` : ''}
-        ${cur.mode === 'flip' ? '<div class="hint-tap">Tap to flip</div>' : ''}`;
+        ${ex ? `<div class="fc">${sent}${say('sentence')}</div>` : ''}
+        ${cur.mode === 'flip' ? `<div class="hint-tap">${ex ? 'Tap a word for its meaning, anywhere else to flip' : 'Tap to flip'}</div>` : ''}`;
     }
     const back = `<div class="fw-row"><div class="bw${long}">${esc(s)}</div>${say('word')}</div>
       <div class="fm">${esc(w.meaning || '—')}</div>
-      ${ex ? `<div class="fc">${highlight(ex, s)}${say('sentence')}</div>` : ''}
+      ${ex ? `<div class="fc">${sent}${say('sentence')}</div>` : ''}
       ${w.exampleTr ? `<div class="ft">${esc(w.exampleTr)}</div>` : ''}
-      <div class="rv-tools"><button class="rv-edit">${ICON.edit}Edit meaning</button><button class="rv-dict-btn">${ICON.book}Dictionary</button></div>`;
+      <div class="rv-tools">${ex && !w.exampleTr ? `<button class="rv-tr">${ICON.globe}Translate sentence</button>` : ''}<button class="rv-edit">${ICON.edit}Edit meaning</button><button class="rv-dict-btn">${ICON.book}Dictionary</button></div>`;
     return `<div class="card3d"><div class="face front">${front}</div><div class="face back">${back}</div></div>
       <i class="stamp know">Know</i><i class="stamp again">Still learning</i>`;
   };
@@ -198,6 +232,7 @@ export async function reviewSheet({ onClose } = {}) {
       return `${list}<div class="rv-verdict ${ok ? 'ok' : 'no'}">${ok ? PRAISE[Math.floor(Math.random() * PRAISE.length)] : 'Not quite. It will come back soon.'}</div>
         <button class="primary" data-r="${ok ? GOOD : AGAIN}">Continue</button>`;
     }
+    if (revealed && cur.item.practice) return `<div class="review-btns"><button class="again" data-r="${AGAIN}">Still learning</button><button class="good" data-r="${GOOD}">Got it</button></div>`;
     if (!revealed) return `<button class="primary" data-flip>Show Meaning</button><div class="swipe-hint"><span>← Still learning</span><span>Know →</span></div>`;
     const iv = preview(cur.w.srs, Date.now(), retention());
     return `<div class="review-btns four">${GRADES.map(([g, l, c]) => `<button class="${c}" data-r="${g}"><span>${l}</span><small>${ivlLabel(iv[g])}</small></button>`).join('')}</div>`;
@@ -210,7 +245,8 @@ export async function reviewSheet({ onClose } = {}) {
     if (!w || w.status < 1 || w.status > 4) { i++; return render(); } // changed elsewhere meanwhile
     cur = { item, w, answered: null, ...cardMode(w, item, pool) };
     revealed = false;
-    body.innerHTML = `${headHTML(`Today's Review <span class="muted">${i + 1} of ${queue.length}</span>`)}${tallyHTML()}
+    const title = { today: "Today's Review", ahead: 'Extra Practice', missed: 'Missed Words' }[session];
+    body.innerHTML = `${headHTML(`${title} <span class="muted">${i + 1} of ${queue.length}</span>`)}${tallyHTML()}
       <div class="flash enter mode-${cur.mode}">${cardHTML()}</div>
       <div class="rv-actions">${actionsHTML()}</div><div class="rv-dict" hidden></div>`;
     $('#sheet').scrollTop = 0;
@@ -222,7 +258,7 @@ export async function reviewSheet({ onClose } = {}) {
     const nx = todaysQueue(extra + 10), more = nx.due.length + nx.fresh.length;
     $('#sheet').scrollTop = 0;
     const pct = stats.n ? Math.round((stats.right / stats.n) * 100) : 0;
-    const tricky = stats.tricky.map((t) => entry(t)).filter(Boolean);
+    const tricky = stats.tricky.map((t) => entry(t)).filter((w) => w && isLingq(w));
     body.innerHTML = `${headHTML(stats.n ? 'All done for today' : 'Nothing to review')}
       <div class="rv-done">
         ${stats.n ? `<div class="rv-ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" pathLength="100"/><circle class="fg" cx="60" cy="60" r="52" pathLength="100" style="--p:${pct}"/></svg><div><b>${pct}%</b><small>remembered</small></div></div>`
@@ -233,7 +269,17 @@ export async function reviewSheet({ onClose } = {}) {
       </div>
       ${tricky.length ? `<div class="section-title rv-tricky-title">Still learning</div><div class="list rv-tricky">${tricky.map((w) => `<div class="row"><div class="txt"><div class="w">${esc(w.display || w.term)}</div><div class="m">${esc(w.meaning || '—')}</div></div><button class="rv-say" data-term="${esc(w.display || w.term)}" aria-label="Play">${icons.speaker}</button></div>`).join('')}</div>` : ''}
       <button class="primary" data-done>Done</button>
-      ${more ? '<button class="secondary more-btn" data-extra>Review 10 more</button>' : ''}`;
+      ${keepGoingHTML(more, tricky.length)}`;
+  };
+  // Optional extras, never pushed: today's remaining due cards first, else cards that aren't due yet,
+  // and today's misses once more.
+  const keepGoingHTML = (more, missed) => {
+    const ahead = more ? 0 : aheadCards(10, new Set()).length;
+    if (!more && !ahead && !missed) return '';
+    return `<div class="rv-more"><div class="rv-more-title">Want to keep going? <span>Only if you feel like it.</span></div>
+      ${more ? `<button class="secondary" data-extra>Review ${Math.min(10, more)} more</button>` : ''}
+      ${ahead ? `<button class="secondary" data-ahead>Practise ${ahead} ahead of schedule</button>` : ''}
+      ${missed ? `<button class="secondary" data-missed>Go over the ${missed === 1 ? 'one' : missed} I missed</button>` : ''}</div>`;
   };
 
   // Hear it as you check it (synchronously, in the tap, for iOS).
@@ -277,13 +323,23 @@ export async function reviewSheet({ onClose } = {}) {
     busy = true;
     const item = cur.item, w = entry(item.term) || cur.w;
     flyOut(dir ?? (g === AGAIN ? -1 : 1));
-    const snap = { term: w.term, prev: { status: w.status, srs: w.srs }, i, qlen: queue.length, stats: { ...stats, tricky: [...stats.tricky] }, streak, counted: null, known: false };
-    const p = rate(w, g, Date.now(), retention(), Math.random());
-    if (!item.again) { snap.counted = item.fresh ? 'fresh' : 'reviews'; countDone(snap.counted); stats.n++; if (g > AGAIN) stats.right++; }
-    if (g === AGAIN) { streak = 0; if (!stats.tricky.includes(w.term)) stats.tricky.push(w.term); }
-    else { streak++; stats.best = Math.max(stats.best, streak); }
-    if (p.status === 5) { stats.known++; if (!w.phrase) { bump('known'); snap.known = true; } }
+    const snap = { term: w.term, prev: { status: w.status, srs: w.srs }, i, queue, qlen: queue.length, session, stats: { ...stats, tricky: [...stats.tricky] }, streak, counted: null, known: false };
+    if (g === AGAIN) streak = 0; else { streak++; stats.best = Math.max(stats.best, streak); }
     undo.push(snap);
+    // Going over today's misses again is only practice: their schedule was already set today.
+    if (item.practice) {
+      snap.term = null; busy = false;
+      if (g === AGAIN && !item.again) queue.push({ ...item, again: true });
+      i++; return render();
+    }
+    const p = rate(w, g, Date.now(), retention(), Math.random());
+    if (!item.again) {
+      // Extra practice ahead of schedule doesn't use up tomorrow's share.
+      if (!item.ahead) { snap.counted = item.fresh ? 'fresh' : 'reviews'; countDone(snap.counted); }
+      stats.n++; if (g > AGAIN) stats.right++;
+    }
+    if (g === AGAIN && !stats.tricky.includes(w.term)) stats.tricky.push(w.term);
+    if (p.status === 5) { stats.known++; if (!w.phrase) { bump('known'); snap.known = true; } }
     try { await setWord(w.term, p); } finally { busy = false; }
     // Forgotten cards come back once more at the end of the session.
     if (g === AGAIN && !item.again) queue.push({ ...item, again: true });
@@ -297,8 +353,8 @@ export async function reviewSheet({ onClose } = {}) {
     const s = undo.pop();
     if (s.counted) countDone(s.counted, -1);
     if (s.known) bump('known', -1);
-    try { await setWord(s.term, s.prev); } finally { busy = false; }
-    queue.length = s.qlen; i = s.i; stats = s.stats; streak = s.streak;
+    try { if (s.term) await setWord(s.term, s.prev); } finally { busy = false; }
+    queue = s.queue; queue.length = s.qlen; i = s.i; session = s.session; stats = s.stats; streak = s.streak;
     render();
   };
 
@@ -355,6 +411,49 @@ export async function reviewSheet({ onClose } = {}) {
     job(translate(s, { word: !w.phrase }).then((r) => { hints.mt = r.options || []; }));
     paintHints();
     box.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  // Tap a word in the sentence: its meaning shows under the sentence (saved meaning, Wiktionary, then
+  // machine translation), and a New word can be saved as a LingQ from there.
+  const showGloss = async (span) => {
+    const text = span.dataset.w, term = normalize(text), face = span.closest('.face');
+    if (settings.speakOnTap) speak(text); // synchronously, in the tap, for iOS
+    $$('.cw.on', body).forEach((x) => x.classList.remove('on'));
+    span.classList.add('on');
+    let bar = $('.cgloss', face);
+    if (!bar) { bar = document.createElement('div'); bar.className = 'cgloss'; $('.fc', face).after(bar); }
+    const paint = (m, loading = false) => {
+      const st = entry(term)?.status ?? 0;
+      bar.innerHTML = `<b>${esc(text)}</b><span class="cg-m">${loading ? 'Looking up…' : esc(m || 'No translation found')}</span>`
+        + (!loading && m && st === 0 ? `<button class="cg-add" data-t="${esc(term)}" data-m="${esc(m)}">+ LingQ</button>` : st >= 1 && st <= 4 ? '<small>LingQ</small>' : '');
+    };
+    const saved = entry(term)?.meaning;
+    if (saved) return paint(saved);
+    paint('', true);
+    const seq = ++glossSeq;
+    let m = '';
+    if (settings.target === 'en') { try { const r = await lookup(text); m = (r && dictionaryHints(r)[0]?.text) || ''; } catch {} }
+    if (!m) { try { m = (await translate(text, { word: true })).main || ''; } catch {} }
+    if (seq === glossSeq && bar.isConnected) paint(m);
+  };
+  const addLingq = async (b) => {
+    haptic();
+    const term = b.dataset.t, m = b.dataset.m;
+    const w = await setWord(term, { status: 1, meaning: m, ...(cur?.w.example && { example: cur.w.example, ...(cur.w.exampleTr && { exampleTr: cur.w.exampleTr }) }) });
+    bump('lingqs');
+    pool.push(w);
+    $$('.cw', body).forEach((x) => { if (normalize(x.dataset.w) === term) { x.classList.remove('s0'); x.classList.add('s1'); } });
+    b.outerHTML = '<small>Saved as LingQ</small>';
+  };
+  const translateSentence = async (b) => {
+    const w = cur.w, ex = w.example;
+    b.disabled = true; b.lastChild.textContent = 'Translating…';
+    let tr;
+    try { tr = (await translate(ex)).main; } catch { b.lastChild.textContent = 'Translation unavailable (offline?)'; return; }
+    if (!cur || cur.w.term !== w.term) return;
+    cur.w = await setWord(w.term, { exampleTr: tr }, { silent: true });
+    $('.face.back .fc', body)?.insertAdjacentHTML('afterend', `<div class="ft">${esc(tr)}</div>`);
+    b.remove();
   };
 
   const sayBtn = (b, text) => {
@@ -428,6 +527,14 @@ export async function reviewSheet({ onClose } = {}) {
       if (b.matches('.x') || b.dataset.done != null) return closeSheet();
       if (b.matches('.rv-undo')) return undoLast();
       if (b.dataset.extra != null) { extra += 10; start(); return render(); }
+      if (b.dataset.ahead != null) { session = 'ahead'; start(aheadCards(10, seen).map((w) => ({ term: w.term, ahead: true }))); return render(); }
+      if (b.dataset.missed != null) {
+        session = 'missed';
+        start(shuffle(stats.tricky.filter((t) => isLingq(entry(t) || {}))).map((term) => ({ term, practice: true })));
+        return render();
+      }
+      if (b.matches('.rv-tr')) return translateSentence(b);
+      if (b.matches('.cg-add')) return addLingq(b);
       if (b.dataset.term) return sayBtn(b, b.dataset.term);
       if (b.dataset.say) return sayBtn(b, b.dataset.say === 'word' ? shown() : cur.w.example);
       if (b.matches('.rv-edit')) return editMeaning();
@@ -439,7 +546,10 @@ export async function reviewSheet({ onClose } = {}) {
       if (b.dataset.r != null) { haptic(); return grade(+b.dataset.r); }
       return;
     }
-    if (e.target.closest('input, form, a')) return;
-    if (cur && e.target.closest('.flash') && performance.now() - swipedAt > 400) flip();
+    if (e.target.closest('input, form, a, .cgloss')) return;
+    if (!cur || !e.target.closest('.flash') || performance.now() - swipedAt < 400) return;
+    const cw = e.target.closest('.cw');
+    if (cw) return showGloss(cw);
+    flip();
   };
 }

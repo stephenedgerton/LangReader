@@ -590,7 +590,20 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .rv-tricky { margin-bottom: 16px; }
 .rv-tricky .rv-say { margin-left: auto; }
 .review-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.review-btns button { padding: 14px; border-radius: 12px; font-weight: 600; }
+.review-btns button { padding: 14px; border-radius: 12px; font-weight: 600; background: var(--fill); }
+/* Words in the card's sentence: tap one for its meaning. Blue New, yellow LingQ, as in the reader. */
+.face .cw { border-radius: 4px; padding: 0 1px; margin: 0 -1px; cursor: pointer; transition: background .15s; }
+.face .cw.s0 { text-decoration: underline solid rgba(30, 120, 255, .55) 1.5px; text-underline-offset: 3px; }
+.face .cw.s1, .face .cw.s2, .face .cw.s3, .face .cw.s4 { text-decoration: underline solid rgba(255, 190, 0, .85) 1.5px; text-underline-offset: 3px; }
+.face .cw.on { background: color-mix(in srgb, var(--tint) 22%, transparent); color: var(--label); }
+.cgloss { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 4px 8px; margin-top: 10px; padding: 8px 12px; border-radius: 12px; background: var(--fill); font-size: 15px; max-width: 100%; animation: bubble-in .18s ease-out; cursor: default; }
+.cgloss b { font: 600 16px var(--serif-ui); }
+.cgloss .cg-m { color: var(--label); }
+.cgloss small { font-size: 12px; color: var(--label-2); }
+.cg-add { font-size: 13px; font-weight: 700; color: #000; background: rgba(255, 193, 7, .9); border-radius: 99px; padding: 3px 10px; }
+.rv-more { margin-top: 22px; padding-top: 16px; border-top: .5px solid var(--sep); display: grid; gap: 8px; }
+.rv-more-title { font-size: 15px; font-weight: 600; text-align: center; margin-bottom: 2px; }
+.rv-more-title span { display: block; font-size: 13px; font-weight: 400; color: var(--label-2); margin-top: 2px; }
 .review-btns.four { grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .review-btns.four button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; background: var(--fill); transition: transform .1s; }
 .review-btns.four button:active { transform: scale(.95); }
@@ -599,7 +612,6 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .review-btns .hard { color: #ff9500; }
 .review-btns .good { color: var(--green); }
 .review-btns .easy { color: #007aff; }
-.more-btn { width: 100%; margin-top: 10px; }
 .review-card { display: flex; gap: 14px; align-items: center; width: 100%; text-align: left; margin-top: 10px; }
 .review-card .rv-ico { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--fill); color: var(--tint); flex: none; font-weight: 700; }
 .review-card .rv-ico svg { width: 22px; height: 22px; }

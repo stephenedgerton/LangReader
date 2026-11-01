@@ -201,7 +201,8 @@ async function renderHome() {
 function reviewCardHTML(c) {
   if (!c.lingqs) return '';
   const n = todaysCount(), done = reviewedToday();
-  if (!n) return done ? `<div class="card review-card done"><div class="rv-ico">✓</div><div><h4>Reviews done for today</h4><p>${done} card${done === 1 ? '' : 's'} reviewed. Reading keeps the rest fresh.</p></div></div>` : '';
+  // Done for today, but still a button: the sheet offers extra practice for anyone who wants more.
+  if (!n) return done ? `<button class="card review-card done" data-act="review"><div class="rv-ico">✓</div><div><h4>Reviews done for today</h4><p>${done} card${done === 1 ? '' : 's'} reviewed. Practise more if you like.</p></div><span class="chev">›</span></button>` : '';
   return `<button class="card review-card" data-act="review"><div class="rv-ico">${icons.cards}</div>
     <div><h4>Today's Review</h4><p>${n} card${n === 1 ? '' : 's'} · about ${Math.max(1, Math.round(n / 10))} min</p></div><span class="chev">›</span></button>`;
 }

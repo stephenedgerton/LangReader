@@ -192,6 +192,61 @@ describe('reviews', () => {
     assert.deepEqual(errors, []);
   });
 
+  test('words in the sentence can be looked up, saved as LingQs, and the sentence translated', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'vocab', settings: { reviewStyle: 'flip' } });
+    await seed(page, [{ term: 'treno', srs: due(2) }]);
+    await page.evaluate(() => import('./js/vocab.js').then((v) => v.setWord('treno', { example: 'Il treno arrivò alla stazione.' })));
+    await openReview(page);
+    assert.equal(await page.$$eval('.face.front .fc b', (b) => b.map((x) => x.textContent).join()), 'treno', 'the card\'s word is bold');
+    assert.ok(await page.$('.face.front .cw.s0[data-w="arrivò"]'), 'other words are tappable and coloured New');
+    await page.click('.face.front .cw[data-w="arrivò"]'); await sleep(500);
+    assert.equal(await page.$eval('.flash', (e) => e.classList.contains('flipped')), false, 'looking up a word does not flip');
+    assert.match(await page.textContent('.face.front .cgloss'), /arrivò\s*to arrive, to reach/);
+    await page.click('.face.front .cg-add'); await sleep(200);
+    const a = await card(page, 'arrivò');
+    assert.equal(a.status, 1);
+    assert.equal(a.meaning, 'to arrive, to reach');
+    assert.equal(a.example, 'Il treno arrivò alla stazione.');
+    assert.ok(await page.$('.face.front .cw.s1[data-w="arrivò"]'), 'recoloured as a LingQ');
+    await page.click('[data-flip]'); await sleep(100);
+    await page.click('.rv-tr'); await sleep(300);
+    assert.equal(await page.textContent('.face.back .ft'), 'mock translation');
+    assert.equal((await card(page, 'treno')).exampleTr, 'mock translation');
+    assert.deepEqual(errors, []);
+  });
+
+  test('when today is done you can keep going, but only if you want to', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'vocab', settings: { reviewStyle: 'flip' } });
+    await seed(page, [{ term: 'casa', status: 3, srs: due(2) }]);
+    // A card that isn't due for a week.
+    await page.evaluate(() => import('./js/vocab.js').then((v) => v.setWord('tempo', { status: 3, meaning: 'time', created: Date.now() - 9e8,
+      srs: { s: 20, d: 5, reps: 3, lapses: 0, last: Date.now() - 5 * 864e5, due: Date.now() + 7 * 864e5 } })));
+    await openReview(page);
+    await page.click('[data-flip]'); await page.click('[data-r="1"]'); await sleep(200); // forgot it
+    await page.click('[data-flip]'); await page.click('[data-r="3"]'); await sleep(200); // it comes back once
+    assert.match(await page.textContent('.rv-more'), /Want to keep going\?/);
+    assert.ok(await page.$('[data-done].primary'), 'Done stays the main button');
+    // Today's misses again: practice only, the schedule stays as it was.
+    const before = await card(page, 'casa');
+    await page.click('[data-missed]'); await sleep(200);
+    assert.match(await page.textContent('.sheet h2'), /Missed Words\s*1 of 1/);
+    await page.click('[data-flip]');
+    assert.equal(await page.$$eval('.review-btns button', (b) => b.length), 2);
+    await page.click('[data-r="3"]'); await sleep(200);
+    assert.deepEqual((await card(page, 'casa')).srs, before.srs);
+    // Ahead of schedule: rated for real, but not counted against tomorrow.
+    await page.click('[data-ahead]'); await sleep(200);
+    assert.match(await page.textContent('.sheet h2'), /Extra Practice\s*1 of 1/);
+    assert.equal(await page.textContent('.flash .fw'), 'tempo');
+    await page.click('[data-flip]'); await page.click('[data-r="3"]'); await sleep(200);
+    assert.equal((await card(page, 'tempo')).srs.reps, 4);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.srsDay')).reviews), 1);
+    await page.click('[data-done]'); await sleep(300);
+    await page.click('#tabbar button[data-tab=home]'); await sleep(300);
+    assert.ok(await page.$('button.review-card.done[data-act=review]'), 'the finished card on Home still opens the review');
+    assert.deepEqual(errors, []);
+  });
+
   test('review settings are saved as numbers', async () => {
     const { page } = await openApp(t, srv.url, { hash: 'home' });
     await page.click('[data-act=settings]'); await sleep(300);

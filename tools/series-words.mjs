@@ -30,7 +30,7 @@ export const LATE = new Set(`
 // Keep this short; each one is a word the reader meets without any frequency data behind it.
 export const EXTRA = new Set(`
   ok bar cappuccino brioche focaccia pesto wifi email euro foto centouno
-  fog telefonata radio
+  fog telefonata radio congiuntivo
 `.split(/\s+/).filter(Boolean));
 
 // The plan per book: [words, target lemmas covered by the end of the book].

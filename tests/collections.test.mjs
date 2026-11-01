@@ -46,7 +46,7 @@ describe('library organising', () => {
     assert.equal(await page.$('.coll-row'), null);
     await page.click('#sheet .x'); await sleep(300);
     assert.equal(await page.textContent('.chips .on'), 'All');
-    assert.equal((await titles(page)).length, 10);
+    assert.equal((await titles(page)).length, 15);
     const left = await page.evaluate(async () => {
       const db = await new Promise((r) => { const q = indexedDB.open('langreader'); q.onsuccess = () => r(q.result); });
       const all = await new Promise((r) => { const q = db.transaction('books').objectStore('books').getAll(); q.onsuccess = () => r(q.result); });

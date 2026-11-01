@@ -25,7 +25,8 @@ const defaults = {
   goalMinutes: 15,
   retention: 'normal',     // relaxed | normal | intense: how much of your LingQs reviews aim to keep (80/85/90%)
   reviewsPerDay: 20,       // due cards offered a day; the rest wait, most valuable first
-  newPerDay: 10,           // LingQs that start reviews each day (reading introduces others)
+  newPerDay: 10,
+  reviewStyle: 'mixed',   // mixed (flashcards, pick the meaning, fill the gap) | flip (flashcards only)           // LingQs that start reviews each day (reading introduces others)
 };
 
 let stored = {};

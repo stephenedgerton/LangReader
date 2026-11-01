@@ -225,6 +225,7 @@ function settingsSheet() {
     <label class="field"><span>Memory target</span><select name="retention">${[['relaxed', 'Relaxed · keep about 80%, fewest reviews'], ['normal', 'Normal · keep about 85%'], ['intense', 'Intense · keep about 90%, most reviews']].map(([k, n]) => `<option value="${k}" ${settings.retention === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <label class="field"><span>Reviews a day (the rest wait, most useful first)</span><select name="reviewsPerDay" data-num>${[10, 20, 30, 50, 100].map((n) => `<option ${+settings.reviewsPerDay === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <label class="field"><span>New cards a day</span><select name="newPerDay" data-num>${[0, 5, 10, 20].map((n) => `<option ${+settings.newPerDay === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <label class="field"><span>Card style</span><select name="reviewStyle">${[['mixed', 'Mixed · flashcards, pick the meaning, fill the gap'], ['flip', 'Flashcards only']].map(([k, n]) => `<option value="${k}" ${settings.reviewStyle === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <p class="muted" style="font-size:13px;margin:-4px 0 0">Reading counts as review: LingQs you read past without tapping move forward, ones you look up come back sooner.</p>
     <div class="section-title" style="font-size:17px;margin-top:18px">Backup</div>
     <p class="muted storage-status" style="font-size:13px;margin:-4px 0 10px">Last backup: ${backupAge()}.</p>

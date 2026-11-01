@@ -53,7 +53,13 @@ The story runs from November to May.
 - **Tonino**, 80s, retired fisherman. Knew Margherita all his life. Speaks slowly; tells the old stories.
 - **Matteo**, 30s, carpenter who restores old houses. Quiet; a slow friendship that becomes more.
 - **Avvocato Rinaldi**, the lawyer who handles the will.
-- **Elena**, the schoolteacher and keeper of the small village archive; reads old handwriting.
+- **Elena**, the schoolteacher and keeper of the small village archive; reads old handwriting. Gives Kate
+  Italian lessons from book 5.
+- **Signora Teresa**, over 90, black hat, knew the sisters as a girl; speaks to nobody but Kate ("what
+  people say isn't true"). **Don Piero**, the old priest. The **antique dealer** behind the church, who
+  says Bellini asks him every year about a woman's portrait from the yellow house.
+- **Giulia's family**: her husband Paolo and their children Sofia and Marco. **Luca**, the little boy
+  from the bread stall, who says the yellow house changes at night.
 - **Ingegner Bellini**, an engineer from Genoa who wants to buy the house for a hotel.
 - In 1944: **Andrea**, Lucia's fiancé, a partisan; **Ettore Bellini**, the engineer's grandfather; a
   German officer, **il capitano Weber**, quartered in the yellow house.
@@ -99,12 +105,15 @@ her sister) and the 1880s (a forbidden love and the portrait itself).
 
 | Part | Books | Narration | Dialogue adds | Register |
 |---|---|---|---|---|
-| 1 · L'arrivo | 1–5 | present | *mi piace*, *c'è*, *vorrei*, near future with present | everyday, short sentences |
+| 1 · L'arrivo | 1–5 | present | *mi piace*, *c'è*, a few fixed past forms; Elena teaches the passato prossimo in book 5 | everyday, short sentences |
 | 2 · Le domande | 6–10 | present | passato prossimo (6), imperfetto (7), future (8), conditional (9), first subjunctives (10) | everyday; old people's stories in the past |
 | 3 · Il diario | 11–15 | passato remoto + imperfetto | full subjunctive, pluperfect | 1940s diary, plainly written |
 | 4 · Le lettere | 16–20 | passato remoto | everything | 19th-century letters; `LATE` words allowed |
 
 ## The books
+
+The word and lemma columns are the first estimates. The live targets are `PLAN` in
+`tools/series-words.mjs`, which the checker prints next to each book.
 
 | # | Title | Story | Words | Target lemmas by the end |
 |---|---|---|---|---|
@@ -115,7 +124,7 @@ her sister) and the 1880s (a forbidden love and the portrait itself).
 | 5 | Natale al porto | Christmas morning: a door on the top floor that has never been there, and behind it two girls' bedroom. Christmas in the village. Italian lessons with Elena. The photo: two sisters and a young man. Kate's mother: Nonna never spoke of Italy. | 3,500 | 560 |
 | 6 | Quello che ricorda Tonino | Tonino tells of the war: the two sisters, Andrea, the summer of 1944. | 4,000 | 660 |
 | 7 | Il quadro che manca | A smell of fresh paint in a room nobody has painted in for 80 years. The pale square on the wall. An old inventory lists "ritratto di donna". Bellini shows interest in the cellar. | 4,500 | 760 |
-| 8 | La chiesa sulla collina | The parish records and the war memorial: Andrea, died 1944. The priest remembers. | 5,000 | 860 |
+| 8 | La chiesa sulla collina | The parish records (Kate already saw Andrea's name on the war memorial at Christmas). Don Piero remembers. | 5,000 | 860 |
 | 9 | Il diario in cantina | The cellar stairs go one floor further down than yesterday. Kate and Matteo find Margherita's diary there, water-damaged. Elena helps read it. | 5,500 | 960 |
 | 10 | Una notte di tempesta | Someone breaks in, but the doors are never where the intruder expects. Kate finally reads Margherita's whole letter. The box opens: a ring and a second key. | 6,000 | 1,060 |
 | 11 | Estate 1944 | Diary: the village under occupation; Lucia and Andrea; Margherita's secret. | 6,500 | 1,160 |
@@ -132,3 +141,80 @@ her sister) and the 1880s (a forbidden love and the portrait itself).
 About 136,000 words in all. Vocabulary each book naturally brings: 1–5 travel, food, house, family,
 weather, the sea, numbers, time, Christmas; 6–10 war and memory, church, art, the law, the night; 11–15
 occupation, soldiers, fear, hiding, betrayal, love; 16–20 ships, nobility, honour, fate, the old world.
+
+## Written so far (books 1–5)
+
+What later books must stay consistent with:
+
+- The kitchen clock is stopped at 10:20, with *12 agosto 1944* hidden inside it (Margherita's first riddle).
+- The 1946 letter "Per Lucia" from the salotto wall: "perdonami… io volevo solo salvare…", then
+  "Torna a casa. Ti aspetto sempre."
+- The silver button from the stairs, after the dream of the two girls.
+- Behind the Christmas door on the top floor: the girls' room, with two beds, their drawings and a
+  calendar stopped at August 1944. Matteo's missing metre is now there.
+- Lucia married a British soldier she met in Genoa and left in 1946. Andrea's photo, taken by the tower,
+  was in her books. His name is on the war memorial: "Andrea, di anni 20. 12 agosto 1944."
+- Bellini's offer is refused ("anche le case cambiano"). He asks the antique dealer every year about a
+  woman's portrait. Margherita bought frames there, never paintings. Margherita drew as a girl.
+- Kate's letter so far: "Cara Kate, questa casa è tua. È tua perché è di Lucia, e Lucia non può tornare.
+  Non avere paura della casa. La casa ti mostra solo quello che sei pronta a vedere." It says
+  "perdonami" twice.
+- Tonino promised at Christmas to tell everything after Christmas (book 6).
+- Still owed after book 5: about 110 words from books 1–5 are under 4 uses; book 6 should work them down.
+
+Open threads and small facts to keep straight:
+
+- **Still unresolved:** the locked wooden box from under the bed (book 2), whose small key isn't found
+  until book 10; the light square in the salotto (where the portrait hung).
+- **Kate's letter:** two pages, not finished.
+- **Season:** book 5 ends on Christmas Day, so book 6 starts in the days after Christmas.
+- **Kate's habits:** a floor plan every morning in her drawing book, with notes on it ("Il metro c'è",
+  "Bottone. Sogno?"); her picture book about a grey city cat who goes to the sea; two lessons a week
+  with Elena.
+- **Elena's promise:** "there's another form for very old stories, but that's for another day". That's
+  the passato remoto, so pay it off when the diary starts (book 11).
+- **People:** Giulia and Kate use *tu*; Tonino uses *tu* to Kate and she uses *tu* back since book 3.
+  Kate and Elena use *tu*; the lawyer, Bellini and the antique dealer use *Lei*.
+- **Matteo:** gave Kate a small grey wooden cat (on the kitchen table, under the clock). He worked ten
+  years in an office in Milan, then came home and has restored houses for five years. His
+  grandfather watched the German ships from the tower as a boy and said "non tutti erano amici".
+- **Unexplained so far:** the ticking at night is always the kitchen clock, which never moves.
+  Nobody has explained the notes "Per Kate" (Kate thinks Margherita prepared them before she died).
+
+## How to write the next book
+
+What worked for books 1–5:
+
+1. **Plan the scenes.** Work from this file and `node tools/check-series.mjs --next 150` (the most
+   common unused target words). Pick the ones the story's subject brings naturally.
+2. **Plan more scenes than feels necessary.** Drafts have come out at about 60% of the planned word
+   count every time.
+3. **Write, then run the checker.** `node tools/check-series.mjs <n>` lists the book's new words, its
+   thin ones, and every earlier word still under 4 uses.
+4. **Fix the owed words with scenes, not lists.** Write one or two extra scenes that use the owed words
+   naturally: the bar, the market, an errand, a dinner, a dream, a walk. Don't add filler sentences.
+5. **Proofread the whole book** (print it with the snippet below), then run the checker again. Mistakes
+   caught so far:
+   - Present tense where Italian needs a past: "ieri sera Kate ha paura" (→ aveva), "forse Margherita
+     prepara tutto" (→ ha preparato), "il bottone cade" (→ è caduto), "chi la scrive?" (→ chi l'ha
+     scritta?). Look-backs need the passato prossimo; dead people's habits need the imperfetto.
+   - Subjunctives sneaking in before book 10 ("prima che suoni", "credo che sia"). Rephrase them.
+   - Wrong verbs and idioms: getting out of a car is *scendere*, not *uscire*; a knock is *bussare*;
+     "aprire gli occhi grandi" isn't Italian (say *è molto sorpresa*).
+   - Continuity: who uses *tu* or *Lei*; what's in each room; dates; ages.
+   - Dialogue in English (Kate and her mother) is still written in Italian, as a convention.
+6. **Ship it** (see `CLAUDE.md`, "Bundled content"):
+   - add the book to `SERIES.books` and `REVS` in `index.js`, to `SHELL` in `sw.js`, and to the title
+     list in `tests/library.test.mjs`;
+   - add new names to `js/names.js` and bump `NAMES_VERSION`;
+   - bump `VERSION` in `sw.js`;
+   - raise a book's `REVS` number whenever a released book's text changes;
+   - update "Written so far" above.
+7. **Run `node --test`.** `tests/voice.test.mjs` sometimes times out under the full run; when it fails,
+   run it on its own (`node --test tests/voice.test.mjs`) to confirm it passes.
+
+To print a book for proofreading:
+`node --input-type=module -e "import {loadSeriesBook} from './samples/series/index.js'; const b=await loadSeriesBook(5); for (const c of b.chapters) for (const x of c.blocks) console.log(x.x)"`
+
+Workflow with the owner: write on branch `langreader-app`; merge to `main` (open a PR, then merge) only
+when asked, since merging is the deploy.

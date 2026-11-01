@@ -7,7 +7,7 @@ import { db } from './db.js';
 import { settings } from './settings.js';
 import { counts } from './vocab.js';
 import { getDays, todayKey } from './stats.js';
-import { bookPct } from './goals.js';
+import { bookPct, finishedOn } from './goals.js';
 import { openSheet, closeSheet, esc, icons, coverHTML } from './ui.js';
 
 const KEY = 'langreader.badges';
@@ -36,11 +36,12 @@ function bestStreak(days) {
   return best;
 }
 
-const isFinished = (b) => (b.milestones && '1' in b.milestones) || bookPct(b) >= 100;
+// A finished book stays finished when you start it again.
+const isFinished = (b) => finishedOn(b) !== undefined || bookPct(b) >= 100;
 
 async function measure() {
   const [days, books] = await Promise.all([getDays(), db.all('books')]);
-  const finished = books.filter(isFinished).sort((a, b) => (a.milestones?.[1] || '').localeCompare(b.milestones?.[1] || ''));
+  const finished = books.filter(isFinished).sort((a, b) => (finishedOn(a) || '').localeCompare(finishedOn(b) || ''));
   return {
     values: { known: counts().known, read: days.reduce((a, d) => a + (d.wordsRead || 0), 0), streak: bestStreak(days), books: finished.length },
     finished,

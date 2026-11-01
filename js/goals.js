@@ -42,6 +42,8 @@ export const pagesToday = (b) => toPages(dayWords(b, todayKey()));
 export function trackProgress(b) {
   const pos = Math.round(wordsAt(b));
   const today = todayKey();
+  const reads = b.reads || (b.reads = pastReads(b)); // before today's log entry, which isn't history
+  const wasFinished = !!b.milestones && 1 in b.milestones;
   const log = b.log || (b.log = {});
   const d = log[today] || (log[today] = { from: pos, to: pos });
   d.to = Math.max(d.to, pos);
@@ -60,6 +62,13 @@ export function trackProgress(b) {
     else if (top) cheers.push({ icon: '🎉', title: `${MILESTONE_NAMES[top]} through!`, sub: `${top * 100}% of ${esc(b.title)}` });
   }
 
+  // Each time through the book is a read. It starts the day you first get past the opening (just
+  // opening a book doesn't count) and finishes the day you reach the end. "Start from the
+  // beginning" clears the milestones, so the next page you read starts a new read.
+  let cur = reads[reads.length - 1];
+  if (pos > 0 && (!cur || 'finished' in cur) && !wasFinished) reads.push(cur = { started: today });
+  if (cur && !('finished' in cur) && 1 in b.milestones) cur.finished = b.milestones[1];
+
   const g = b.goal;
   if (g && g.cheered !== today && toPages(dayWords(b, today)) >= g.pages) {
     g.cheered = today;
@@ -67,6 +76,30 @@ export function trackProgress(b) {
     cheers.push({ icon: '🎯', title: 'Today’s goal done!', sub: `${g.pages} ${g.pages === 1 ? 'page' : 'pages'}${st > 1 ? ` · 🔥 ${st}-day streak` : ''}` });
   }
   return cheers;
+}
+
+// "Mark as complete": move the position to the end of the book, which finishes the current read
+// (starting one today if there isn't one). Words aren't marked Known; the caller saves the book.
+export function markBookComplete(b) {
+  if (!b.milestones) trackProgress(b); // so the milestones it passes now are dated today
+  const n = b.chapterCount || 1;
+  b.progress = { ...b.progress, chapter: n - 1, page: 0, frac: 1, read: 1, done: [...Array(n).keys()] };
+  trackProgress(b);
+}
+
+// The reads of a book from before reads were recorded, pieced together from the reading log:
+// started on the first day you read some of it, or null if you'd begun before the log did.
+// (trackProgress adds the finish from the milestones.)
+function pastReads(b) {
+  const days = Object.keys(b.log || {}).sort().filter((k) => b.log[k].to > 0);
+  if (!days.length && !wordsAt(b)) return [];
+  return [{ started: days.length && b.log[days[0]].from === 0 ? days[0] : null }];
+}
+
+// When the book was last finished (a date key; null if before that was recorded), or undefined.
+export function finishedOn(b) {
+  const r = (b.reads || []).filter((x) => 'finished' in x).pop();
+  return r ? r.finished : b.milestones?.[1];
 }
 
 // Days in a row the goal was met, counting today only once it's met.

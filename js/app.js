@@ -7,13 +7,14 @@ import { openWordCard, highlight } from './wordcard.js';
 import { NAMES, NAMES_VERSION } from './names.js';
 import { normalize } from './text.js';
 import { getDays, streak, todayKey, bump } from './stats.js';
-import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, $, $$ } from './ui.js';
+import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, toast, $, $$ } from './ui.js';
 import { SAMPLE } from '../samples/sample.js';
 import { STORIES } from '../samples/stories.js';
 import { SERIES, seriesBookId, seriesRev, loadSeriesBook } from '../samples/series/index.js';
 import { haptic } from './haptics.js';
-import { bookPct, goalSheet, goalSummary, goalCardHTML } from './goals.js';
+import { bookPct, goalSheet, goalSummary, goalCardHTML, markBookComplete } from './goals.js';
 import { fillDifficulty } from './difficulty.js';
+import { allCollections, STATES, filterBooks, SORTS, sortBooks, bookCollectionsSheet, organiseSheet, newCollection } from './collections.js';
 import { checkBadges, achievementsCardHTML, achievementsSheet } from './achievements.js';
 import { loadFreq, recordSnapshot } from './freq.js';
 import { renderStats } from './statsview.js';
@@ -175,9 +176,10 @@ async function renderHome() {
         <div class="row-btns"><button class="primary" data-act="backup">Back Up Now</button><button class="secondary" data-act="snooze">Later</button></div>
       </div>` : ''}
     <div class="section-title">Reading Goals</div>
-    <button class="card goal" data-act="goal" style="width:100%;text-align:left">
+    <button class="card goal${frac >= 1 ? ' met' : ''}" data-act="goal" style="width:100%;text-align:left">
       <div class="ring"><svg viewBox="0 0 96 96"><circle class="track" cx="48" cy="48" r="${R}"/>
-        <circle class="prog" cx="48" cy="48" r="${R}" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg></div>
+        <circle class="prog${frac >= 1 ? ' met' : ''}" cx="48" cy="48" r="${R}" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg>
+        ${frac >= 1 ? `<div class="ring-n">${icons.check}</div>` : ''}</div>
       <div><h4>Today's Reading</h4><div class="big">${mins}:${String(today.seconds % 60).padStart(2, '0')}</div>
         <p>of your ${settings.goalMinutes}-minute goal${st ? ` · 🔥 ${st}-day streak` : ''}</p></div>
     </button>
@@ -285,6 +287,7 @@ function settingsSheet() {
       for (const bk of data.books || []) await db.put('books', bk);
       if (data.chapters) await db.putMany('chapters', data.chapters);
       for (const d of data.days || []) await db.put('days', d);
+      for (const c of data.collections || []) await db.put('collections', c);
       alert('Backup restored.');
       closeSheet(); await refreshBooks(); show(tab);
     } catch (err) { alert('Could not read backup: ' + err.message); }
@@ -292,7 +295,7 @@ function settingsSheet() {
 }
 
 async function exportAll() {
-  const data = { app: 'LangReader', version: 1, exported: new Date().toISOString(), words: allEntries(), books: await db.all('books'), chapters: await db.all('chapters'), days: await db.all('days') };
+  const data = { app: 'LangReader', version: 1, exported: new Date().toISOString(), words: allEntries(), books: await db.all('books'), chapters: await db.all('chapters'), days: await db.all('days'), collections: await db.all('collections') };
   if (await saveFile(`langreader-backup-${todayKey()}.json`, JSON.stringify(data), 'application/json')) markBackedUp();
 }
 function exportCSV() {
@@ -302,13 +305,32 @@ function exportCSV() {
 }
 
 // ---------------- Library ----------------
+let libQuery = '';
+
 async function renderLibrary() {
   const v = $('#view-library');
   await refreshBooks();
-  const sorted = books.slice().sort((a, b) => (b.lastOpened || b.added) - (a.lastOpened || a.added));
+  const cols = await allCollections();
+  let filter = settings.libraryFilter;
+  if (filter.startsWith('c:') ? !cols.some((c) => 'c:' + c.id === filter) : !STATES.some(([k]) => k === filter)) filter = settings.libraryFilter = 'all';
+  const q = libQuery.trim().toLowerCase();
+  const shown = filterBooks(books, filter).filter((b) => !q || b.title.toLowerCase().includes(q) || (b.author || '').toLowerCase().includes(q));
+  const sorted = await sortBooks(shown, settings.librarySort);
+  const sortName = (SORTS.find(([k]) => k === settings.librarySort) || SORTS[0])[1];
+  const chips = [...STATES, ...cols.map((c) => ['c:' + c.id, c.name])];
+  const focused = document.activeElement?.name === 'lq';
+  const empty = !books.length
+    ? `<div class="empty"><h3>Your library is empty</h3><p>Tap + to paste Italian text or import a .txt or .epub book.</p></div>`
+    : `<div class="empty"><h3>No books here</h3><p>${q ? 'Nothing matches your search.' : filter.startsWith('c:') ? 'Add books to this collection from their ⋯ menu.' : 'Books will show here as you read.'}</p></div>`;
   v.innerHTML = `
     <div class="view-head"><h1 class="large-title">Library</h1>
-      <button class="circle-btn" data-act="add" aria-label="Add book">${icons.plus}</button></div>
+      <div class="head-btns"><button class="circle-btn" data-act="organise" aria-label="Sort and collections">${icons.sort}</button>
+      <button class="circle-btn" data-act="add" aria-label="Add book">${icons.plus}</button></div></div>
+    ${books.length > 1 ? `
+      <label class="search">${icons.search}<input name="lq" type="search" placeholder="Search titles and authors" value="${esc(libQuery)}" autocomplete="off"></label>
+      <div class="chips">${chips.map(([k, l]) => `<button data-filter="${esc(k)}" class="${k === filter ? 'on' : ''}">${esc(l)}</button>`).join('')}
+        <button data-act="new-coll" class="chip-new" aria-label="New collection">${icons.plus}</button></div>
+      <div class="lib-sub"><span>${sorted.length} ${sorted.length === 1 ? 'book' : 'books'}</span><button data-act="organise">${esc(sortName)} ${icons.sort}</button></div>` : ''}
     ${sorted.length ? `<div class="lib-grid">${sorted.map((b) => `
       <div class="book">
         <button data-open="${b.id}" style="width:100%">${coverHTML(b)}</button>
@@ -319,14 +341,23 @@ async function renderLibrary() {
         </div>
         <div class="newwords">${libLine(b)}</div>
       </div>`).join('')}</div>`
-      : `<div class="empty"><h3>Your library is empty</h3><p>Tap + to paste Italian text or import a .txt or .epub book.</p></div>`}
+      : empty}
   `;
+  $('.chips .on', v)?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  if (focused) { const i = $('input[name=lq]', v); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+  const lq = $('input[name=lq]', v);
+  if (lq) lq.oninput = (e) => { libQuery = e.target.value; renderLibrary(); };
   fillDifficulty(v, books);
   v.onclick = (e) => {
-    const b = e.target.closest('[data-open],[data-more],[data-act]'); if (!b) return;
+    const b = e.target.closest('[data-open],[data-more],[data-act],[data-filter]'); if (!b) return;
     if (b.dataset.open) return open(books.find((x) => x.id === b.dataset.open), b);
     if (b.dataset.more) return bookActions(books.find((x) => x.id === b.dataset.more));
+    if (b.dataset.filter) { settings.libraryFilter = b.dataset.filter; return renderLibrary(); }
     if (b.dataset.act === 'add') return addSheet();
+    if (b.dataset.act === 'organise') return organiseSheet({ onChange: renderLibrary });
+    if (b.dataset.act === 'new-coll') {
+      newCollection().then((c) => { if (c) { settings.libraryFilter = 'c:' + c.id; renderLibrary(); } });
+    }
   };
 }
 
@@ -336,13 +367,19 @@ function libLine(b) {
   return `${b.chapterCount} ${b.chapterCount === 1 ? 'lesson' : 'lessons'} · ${b.wordCount.toLocaleString()} words`;
 }
 
-function bookActions(book) {
+let collCache = [];
+const collNames = (b) => (b.collections || []).map((id) => collCache.find((c) => c.id === id)?.name).filter(Boolean).join(', ') || 'None';
+
+async function bookActions(book) {
+  collCache = await allCollections();
   const g = goalSummary(book);
   const body = openSheet(`<h2>${esc(book.title)}<button class="x">${icons.close}</button></h2>
     <p class="diff-line"><span data-diff="${book.id}" data-long></span></p>
     <div class="action-list">
       <button data-a="read"><span>${book.lastOpened ? 'Resume' : 'Read'}</span></button>
+      <button data-a="collections"><span>Collections…</span><small class="muted">${esc(collNames(book))}</small></button>
       <button data-a="goal"><span>Reading Goal</span><small class="muted">${g ? `${g.pages} pages a day` : 'Not set'}</small></button>
+      ${bookPct(book) < 100 ? '<button data-a="complete"><span>Mark as complete</span></button>' : ''}
       <button data-a="restart"><span>Start from the beginning</span></button>
       <button data-a="rename"><span>Rename</span></button>
       <button data-a="delete" class="danger"><span>Remove from library</span>${icons.trash}</button>
@@ -351,8 +388,13 @@ function bookActions(book) {
   body.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.a === 'goal') return goalSheet(book, { onChange: renderLibrary }); // replaces this sheet
+    if (b.dataset.a === 'collections') return bookCollectionsSheet(book, { onChange: renderLibrary });
     closeSheet();
     if (b.dataset.a === 'read') open(book);
+    if (b.dataset.a === 'complete') {
+      markBookComplete(book); await db.put('books', book);
+      toast('Marked as complete 🏆'); renderLibrary(); checkBadges();
+    }
     if (b.dataset.a === 'restart') { book.progress = { chapter: 0, page: 0, frac: 0, done: [] }; book.milestones = {}; await db.put('books', book); open(book); }
     if (b.dataset.a === 'rename') {
       const t = prompt('Title', book.title);

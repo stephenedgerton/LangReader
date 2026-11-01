@@ -5,9 +5,10 @@
 //   words     {term, status, meaning, phrase, example, created, updated}
 //   tcache    {key, value}   translation cache
 //   days      {date, seconds, wordsRead, known, lingqs, lemmas?, cover?, coverL?}
+//   collections {id, name, created}   books list theirs in book.collections
 
 const DB_NAME = 'langreader';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 let dbp;
 
 function open() {
@@ -24,6 +25,7 @@ function open() {
       if (!db.objectStoreNames.contains('words')) db.createObjectStore('words', { keyPath: 'term' });
       if (!db.objectStoreNames.contains('tcache')) db.createObjectStore('tcache', { keyPath: 'key' });
       if (!db.objectStoreNames.contains('days')) db.createObjectStore('days', { keyPath: 'date' });
+      if (!db.objectStoreNames.contains('collections')) db.createObjectStore('collections', { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

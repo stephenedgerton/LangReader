@@ -121,7 +121,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 
 .card { background: var(--bg-grouped); border-radius: 14px; padding: 16px; }
 .goal { display: flex; align-items: center; gap: 18px; }
-.ring { width: 96px; height: 96px; flex: none; }
+.ring { width: 96px; height: 96px; flex: none; position: relative; }
 .ring svg { width: 96px; height: 96px; transform: rotate(-90deg); }
 .ring circle { fill: none; stroke-width: 9; }
 .ring .track { stroke: var(--fill-2); }
@@ -142,6 +142,31 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .shelf .book { width: 108px; flex: none; }
 
 /* ============ Library ============ */
+.head-btns { display: flex; gap: 10px; }
+.chips { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px 10px; padding: 2px 16px; scrollbar-width: none; scroll-padding-inline: 16px; }
+.chips::-webkit-scrollbar { display: none; }
+.chips button { flex: none; background: var(--fill); color: var(--label); font-size: 15px; font-weight: 500; padding: 6px 14px; border-radius: 99px; white-space: nowrap; }
+.chips button.on { background: var(--tint); color: #fff; font-weight: 600; }
+.chips .chip-new { color: var(--tint); padding: 6px 10px; display: grid; place-items: center; }
+.chips .chip-new svg { width: 18px; height: 18px; stroke-width: 2.2; }
+.lib-sub { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--label-2); margin: 0 0 16px; }
+.lib-sub button { color: var(--tint); font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.lib-sub svg { width: 16px; height: 16px; stroke-width: 2.2; }
+.coll-for { margin: -6px 0 14px; }
+.coll-pick .tick { visibility: hidden; color: var(--tint); display: grid; }
+.coll-pick .tick svg { width: 20px; height: 20px; stroke-width: 2.4; }
+.coll-pick .on .tick { visibility: visible; }
+.action-list .btn-new { justify-content: flex-start; gap: 8px; color: var(--tint); }
+.action-list .btn-new svg { width: 18px; height: 18px; stroke-width: 2.2; }
+.coll-row { display: flex; align-items: center; gap: 14px; padding: 9px 12px 9px 16px; position: relative; }
+.coll-row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.action-list .coll-row button { width: auto; flex: none; color: var(--tint); font-size: 15px; padding: 4px 2px; }
+.action-list .coll-row button::before { content: none; }
+.action-list .coll-row .danger { color: var(--red); display: grid; }
+.coll-row .danger svg { width: 20px; height: 20px; }
+.action-list > * + *::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.section-title.sm { font-size: 13px; font-weight: 400; color: var(--label-2); text-transform: uppercase; letter-spacing: .2px; margin: 18px 0 6px 16px; }
+.coll-help { font-size: 13px; margin: 8px 16px 0; }
 .lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 26px 18px; }
 @media (max-width: 380px) { .lib-grid { grid-template-columns: repeat(2, 1fr); } }
 .book { display: block; text-align: left; position: relative; }
@@ -750,6 +775,7 @@ input[type=date] { background: transparent; border: 0; color: var(--tint); font:
 .ring .prog.met { stroke: var(--green); }
 .ring-n { position: absolute; inset: 0; display: grid; place-items: center; font: 700 22px var(--sans); font-variant-numeric: tabular-nums; }
 .ring-n svg { width: 30px; height: 30px; stroke: var(--green); stroke-width: 3; transform: none; }
+.ring:not(.sm) .ring-n svg { width: 40px; height: 40px; }
 
 /* Last seven days: a bar per day, the dashed line is the goal. */
 .gs-week { --h: 64px; position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background: var(--fill); border-radius: 12px; padding: 12px 14px 8px; margin-bottom: 14px; }

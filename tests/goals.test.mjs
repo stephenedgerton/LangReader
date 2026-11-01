@@ -102,4 +102,55 @@ describe('reading goals', () => {
     const ms = (await bookRecord(page)).milestones;
     assert.match(ms['0.75'], /^\d{4}-\d\d-\d\d$/, 'dated when reached');
   });
+
+  test('each read of a book records when it was started and finished', async () => {
+    const { page, errors } = await openApp(t, srv.url);
+    await openBook(page);
+    await sleep(200);
+    assert.deepEqual((await bookRecord(page)).reads, [], 'opening a book doesn’t start a read');
+    await page.keyboard.press('ArrowRight'); await sleep(700);
+    const today = (await bookRecord(page)).reads[0].started;
+    assert.match(today, /^\d{4}-\d\d-\d\d$/);
+    assert.deepEqual((await bookRecord(page)).reads, [{ started: today }]);
+
+    // Jump to the last page of the last chapter and turn past it.
+    await closeReader(page);
+    await page.evaluate(async (title) => {
+      const db = await new Promise((r) => { const q = indexedDB.open('langreader'); q.onsuccess = () => r(q.result); });
+      const all = await new Promise((r) => { const q = db.transaction('books').objectStore('books').getAll(); q.onsuccess = () => r(q.result); });
+      const b = all.find((x) => x.title === title);
+      b.progress = { ...b.progress, chapter: b.chapterCount - 1, frac: 1, read: 1 };
+      await new Promise((r) => { const tx = db.transaction('books', 'readwrite'); tx.objectStore('books').put(b); tx.oncomplete = r; });
+    }, BOOK);
+    await page.reload(); await page.waitForSelector('#view-library .book');
+    await openBook(page); await sleep(300);
+    assert.deepEqual((await bookRecord(page)).reads, [{ started: today }], 'the last page isn’t the end yet');
+    await page.keyboard.press('ArrowRight'); await sleep(700);
+    assert.deepEqual((await bookRecord(page)).reads, [{ started: today, finished: today }]);
+
+    // Starting again keeps the finished read and begins a new one once you read on.
+    await closeReader(page);
+    await page.click(`#view-library .book:has-text("${BOOK}") [data-more]`);
+    await page.click('[data-a=restart]'); await sleep(500);
+    await page.keyboard.press('ArrowRight'); await sleep(700);
+    assert.deepEqual((await bookRecord(page)).reads, [{ started: today, finished: today }, { started: today }]);
+    assert.deepEqual(errors, []);
+  });
+
+  test('books read before reads were recorded get them from the log and milestones', async () => {
+    const { page, errors } = await openApp(t, srv.url);
+    await page.evaluate(async (title) => {
+      const db = await new Promise((r) => { const q = indexedDB.open('langreader'); q.onsuccess = () => r(q.result); });
+      const all = await new Promise((r) => { const q = db.transaction('books').objectStore('books').getAll(); q.onsuccess = () => r(q.result); });
+      const b = all.find((x) => x.title === title);
+      b.progress = { chapter: b.chapterCount - 1, page: 0, frac: 1, read: 1, done: [] };
+      b.log = { '2026-03-02': { from: 0, to: 500 }, '2026-01-10': { from: 0, to: 0 }, '2026-03-20': { from: 500, to: 900 } };
+      b.milestones = { 0.25: '2026-03-02', 0.5: '2026-03-20', 0.75: '2026-03-20', 1: '2026-03-20' };
+      await new Promise((r) => { const tx = db.transaction('books', 'readwrite'); tx.objectStore('books').put(b); tx.oncomplete = r; });
+    }, BOOK);
+    await page.reload(); await page.waitForSelector('#view-library .book');
+    await openBook(page); await sleep(300);
+    assert.deepEqual((await bookRecord(page)).reads, [{ started: '2026-03-02', finished: '2026-03-20' }]);
+    assert.deepEqual(errors, []);
+  });
 });

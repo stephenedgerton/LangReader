@@ -7,12 +7,12 @@ import { openWordCard, highlight } from './wordcard.js';
 import { NAMES, NAMES_VERSION } from './names.js';
 import { normalize } from './text.js';
 import { getDays, streak, todayKey, bump } from './stats.js';
-import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, $, $$ } from './ui.js';
+import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, toast, $, $$ } from './ui.js';
 import { SAMPLE } from '../samples/sample.js';
 import { STORIES } from '../samples/stories.js';
 import { SERIES, seriesBookId, seriesRev, loadSeriesBook } from '../samples/series/index.js';
 import { haptic } from './haptics.js';
-import { bookPct, goalSheet, goalSummary, goalCardHTML } from './goals.js';
+import { bookPct, goalSheet, goalSummary, goalCardHTML, markBookComplete } from './goals.js';
 import { fillDifficulty } from './difficulty.js';
 import { checkBadges, achievementsCardHTML, achievementsSheet } from './achievements.js';
 import { loadFreq, recordSnapshot } from './freq.js';
@@ -175,9 +175,10 @@ async function renderHome() {
         <div class="row-btns"><button class="primary" data-act="backup">Back Up Now</button><button class="secondary" data-act="snooze">Later</button></div>
       </div>` : ''}
     <div class="section-title">Reading Goals</div>
-    <button class="card goal" data-act="goal" style="width:100%;text-align:left">
+    <button class="card goal${frac >= 1 ? ' met' : ''}" data-act="goal" style="width:100%;text-align:left">
       <div class="ring"><svg viewBox="0 0 96 96"><circle class="track" cx="48" cy="48" r="${R}"/>
-        <circle class="prog" cx="48" cy="48" r="${R}" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg></div>
+        <circle class="prog${frac >= 1 ? ' met' : ''}" cx="48" cy="48" r="${R}" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg>
+        ${frac >= 1 ? `<div class="ring-n">${icons.check}</div>` : ''}</div>
       <div><h4>Today's Reading</h4><div class="big">${mins}:${String(today.seconds % 60).padStart(2, '0')}</div>
         <p>of your ${settings.goalMinutes}-minute goal${st ? ` · 🔥 ${st}-day streak` : ''}</p></div>
     </button>
@@ -343,6 +344,7 @@ function bookActions(book) {
     <div class="action-list">
       <button data-a="read"><span>${book.lastOpened ? 'Resume' : 'Read'}</span></button>
       <button data-a="goal"><span>Reading Goal</span><small class="muted">${g ? `${g.pages} pages a day` : 'Not set'}</small></button>
+      ${bookPct(book) < 100 ? '<button data-a="complete"><span>Mark as complete</span></button>' : ''}
       <button data-a="restart"><span>Start from the beginning</span></button>
       <button data-a="rename"><span>Rename</span></button>
       <button data-a="delete" class="danger"><span>Remove from library</span>${icons.trash}</button>
@@ -353,6 +355,10 @@ function bookActions(book) {
     if (b.dataset.a === 'goal') return goalSheet(book, { onChange: renderLibrary }); // replaces this sheet
     closeSheet();
     if (b.dataset.a === 'read') open(book);
+    if (b.dataset.a === 'complete') {
+      markBookComplete(book); await db.put('books', book);
+      toast('Marked as complete 🏆'); renderLibrary(); checkBadges();
+    }
     if (b.dataset.a === 'restart') { book.progress = { chapter: 0, page: 0, frac: 0, done: [] }; book.milestones = {}; await db.put('books', book); open(book); }
     if (b.dataset.a === 'rename') {
       const t = prompt('Title', book.title);

@@ -43,6 +43,7 @@ export function trackProgress(b) {
   const pos = Math.round(wordsAt(b));
   const today = todayKey();
   const reads = b.reads || (b.reads = pastReads(b)); // before today's log entry, which isn't history
+  const wasFinished = !!b.milestones && 1 in b.milestones;
   const log = b.log || (b.log = {});
   const d = log[today] || (log[today] = { from: pos, to: pos });
   d.to = Math.max(d.to, pos);
@@ -65,7 +66,7 @@ export function trackProgress(b) {
   // opening a book doesn't count) and finishes the day you reach the end. "Start from the
   // beginning" clears the milestones, so the next page you read starts a new read.
   let cur = reads[reads.length - 1];
-  if (pos > 0 && (!cur || 'finished' in cur) && !(1 in b.milestones)) reads.push(cur = { started: today });
+  if (pos > 0 && (!cur || 'finished' in cur) && !wasFinished) reads.push(cur = { started: today });
   if (cur && !('finished' in cur) && 1 in b.milestones) cur.finished = b.milestones[1];
 
   const g = b.goal;
@@ -75,6 +76,15 @@ export function trackProgress(b) {
     cheers.push({ icon: '🎯', title: 'Today’s goal done!', sub: `${g.pages} ${g.pages === 1 ? 'page' : 'pages'}${st > 1 ? ` · 🔥 ${st}-day streak` : ''}` });
   }
   return cheers;
+}
+
+// "Mark as complete": move the position to the end of the book, which finishes the current read
+// (starting one today if there isn't one). Words aren't marked Known; the caller saves the book.
+export function markBookComplete(b) {
+  if (!b.milestones) trackProgress(b); // so the milestones it passes now are dated today
+  const n = b.chapterCount || 1;
+  b.progress = { ...b.progress, chapter: n - 1, page: 0, frac: 1, read: 1, done: [...Array(n).keys()] };
+  trackProgress(b);
 }
 
 // The reads of a book from before reads were recorded, pieced together from the reading log:

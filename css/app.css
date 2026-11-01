@@ -121,7 +121,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 
 .card { background: var(--bg-grouped); border-radius: 14px; padding: 16px; }
 .goal { display: flex; align-items: center; gap: 18px; }
-.ring { width: 96px; height: 96px; flex: none; }
+.ring { width: 96px; height: 96px; flex: none; position: relative; }
 .ring svg { width: 96px; height: 96px; transform: rotate(-90deg); }
 .ring circle { fill: none; stroke-width: 9; }
 .ring .track { stroke: var(--fill-2); }
@@ -750,6 +750,7 @@ input[type=date] { background: transparent; border: 0; color: var(--tint); font:
 .ring .prog.met { stroke: var(--green); }
 .ring-n { position: absolute; inset: 0; display: grid; place-items: center; font: 700 22px var(--sans); font-variant-numeric: tabular-nums; }
 .ring-n svg { width: 30px; height: 30px; stroke: var(--green); stroke-width: 3; transform: none; }
+.ring:not(.sm) .ring-n svg { width: 40px; height: 40px; }
 
 /* Last seven days: a bar per day, the dashed line is the goal. */
 .gs-week { --h: 64px; position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background: var(--fill); border-radius: 12px; padding: 12px 14px 8px; margin-bottom: 14px; }

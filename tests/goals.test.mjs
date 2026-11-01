@@ -153,4 +153,29 @@ describe('reading goals', () => {
     assert.deepEqual((await bookRecord(page)).reads, [{ started: '2026-03-02', finished: '2026-03-20' }]);
     assert.deepEqual(errors, []);
   });
+
+  test('Mark as complete in the Library menu finishes the book', async () => {
+    const { page, errors } = await openApp(t, srv.url);
+    await page.click(`#view-library .book:has-text("${BOOK}") [data-more]`);
+    await page.click('[data-a=complete]'); await sleep(400);
+    const b = await bookRecord(page);
+    assert.equal(b.reads.length, 1);
+    assert.match(b.reads[0].finished, /^\d{4}-\d\d-\d\d$/);
+    assert.equal(b.reads[0].started, b.reads[0].finished);
+    assert.equal(b.progress.done.length, b.chapterCount);
+    await page.click(`#view-library .book:has-text("${BOOK}") [data-more]`); await sleep(200);
+    assert.equal(await page.$('[data-a=complete]'), null, 'not offered for a finished book');
+    assert.deepEqual(errors, []);
+  });
+
+  test('Today’s Reading ring turns green with a tick once the minutes goal is met', async () => {
+    const { page, errors } = await openApp(t, srv.url, { settings: { goalMinutes: 5 } });
+    await page.click('#tabbar button[data-tab=home]'); await sleep(300);
+    assert.equal(await page.$('.card.goal .ring-n'), null, 'no tick before the goal');
+    await page.evaluate(async () => { const s = await import('/js/stats.js'); s.bump('seconds', 300); await s.flush(); });
+    await page.click('#tabbar button[data-tab=library]'); await page.click('#tabbar button[data-tab=home]'); await sleep(300);
+    assert.ok(await page.$('.card.goal .ring .prog.met'), 'ring is green');
+    assert.ok(await page.$('.card.goal .ring-n svg'), 'tick shown');
+    assert.deepEqual(errors, []);
+  });
 });

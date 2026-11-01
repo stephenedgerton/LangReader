@@ -65,6 +65,32 @@ decides not to have it translated: she'll read it herself when she can. Each boo
 understands a little more (a line or two quoted, more of it each time); she reads all of it in book 10.
 It tells her the house is hers because of Lucia, and asks her to find "what I couldn't".
 
+**The house.** The yellow house changes, and the story never fully says why. Its rules, which the
+reader works out slowly and the book never states:
+
+- It changes only at night, while Kate sleeps there, and never while anyone is watching.
+- It shows Kate more as she understands more: each time she learns something true about the past, a door,
+  a room or an object tied to it is there in the morning. It never takes back what it has shown.
+- Nebbia always knows where the change is, and walks there first.
+- The kitchen clock is stopped at *le dieci e venti*: the time Andrea died, in August 1944. Every clock
+  Kate brings into the house stops at the same minute.
+
+Rational hints run alongside: Captain Giacomo, once a ship's carpenter, built false walls, panels and a
+turning bookcase, and Matteo finds some of the mechanisms. They explain some changes, never all (a room
+longer inside than the outside allows, a window showing snow in May). Kate draws a floor plan every
+morning; comparing the plans is how she, and the reader, spot what changed.
+
+**Margherita's notes.** From book 4, short riddles in Margherita's hand turn up where the house has
+changed. They're fair play: every clue is in the text, so a careful reader can solve each one a chapter
+before Kate does. Keep each riddle within the vocabulary the reader has by then.
+
+**How strongly, when.** Books 1–3: easy-to-miss details that could be imagination (the stopped clock and
+a ticking at night in 1; in 2 the light square on the wall has moved and the box is under a bed that
+was empty; in 3 Matteo's measurements don't add up). Book 5: the first change Kate can't deny. Part 2:
+one change per book, each tied to what Kate learns. Parts 3–4: the house is a main thread alongside the
+sisters' story. It's how the portrait is found (book 19, in a room that's on no plan), and after that it
+stops changing, except for one last small thing on the last page.
+
 **The mystery.** Why did Lucia leave and never come back? What did Margherita wait for all her life? Where
 is the portrait that once hung in the house? The answers are layered: 1944 (a betrayal Lucia blamed on
 her sister) and the 1880s (a forbidden love and the portrait itself).
@@ -84,24 +110,24 @@ her sister) and the 1880s (a forbidden love and the portrait itself).
 |---|---|---|---|---|
 | 1 | Una casa a Montemare | Kate arrives by train. Giulia's bar, the lawyer, the key, the yellow house, the cat. | 1,500 | 160 |
 | 2 | Il gatto e la scatola | First days: the market, the harbour, Tonino. A locked box, a photo of two girls. | 2,000 | 260 |
-| 3 | Il mare d'inverno | Matteo starts on the house. A storm. Tonino: "Margherita waited for someone all her life." Kate decides to stay the winter. | 2,500 | 360 |
-| 4 | Una lettera nel muro | A 1946 letter in the wall: "Lucia, perdonami." Bellini offers to buy the house. | 3,000 | 460 |
-| 5 | Natale al porto | Christmas in the village. Italian lessons with Elena. The photo: two sisters and a young man. Kate's mother: Nonna never spoke of Italy. | 3,500 | 560 |
+| 3 | Il mare d'inverno | Matteo starts on the house; his measurements don't add up, and Kate begins her morning floor plans. A storm. Tonino: "Margherita waited for someone all her life." Kate decides to stay the winter. | 2,500 | 360 |
+| 4 | Una lettera nel muro | A 1946 letter in a wall that wasn't hollow yesterday: "Lucia, perdonami." Margherita's first riddle note. Bellini offers to buy the house. | 3,000 | 460 |
+| 5 | Natale al porto | Christmas morning: a door on the top floor that has never been there, and behind it two girls' bedroom. Christmas in the village. Italian lessons with Elena. The photo: two sisters and a young man. Kate's mother: Nonna never spoke of Italy. | 3,500 | 560 |
 | 6 | Quello che ricorda Tonino | Tonino tells of the war: the two sisters, Andrea, the summer of 1944. | 4,000 | 660 |
-| 7 | Il quadro che manca | A pale square on the wall. An old inventory lists "ritratto di donna". Bellini shows interest in the cellar. | 4,500 | 760 |
+| 7 | Il quadro che manca | A smell of fresh paint in a room nobody has painted in for 80 years. The pale square on the wall. An old inventory lists "ritratto di donna". Bellini shows interest in the cellar. | 4,500 | 760 |
 | 8 | La chiesa sulla collina | The parish records and the war memorial: Andrea, died 1944. The priest remembers. | 5,000 | 860 |
-| 9 | Il diario in cantina | Kate and Matteo find Margherita's diary in the cellar, water-damaged. Elena helps read it. | 5,500 | 960 |
-| 10 | Una notte di tempesta | Someone breaks in, looking for something. The box opens: a ring and a second key. | 6,000 | 1,060 |
+| 9 | Il diario in cantina | The cellar stairs go one floor further down than yesterday. Kate and Matteo find Margherita's diary there, water-damaged. Elena helps read it. | 5,500 | 960 |
+| 10 | Una notte di tempesta | Someone breaks in, but the doors are never where the intruder expects. Kate finally reads Margherita's whole letter. The box opens: a ring and a second key. | 6,000 | 1,060 |
 | 11 | Estate 1944 | Diary: the village under occupation; Lucia and Andrea; Margherita's secret. | 6,500 | 1,160 |
-| 12 | Il capitano tedesco | Diary: Weber is quartered in the house, loves painting, wants the portrait. Margherita hides it. | 7,000 | 1,260 |
+| 12 | Il capitano tedesco | A room appears furnished as in 1944. Diary: Weber is quartered in the house, loves painting, wants the portrait. Margherita hides it. | 7,000 | 1,260 |
 | 13 | Il tradimento | Diary: someone tells the Germans where Andrea hides. Andrea is killed. Lucia blames her sister. | 7,500 | 1,360 |
 | 14 | Due sorelle | Diary: Margherita was bargaining with Weber to save Andrea; the informer was Ettore Bellini. Lucia leaves. | 8,000 | 1,450 |
 | 15 | La verità a metà | Kate tells Bellini; he knew. He withdraws his offer. The diary's last line: "Il ritratto è con il capitano." | 8,500 | 1,540 |
 | 16 | Il capitano Giacomo | Elena finds Giacomo Ferrante's letters from the 1880s in the archive. | 9,000 | 1,630 |
 | 17 | La contessa della villa | Isabella, the villa on the hill, the painter and the portrait; her marriage to the count. | 9,500 | 1,720 |
 | 18 | Il naufragio | Giacomo's last voyage; the letters stop. Which captain did Margherita mean? | 10,000 | 1,800 |
-| 19 | Sotto la torre | The search: the family chapel, the tower on the point. The portrait is found. | 11,000 | 1,870 |
-| 20 | La casa gialla | Spring. The portrait comes home; the sisters' story is told; Kate stays in Montemare. | 12,000 | 1,930 |
+| 19 | La stanza che non c'è | The search: the family chapel, the tower on the point, the captain's plans. The portrait is found in a room that is on no plan. | 11,000 | 1,870 |
+| 20 | La casa gialla | Spring. The house stops changing. The portrait comes home; the sisters' story is told; Kate stays in Montemare. | 12,000 | 1,930 |
 
 About 136,000 words in all. Vocabulary each book naturally brings: 1–5 travel, food, house, family,
 weather, the sea, numbers, time, Christmas; 6–10 war and memory, church, art, the law, the night; 11–15

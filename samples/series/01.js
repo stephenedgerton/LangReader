@@ -61,7 +61,7 @@ export default book(1, 'Una casa a Montemare', ['#e0a526', '#1f6f8b'], [
     'La casa è gialla, ma è un giallo vecchio, un giallo stanco. Le finestre sono verdi, e anche la porta è verde. Davanti alla casa c’è un piccolo giardino con un albero.',
     'Kate mette la chiave nella porta. La porta è vecchia e pesante, ma si apre.',
     'Dentro è buio, e c’è silenzio. Kate apre una finestra. Entra il sole. Entra l’aria del mare.',
-    'Al primo piano c’è una cucina con un tavolo di legno e quattro sedie. C’è anche un salotto. Nel salotto ci sono molti libri e una poltrona rossa.',
+    'Al primo piano c’è una cucina con un tavolo di legno e quattro sedie. Sul muro della cucina c’è un vecchio orologio. È fermo: segna le dieci e venti. C’è anche un salotto. Nel salotto ci sono molti libri e una poltrona rossa.',
     'Sui muri del salotto ci sono quadri: il mare, le barche, i fiori. Su un muro c’è un segno chiaro, grande come una finestra. Lì manca un quadro.',
     'Al secondo piano ci sono due camere da letto. Al terzo piano c’è una piccola stanza con una grande finestra. Dalla finestra Kate vede tutto: il porto, le barche, il mare e il cielo.',
     '«Che bello», dice Kate, in inglese. Poi lo dice anche in italiano: «Bello. Molto bello.»',
@@ -88,5 +88,6 @@ export default book(1, 'Una casa a Montemare', ['#e0a526', '#1f6f8b'], [
     'Kate va a letto nella camera di Margherita. Il letto è grande e freddo. Ma dopo cinque minuti Nebbia salta sul letto. Il gatto è caldo. Fa un piccolo rumore, contento.',
     'Kate pensa alla nonna Lucia. Pensa a Margherita. Pensa alla lettera nella borsa. Chi è Margherita? Perché la casa è per Kate? E perché la nonna, di sua sorella, mai una parola?',
     'Kate non lo sa. Ma adesso ha una casa, un gatto e una lettera. Fuori, il mare parla piano. Kate chiude gli occhi e dorme.',
+    'Nella notte, per un momento, Kate sente un piccolo rumore dalla cucina. Un rumore leggero, sempre uguale, come un orologio. Ma l’orologio della cucina è fermo. Nebbia alza la testa e guarda la porta. Poi Kate dorme di nuovo.',
   ],
 ]);

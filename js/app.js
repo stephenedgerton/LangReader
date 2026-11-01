@@ -14,7 +14,7 @@ import { SERIES, seriesBookId, seriesRev, loadSeriesBook } from '../samples/seri
 import { haptic } from './haptics.js';
 import { bookPct, goalSheet, goalSummary, goalCardHTML, markBookComplete } from './goals.js';
 import { fillDifficulty } from './difficulty.js';
-import { allCollections, STATES, filterBooks, SORTS, sortBooks, bookCollectionsSheet, organiseSheet, newCollection } from './collections.js';
+import { allCollections, STATES, filterBooks, SORTS, sortBooks, seriesOrder, bookCollectionsSheet, organiseSheet, newCollection } from './collections.js';
 import { checkBadges, achievementsCardHTML, achievementsSheet } from './achievements.js';
 import { loadFreq, recordSnapshot } from './freq.js';
 import { renderStats } from './statsview.js';
@@ -61,14 +61,28 @@ async function addBundledStories() {
   // revision of its text (which is then replaced, keeping the reader's place). Book 1 gets the newest
   // date, so a fresh install starts there and the books line up in order.
   const now = Date.now();
+  const fresh = [];
   for (let n = 1; n <= SERIES.books; n++) {
     const id = seriesBookId(n);
     const have = books.find((b) => b.series?.id === SERIES.id && b.series.n === n);
     if (have && (have.rev || 1) < seriesRev(n)) await replaceBookText(have, await loadSeriesBook(n));
     if (added.includes(id)) continue;
     const b = await loadSeriesBook(n);
-    if (!titles.has(b.title)) await saveBook({ ...b, added: now + SERIES.books - n + 1 });
+    if (!titles.has(b.title)) fresh.push(await saveBook({ ...b, added: now + SERIES.books - n + 1 }));
     added.push(id);
+  }
+  // The series ships with its own collection, listed before yours and shown in series order. It's made
+  // once with every series book in it; books shipped later join it if it's still there. A collection you
+  // delete stays deleted, and a book you take out of it stays out.
+  const CID = SERIES.id, CKEY = `collection:${CID}`;
+  let join = fresh;
+  if (!added.includes(CKEY)) {
+    await db.put('collections', { id: CID, name: SERIES.title, created: 0, series: CID });
+    join = (await db.all('books')).filter((b) => b.series?.id === CID);
+    added.push(CKEY);
+  }
+  if (join.length && await db.get('collections', CID)) {
+    for (const b of join) if (!b.collections?.includes(CID)) await db.put('books', { ...b, collections: [...(b.collections || []), CID] });
   }
   try { localStorage.setItem(KEY, JSON.stringify(added)); localStorage.setItem('langreader.seeded', '1'); } catch {}
   books = await db.all('books');
@@ -315,8 +329,9 @@ async function renderLibrary() {
   if (filter.startsWith('c:') ? !cols.some((c) => 'c:' + c.id === filter) : !STATES.some(([k]) => k === filter)) filter = settings.libraryFilter = 'all';
   const q = libQuery.trim().toLowerCase();
   const shown = filterBooks(books, filter).filter((b) => !q || b.title.toLowerCase().includes(q) || (b.author || '').toLowerCase().includes(q));
-  const sorted = await sortBooks(shown, settings.librarySort);
-  const sortName = (SORTS.find(([k]) => k === settings.librarySort) || SORTS[0])[1];
+  const inSeries = filter.startsWith('c:') && cols.find((c) => 'c:' + c.id === filter)?.series;
+  const sorted = inSeries ? seriesOrder(shown) : await sortBooks(shown, settings.librarySort);
+  const sortName = inSeries ? 'Series order' : (SORTS.find(([k]) => k === settings.librarySort) || SORTS[0])[1];
   const chips = [...STATES, ...cols.map((c) => ['c:' + c.id, c.name])];
   const focused = document.activeElement?.name === 'lq';
   const empty = !books.length

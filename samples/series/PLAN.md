@@ -142,48 +142,141 @@ About 136,000 words in all. Vocabulary each book naturally brings: 1–5 travel,
 weather, the sea, numbers, time, Christmas; 6–10 war and memory, church, art, the law, the night; 11–15
 occupation, soldiers, fear, hiding, betrayal, love; 16–20 ships, nobility, honour, fate, the old world.
 
-## Written so far (books 1–5)
+## Written so far (books 1–10)
 
-What later books must stay consistent with:
+What later books must stay consistent with.
+
+**Books 1–5**
 
 - The kitchen clock is stopped at 10:20, with *12 agosto 1944* hidden inside it (Margherita's first riddle).
 - The 1946 letter "Per Lucia" from the salotto wall: "perdonami… io volevo solo salvare…", then
   "Torna a casa. Ti aspetto sempre."
 - The silver button from the stairs, after the dream of the two girls.
-- Behind the Christmas door on the top floor: the girls' room, with two beds, their drawings and a
-  calendar stopped at August 1944. Matteo's missing metre is now there.
+- Behind the Christmas door on the top floor: the girls' room, with two beds (Lucia's on the right, the
+  one Nebbia sleeps on on the left), their drawings and a calendar stopped at August 1944.
 - Lucia married a British soldier she met in Genoa and left in 1946. Andrea's photo, taken by the tower,
   was in her books. His name is on the war memorial: "Andrea, di anni 20. 12 agosto 1944."
-- Bellini's offer is refused ("anche le case cambiano"). He asks the antique dealer every year about a
-  woman's portrait. Margherita bought frames there, never paintings. Margherita drew as a girl.
-- Kate's letter so far: "Cara Kate, questa casa è tua. È tua perché è di Lucia, e Lucia non può tornare.
-  Non avere paura della casa. La casa ti mostra solo quello che sei pronta a vedere." It says
-  "perdonami" twice.
-- Tonino promised at Christmas to tell everything after Christmas (book 6).
-- Still owed after book 5: about 110 words from books 1–5 are under 4 uses; book 6 should work them down.
+- Bellini's offer is refused ("anche le case cambiano"). The antique dealer: Bellini asks him every year
+  about a woman's portrait; Margherita bought frames there, never paintings. Margherita drew as a girl.
+
+**Book 6 (late December – 6 January).** Tonino (7 in 1944, so about 89 now; wife Maria died 20 years ago;
+daughter Anna in Genoa; boat called *Maria*) tells the story. The sisters' father was **il dottor Giuseppe
+Ferrante**, the village doctor; their mother **Anna Rossi** died in 1935. Andrea, a fisherman's son, 13 years
+older than Tonino, was a partisan (7th of 11 names on Elena's list; 7 came back, 4 didn't) and hid in a sea
+**grotta** under the rock by the tower. Tonino carried bread there every morning; on 12 August he saw six or
+seven soldiers going straight to the point, heard two shots, saw the church clock at 10:20. Andrea was left in
+the piazza all day. Margherita was at home with the captain that morning; the village said she'd talked.
+Lucia never spoke to her again. Tonino fears he showed the soldiers the way; Margherita told him "So di chi è
+la colpa. E non è tua." Every 12 August Margherita sat by the tower from ten till evening; last August she
+said "il prossimo anno viene qualcun altro". The house's change: an **eighth drawing**, a pencil portrait of
+Andrea by the tower, signed "Margherita, luglio 1944". Also: Kate's flu (dottor Rizzi, the young doctor,
+whose grandfather followed Ferrante), her New Year resolutions, Elena's class, the Befana rhyme, the order
+signed "Capitano Weber". Letter line: "Io ho cercato per tutta la vita una cosa che non ho trovato."
+
+**Book 7 (January).** Kate learns the imperfetto. Her grandmother hummed a Ligurian sea song without words.
+Elena finds the **1938 notary's list** (on the grandfather's death): in the salotto "un ritratto di donna,
+olio su tela, cornice d'oro, pittore di Genova dell'Ottocento, un metro per settanta" — the size of the pale
+square. The seventh drawing in the girls' room is that portrait, "La signora del mare" (a young woman in
+blue, seated before the sea, who looks at you from anywhere in the room). The change: a smell of fresh oil
+paint in the salotto, three fresh drops (azzurro, bianco, rosso) under the square and an antique wet brush on
+the windowsill. Kate's mother: Nonna stopped before a portrait in a museum and said "Noi ne avevamo uno così.
+A casa." Bellini tells Kate his grandfather **Ettore Bellini** was born in Montemare, worked at the port in the
+war, knew the house and the sisters, and called the portrait the finest he'd seen; he asks to see the cellar
+(Matteo lies that it's unsafe). The dealer: Margherita's frames were always 1 m × 70 cm, for thirty years,
+"per quando torna". Teresa: the captain sat before the portrait every evening; the doctor said it was a
+countess from the villa. Matteo's grandfather's legend: a young unhappy countess married to an old count,
+and a painter from Genoa. **Every clock Kate brings in stops at 10:20; phones don't.** Paolo's brother:
+Bellini owns two houses next to Kate's and keeps them shut (the one on the left shares the cellar wall).
+Kate and Matteo hold hands coming back from the villa. Letter line: "La cerca anche un'altra persona, e non
+per amore."
+
+**Book 8 (February).** Kate learns the future; her editor will publish the cat book (Fog) in the autumn.
+Parish books: Margherita born 3 May 1925, Lucia 20 June 1927; Andrea "morto presso la torre… per mano dei
+soldati tedeschi", buried 13 August "per il permesso ottenuto dal capitano Weber". **Don Piero** (10 in 1944,
+rang the bells for **don Lorenzo**) saw Margherita in the salotto that evening pleading with the captain for
+the burial permit; she watched the funeral from the window, and the village called her a coward. She
+confessed every 12 August; her voice was "of someone who wanted to save someone and couldn't". Banns of
+1 August 1944: Andrea and Lucia to marry on **16 September 1944** — "Non celebrato". The change: a narrow
+wardrobe in the girls' room (wider than the door, so built inside it, with a hidden space behind its back,
+1 m 80 × 70 cm, empty) and Lucia's **unfinished wedding dress**, made in secret by Margherita, with silver
+buttons: Kate's button is the missing one. Teresa (11 in 1944; held the lamp) climbs to the room, her first
+time in the house in 80 years, and reveals that **Margherita kept a diary** all her life. Paola (Luca's
+mother, baker) tells of her grandmother **Nina**, the captain's cleaner: the captain was afraid of the house,
+whose doors moved; "la casa gialla non ama chi entra senza invito". Bellini doubles his offer; a light moves
+at night in his shut house and goes down to the cellar. **Matteo and Kate kiss** (dinner, after Carnevale was
+interrupted by Luca). White flowers on Andrea's grave every Sunday since October, brought by a man with a
+black car. Tonino: Ettore Bellini got rich in Genoa after the war, nobody knows how; **Margherita greeted
+everyone except Ettore, for eighty years**. Kate's composition "Il mio inverno a Montemare" gets a 10.
+Letter line: "Non credere a tutto quello che dice la gente."
+
+**Book 9 (March).** Kate learns the conditional. Someone has been scraping the cellar wall from Bellini's
+side; Matteo props it with oak beams. 8 March: Matteo gives Kate a branch of yellow flowers in front of the
+whole bar. The change: Nebbia's stone in the cellar corner is a **botola** with an iron ring; 15 steps cut
+in the rock lead to a vaulted room below the harbour, with a barred opening on the sea. There: the **30
+empty gold frames** (1 m × 70 cm; the newest holds a card "Per quando torna"), and Captain Giacomo's sea
+chest with his **original plan of the house** (rooms drawn then crossed out, double walls) and **Margherita's
+diary**, sea-damaged; its first page: "Chi lo legge senza permesso sarà maledetto" and, in her old hand,
+"Kate ha il permesso". Elena dries it a page at a time in the girls' room; many pages are lost. Readable
+entries: 8 Sept 1943; Germans arrive 25 Sept; Weber moves in **2 October 1943**; she told the captain she
+didn't know who painted the portrait ("Non è vero"); Andrea's night visits; the captain had a small museum at
+home before the war; the dress begun in May; the Andrea portrait finished in July; the doctor treating a
+German officer; Tonino's bread; the captain: "Ogni cosa ha un prezzo… Anche una persona"; last line before the
+gap: "11 agosto 1944. Domani. Se Dio vuole, domani…". Bellini, at the grave, says his grandfather (died 15
+years ago) made him promise three things: white flowers for Andrea once Margherita can't, buy the yellow
+house at any price, find the portrait, which "was promised to him". He gave the keys of the next house to
+**Rocco**, a big man with a scar on his right hand. School trip to the tower: Tonino tells the children.
+Margherita's 100th birthday (May 2025): "mi dispiace soltanto una cosa: non ho rivisto mia sorella"; the next
+day she had the lawyer find Kate, and wrote the letter. Luca has the sisters' childhood book *Fiabe del mare*
+(the princess who keeps a light burning on the tower), given to him by Margherita "for a special person".
+Kate finishes the cat book, dedicated "Per Margherita e Lucia". **Kate's mother sends Nonna's things**: her
+first-communion prayer book (1935), a blue silk scarf, a silver spoon marked "Ferrante", and **a letter from
+Margherita postmarked Montemare 1947, never opened**. Kate will open it only when she knows the whole truth.
+Letter line: "La verità è nella casa, ma la casa la mostra piano."
+
+**Book 10 (early April).** The storm; Matteo goes to his father's roof. Rocco breaks through the cellar wall,
+hammers at the salotto wall under the square, then climbs and descends the same twelve stairs for an hour
+believing they never end, and falls down the botola into the frame room (broken leg, the frames smashed).
+**Maresciallo Santoro** arrests him. Rocco drove and nursed old Ettore, who raved about the portrait. Bellini
+apologises: his grandfather "wasn't a good man… the flowers were for guilt, not love". The local paper:
+"Notte di paura nella casa dei misteri" (now on the bar wall). Kate learns the congiuntivo and reads **the whole
+letter** (its full text is in chapter 10; it says Margherita hid something precious in 1944 and couldn't find
+it again, "la casa l'aveva nascosta meglio di me"; that Lucia left believing in a betrayal; and where the key
+is). Under a loose board by Lucia's bed: her childhood treasures (three white stones, a pink shell, a red
+ribbon, a heart with two initials, an old coin) and the **little brass key**. The box holds: **Andrea's gold
+ring** engraved "A. e L. 16.9.1944"; a **large iron key with a brass tag engraved with a sailing ship**
+(Captain Giacomo's mark: on his tomb in the Ferrante chapel and on a ship's knife he gave Matteo's
+great-grandfather); and a grey notebook, **"Per Lucia. Quello che è successo davvero. Montemare, 1946."**, written
+in the passato remoto. Teresa: on 13 August Lucia put the ring on the table and said "Tieni tu l'anello.
+Tanto lo volevi." Matteo's father **Giovanni**, a carpenter, says Giacomo built the house over years "for a
+woman he couldn't marry, who never came", and sailed one winter morning and never returned. Don Piero on
+forgiveness. Elena keeps the grey notebook in the town safe; Kate leaves for **a week in Bristol**; Elena
+promises they'll read it together, with the passato remoto, when she's back. In the notebook's first page
+Margherita calls one person only "E.".
+
+**Changes to the plan.** Part 3 is read from the grey notebook (Margherita's 1946 account, in the passato
+remoto, which suits the plan's narration), with the wet diary's fragments as a second voice. The unopened
+1947 letter is new: keep it closed until the end (book 20 is the natural place). `congiuntivo` is in `EXTRA`.
 
 Open threads and small facts to keep straight:
 
-- **Still unresolved:** the locked wooden box from under the bed (book 2), whose small key isn't found
-  until book 10; the light square in the salotto (where the portrait hung).
-- **Kate's letter:** two pages, not finished.
-- **Season:** book 5 ends on Christmas Day, so book 6 starts in the days after Christmas.
-- **Kate's habits:** a floor plan every morning in her drawing book, with notes on it ("Il metro c'è",
-  "Bottone. Sogno?"); her picture book about a grey city cat who goes to the sea; two lessons a week
-  with Elena.
-- **Elena's promise:** "there's another form for very old stories, but that's for another day". That's
-  the passato remoto, so pay it off when the diary starts (book 11).
-- **People:** Giulia and Kate use *tu*; Tonino uses *tu* to Kate and she uses *tu* back since book 3.
-  Kate and Elena use *tu*; the lawyer, Bellini and the antique dealer use *Lei*.
-- **Matteo:** gave Kate a small grey wooden cat (on the kitchen table, under the clock). He worked ten
-  years in an office in Milan, then came home and has restored houses for five years. His
-  grandfather watched the German ships from the tower as a boy and said "non tutti erano amici".
-- **Unexplained so far:** the ticking at night is always the kitchen clock, which never moves.
-  Nobody has explained the notes "Per Kate" (Kate thinks Margherita prepared them before she died).
+- **Unresolved:** the iron key with the ship (the plan's last door, book 19); what Margherita bargained with
+  Weber for, and what "E." did; who painted the portrait and whom it shows; where it is; the unopened 1947
+  letter; Rocco's trial; Bellini's third promise.
+- **Kate's floor plans:** every morning, plus the frame room under the cellar. The house never takes back what
+  it shows: the girls' room, eight drawings, the wardrobe and dress, the botola stay.
+- **People:** *tu* between Kate and Giulia, Tonino, Elena, Matteo, Paola; *Lei* with the lawyer, Bellini, the
+  dealer, don Piero, the maresciallo, Teresa (who says *tu* to Kate). Matteo's father Giovanni says *tu*.
+  Giulia's children are Sofia and Marco (in Elena's class); Paolo's brother works at the port of Genoa;
+  Elena's cousin is the mayor.
+- **Season:** book 10 ends in early April with Kate leaving for Bristol for a week; book 11 starts on her
+  return. Tonino promised her night fishing with the moon.
+- **Word debt:** after book 10, coverage is 1,013 against a plan of 1,050, and about 175 earlier words are
+  still under 4 uses. Book 11 should pick up both: reuse the thin words from books 6–10 (the checker lists
+  them) and bring in about 40 more targets than its plan.
 
 ## How to write the next book
 
-What worked for books 1–5:
+What worked for books 1–10:
 
 1. **Plan the scenes.** Work from this file and `node tools/check-series.mjs --next 150` (the most
    common unused target words). Pick the ones the story's subject brings naturally.
@@ -193,6 +286,11 @@ What worked for books 1–5:
    thin ones, and every earlier word still under 4 uses.
 4. **Fix the owed words with scenes, not lists.** Write one or two extra scenes that use the owed words
    naturally: the bar, the market, an errand, a dinner, a dream, a walk. Don't add filler sentences.
+   In books 6–10 a story-first draft brought in only 40–70 new targets; what worked for both new and owed
+   words were scenes that carry a lot of vocabulary on their own terms: Kate's school composition, diary
+   pages, a fairy tale read aloud (kings, castles, knights), a newspaper article read out in the bar, a round
+   of goodbyes through the village. Keep the narration's grammar to the plan even in these: "come se" and
+   "credo che" need the subjunctive, so rephrase them before book 10 (and in narration, until Part 3).
 5. **Proofread the whole book** (print it with the snippet below), then run the checker again. Mistakes
    caught so far:
    - Present tense where Italian needs a past: "ieri sera Kate ha paura" (→ aveva), "forse Margherita

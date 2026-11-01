@@ -15,8 +15,9 @@ describe('library', () => {
   test('a fresh install gets all bundled stories', async () => {
     const { page, errors } = await openApp(t, srv.url);
     assert.deepEqual((await bookTitles(page)).sort(), [
-      'Il gatto e la scatola', 'Il ladro di mezzanotte', 'Il mare d’inverno', 'Il segnale sotto il ghiaccio', 'La bottega delle chiavi',
-      'La stanza numero sette', 'Natale al porto', 'Un caffè a Bologna', 'Una casa a Montemare', 'Una lettera nel muro',
+      'Il diario in cantina', 'Il gatto e la scatola', 'Il ladro di mezzanotte', 'Il mare d’inverno', 'Il quadro che manca',
+      'Il segnale sotto il ghiaccio', 'La bottega delle chiavi', 'La chiesa sulla collina', 'La stanza numero sette', 'Natale al porto',
+      'Quello che ricorda Tonino', 'Un caffè a Bologna', 'Una casa a Montemare', 'Una lettera nel muro', 'Una notte di tempesta',
     ]);
     await openBook(page, 'Il segnale sotto il ghiaccio');
     assert.equal(await page.textContent('#r-running'), 'Capitolo 1 · Le tre e diciassette');
@@ -37,8 +38,8 @@ describe('library', () => {
     });
     await page.reload(); await page.waitForSelector('#view-library .book');
     const titles = await bookTitles(page);
-    assert.equal(titles.length, 10);
-    assert.equal(new Set(titles).size, 10, 'no duplicates');
+    assert.equal(titles.length, 15);
+    assert.equal(new Set(titles).size, 15, 'no duplicates');
 
     page.once('dialog', (d) => d.accept());
     await page.click('#view-library .book:has-text("La stanza numero sette") [data-more]');

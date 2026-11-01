@@ -1,5 +1,6 @@
 // Library organising: your own book collections, the filter chips and the sort orders.
-// A collection is {id, name, created} in the `collections` store; a book lists the collections it's
+// A collection is {id, name, created} in the `collections` store (a bundled series' own collection also
+// has `series`, and is shown in series order); a book lists the collections it's
 // in as `book.collections: [id]`, so removing a book needs no clean-up.
 import { db } from './db.js';
 import { settings } from './settings.js';
@@ -55,6 +56,12 @@ export async function sortBooks(books, sort) {
     return list.sort((a, b) => pct.get(a.id) - pct.get(b.id) || byTitle(a, b));
   }
   return list.sort((a, b) => recent(b) - recent(a));
+}
+
+// A series' own collection lists its books from the first to the last, whatever the sort order;
+// any other book you add to it comes after them, by title.
+export function seriesOrder(books) {
+  return books.slice().sort((a, b) => (a.series?.n ?? Infinity) - (b.series?.n ?? Infinity) || byTitle(a, b));
 }
 
 // The book's ⋯ menu → Collections: tick the ones it belongs in.

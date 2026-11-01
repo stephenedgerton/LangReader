@@ -53,7 +53,13 @@ The story runs from November to May.
 - **Tonino**, 80s, retired fisherman. Knew Margherita all his life. Speaks slowly; tells the old stories.
 - **Matteo**, 30s, carpenter who restores old houses. Quiet; a slow friendship that becomes more.
 - **Avvocato Rinaldi**, the lawyer who handles the will.
-- **Elena**, the schoolteacher and keeper of the small village archive; reads old handwriting.
+- **Elena**, the schoolteacher and keeper of the small village archive; reads old handwriting. Gives Kate
+  Italian lessons from book 5.
+- **Signora Teresa**, over 90, black hat, knew the sisters as a girl; speaks to nobody but Kate ("what
+  people say isn't true"). **Don Piero**, the old priest. The **antique dealer** behind the church, who
+  says Bellini asks him every year about a woman's portrait from the yellow house.
+- **Giulia's family**: her husband Paolo and their children Sofia and Marco. **Luca**, the little boy
+  from the bread stall, who says the yellow house changes at night.
 - **Ingegner Bellini**, an engineer from Genoa who wants to buy the house for a hotel.
 - In 1944: **Andrea**, Lucia's fiancé, a partisan; **Ettore Bellini**, the engineer's grandfather; a
   German officer, **il capitano Weber**, quartered in the yellow house.
@@ -99,7 +105,7 @@ her sister) and the 1880s (a forbidden love and the portrait itself).
 
 | Part | Books | Narration | Dialogue adds | Register |
 |---|---|---|---|---|
-| 1 · L'arrivo | 1–5 | present | *mi piace*, *c'è*, *vorrei*, near future with present | everyday, short sentences |
+| 1 · L'arrivo | 1–5 | present | *mi piace*, *c'è*, a few fixed past forms; Elena teaches the passato prossimo in book 5 | everyday, short sentences |
 | 2 · Le domande | 6–10 | present | passato prossimo (6), imperfetto (7), future (8), conditional (9), first subjunctives (10) | everyday; old people's stories in the past |
 | 3 · Il diario | 11–15 | passato remoto + imperfetto | full subjunctive, pluperfect | 1940s diary, plainly written |
 | 4 · Le lettere | 16–20 | passato remoto | everything | 19th-century letters; `LATE` words allowed |
@@ -115,7 +121,7 @@ her sister) and the 1880s (a forbidden love and the portrait itself).
 | 5 | Natale al porto | Christmas morning: a door on the top floor that has never been there, and behind it two girls' bedroom. Christmas in the village. Italian lessons with Elena. The photo: two sisters and a young man. Kate's mother: Nonna never spoke of Italy. | 3,500 | 560 |
 | 6 | Quello che ricorda Tonino | Tonino tells of the war: the two sisters, Andrea, the summer of 1944. | 4,000 | 660 |
 | 7 | Il quadro che manca | A smell of fresh paint in a room nobody has painted in for 80 years. The pale square on the wall. An old inventory lists "ritratto di donna". Bellini shows interest in the cellar. | 4,500 | 760 |
-| 8 | La chiesa sulla collina | The parish records and the war memorial: Andrea, died 1944. The priest remembers. | 5,000 | 860 |
+| 8 | La chiesa sulla collina | The parish records (Kate already saw Andrea's name on the war memorial at Christmas). Don Piero remembers. | 5,000 | 860 |
 | 9 | Il diario in cantina | The cellar stairs go one floor further down than yesterday. Kate and Matteo find Margherita's diary there, water-damaged. Elena helps read it. | 5,500 | 960 |
 | 10 | Una notte di tempesta | Someone breaks in, but the doors are never where the intruder expects. Kate finally reads Margherita's whole letter. The box opens: a ring and a second key. | 6,000 | 1,060 |
 | 11 | Estate 1944 | Diary: the village under occupation; Lucia and Andrea; Margherita's secret. | 6,500 | 1,160 |
@@ -132,3 +138,23 @@ her sister) and the 1880s (a forbidden love and the portrait itself).
 About 136,000 words in all. Vocabulary each book naturally brings: 1–5 travel, food, house, family,
 weather, the sea, numbers, time, Christmas; 6–10 war and memory, church, art, the law, the night; 11–15
 occupation, soldiers, fear, hiding, betrayal, love; 16–20 ships, nobility, honour, fate, the old world.
+
+## Written so far (books 1–5)
+
+What later books must stay consistent with:
+
+- The kitchen clock is stopped at 10:20, with *12 agosto 1944* hidden inside it (Margherita's first riddle).
+- The 1946 letter "Per Lucia" from the salotto wall: "perdonami… io volevo solo salvare…", then
+  "Torna a casa. Ti aspetto sempre."
+- The silver button from the stairs, after the dream of the two girls.
+- Behind the Christmas door on the top floor: the girls' room, with two beds, their drawings and a
+  calendar stopped at August 1944. Matteo's missing metre is now there.
+- Lucia married a British soldier she met in Genoa and left in 1946. Andrea's photo, taken by the tower,
+  was in her books. His name is on the war memorial: "Andrea, di anni 20. 12 agosto 1944."
+- Bellini's offer is refused ("anche le case cambiano"). He asks the antique dealer every year about a
+  woman's portrait. Margherita bought frames there, never paintings. Margherita drew as a girl.
+- Kate's letter so far: "Cara Kate, questa casa è tua. È tua perché è di Lucia, e Lucia non può tornare.
+  Non avere paura della casa. La casa ti mostra solo quello che sei pronta a vedere." It says
+  "perdonami" twice.
+- Tonino promised at Christmas to tell everything after Christmas (book 6).
+- Still owed after book 5: about 110 words from books 1–5 are under 4 uses; book 6 should work them down.

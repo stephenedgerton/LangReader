@@ -73,7 +73,7 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 
 ### Word lookup (`bubble.js` → `wordcard.js`)
 - Tapping a word opens the small bubble. ⋯ opens the full card in the shared sheet. Phrases open the full card directly.
-- Lookup order: the saved meaning, then Wiktionary (`dictionary.js`, used only when the translation language is English; it follows "… of *lemma*" links to the base form), then MyMemory (`services.js`). Both are cached in `tcache`. Google Translate links are plain URLs built by `googleTranslateURL`.
+- Lookup order: the saved meaning, then Wiktionary (`dictionary.js`, used only when the translation language is English; it follows "… of *lemma*" links to the base form), then MyMemory (`services.js`). Both are cached in `tcache`. For an inflected form, `dictionaryHints()` first puts the base word's English sense into that form with `english.js` ("third-person singular past historic of *arrivare*" + "to arrive" → "he/she arrived"); it's pure and unit-tested in `tests/english.test.mjs`, and returns nothing when a sense isn't a "to …" verb (or a noun, for plurals). Google Translate links are plain URLs built by `googleTranslateURL`.
 
 ### Speech (`services.js` → `piper.js` → `tts-worker.js`)
 - `speak()` uses a Piper neural voice that runs on the device. `settings.voice` `''` (the default) is Riccardo; `'piper:paola'` and `'piper:serena'` are the other two (`VOICES` in `piper.js`). `'system'` picks the best device voice, and any other value is a device voice's name. Until the Piper voice has loaded, or if it fails, the Web Speech voice speaks instead.

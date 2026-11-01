@@ -16,13 +16,13 @@ describe('words', () => {
     await openBook(page);
     await tapWord(page, 'arrivò'); await sleep(300);
     assert.match(await text(page, '.wpop'), /arrivò → arrivare/);
-    assert.match(await text(page, '.wp-mean'), /to arrive, to reach/);
+    assert.match(await text(page, '.wp-mean'), /he\/she arrived, reached/, 'the base sense, put into the tapped form');
     const pop = await (await page.$('.wpop')).boundingBox();
     assert.ok(pop.x >= 0 && pop.x + pop.width <= 390, 'bubble stays on screen');
 
     await page.click('.wpop [data-s="2"]'); await sleep(300);
     assert.match(await page.getAttribute('.w[data-w="arrivò"]', 'class'), /\bs2\b/);
-    assert.match(await text(page, '.wp-mean'), /to arrive, to reach\s*Saved/);
+    assert.match(await text(page, '.wp-mean'), /he\/she arrived, reached\s*Saved/);
 
     await page.mouse.click(10, 150); await sleep(300); // a tap off the text closes it without turning
     assert.equal(await page.$$eval('.wpop', (e) => e.length), 0, 'bubble closed');
@@ -36,7 +36,8 @@ describe('words', () => {
     await tapWord(page, 'arrivò'); await page.click('.wpop .wp-more'); await sleep(500);
     assert.match(await text(page, '.dict'), /third-person singular past historic of arrivare/);
     assert.deepEqual(await page.$$eval('.hint span:first-child', (e) => e.map((x) => x.firstChild.textContent.trim())),
-      ['to arrive, to reach', 'to succeed', 'arrived']);
+      ['he/she arrived, reached', 'to arrive, to reach', 'to succeed', 'arrived']);
+    assert.match(await text(page, '.hint'), /arrivare · 3rd sg\. past historic/);
     await page.click('.lemma-btn'); await sleep(500);
     assert.equal(await page.textContent('.wcard .term'), 'arrivare');
     await page.click('.wcard .x'); await sleep(300);

@@ -1,7 +1,7 @@
 import { db } from './db.js';
 import { settings, TARGETS } from './settings.js';
 import { loadVocab, counts, allEntries, entry, setWord, setMany, importVocab, onChange } from './vocab.js';
-import { importText, importFile, saveBook } from './importer.js';
+import { importText, importFile, saveBook, replaceBookText } from './importer.js';
 import { initReader, openReader } from './reader.js';
 import { openWordCard, highlight } from './wordcard.js';
 import { NAMES, NAMES_VERSION } from './names.js';
@@ -10,7 +10,7 @@ import { getDays, streak, todayKey, bump } from './stats.js';
 import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, $, $$ } from './ui.js';
 import { SAMPLE } from '../samples/sample.js';
 import { STORIES } from '../samples/stories.js';
-import { SERIES, seriesBookId, loadSeriesBook } from '../samples/series/index.js';
+import { SERIES, seriesBookId, seriesRev, loadSeriesBook } from '../samples/series/index.js';
 import { haptic } from './haptics.js';
 import { bookPct, goalSheet, goalSummary, goalCardHTML } from './goals.js';
 import { fillDifficulty } from './difficulty.js';
@@ -56,11 +56,14 @@ async function addBundledStories() {
     if (!titles.has(s.title)) await saveBook(s);
     added.push(s.id);
   }
-  // The graded series, each book loaded only if it hasn't been added yet. Book 1 gets the newest date,
-  // so a fresh install starts there and the books line up in order.
+  // The graded series, each book loaded only if it hasn't been added yet, or if the library has an older
+  // revision of its text (which is then replaced, keeping the reader's place). Book 1 gets the newest
+  // date, so a fresh install starts there and the books line up in order.
   const now = Date.now();
   for (let n = 1; n <= SERIES.books; n++) {
     const id = seriesBookId(n);
+    const have = books.find((b) => b.series?.id === SERIES.id && b.series.n === n);
+    if (have && (have.rev || 1) < seriesRev(n)) await replaceBookText(have, await loadSeriesBook(n));
     if (added.includes(id)) continue;
     const b = await loadSeriesBook(n);
     if (!titles.has(b.title)) await saveBook({ ...b, added: now + SERIES.books - n + 1 });

@@ -51,4 +51,30 @@ describe('series in the library', () => {
     assert.equal(await page.textContent('#r-running'), 'Capitolo 1 · Il treno');
     assert.deepEqual(errors, []);
   });
+
+  test('a revised book replaces the old text in a library that has it, and keeps the reader\'s place', async () => {
+    const { page, errors } = await openApp(t, srv.url);
+    // Recreate a library saved before revisions: book 1 with no rev, different text, read up to chapter 4.
+    const id = await page.evaluate(async () => {
+      const db = await new Promise((r) => { const q = indexedDB.open('langreader'); q.onsuccess = () => r(q.result); });
+      const all = await new Promise((r) => { const q = db.transaction('books').objectStore('books').getAll(); q.onsuccess = () => r(q.result); });
+      const b = all.find((x) => x.series?.n === 1);
+      delete b.rev; b.progress = { ...b.progress, chapter: 3 };
+      const tx = db.transaction(['books', 'chapters'], 'readwrite');
+      tx.objectStore('books').put(b);
+      tx.objectStore('chapters').put({ key: `${b.id}:0`, bookId: b.id, idx: 0, title: 'Vecchio', blocks: [{ t: 'p', x: 'Testo vecchio.' }] });
+      await new Promise((r) => { tx.oncomplete = r; });
+      return b.id;
+    });
+    await page.reload(); await page.waitForSelector('#view-library .book');
+    const after = await page.evaluate(async (id) => {
+      const db = await new Promise((r) => { const q = indexedDB.open('langreader'); q.onsuccess = () => r(q.result); });
+      const get = (s, k) => new Promise((r) => { const q = db.transaction(s).objectStore(s).get(k); q.onsuccess = () => r(q.result); });
+      const b = await get('books', id), c = await get('chapters', `${id}:0`);
+      return { rev: b.rev, chapter: b.progress.chapter, title: c.title };
+    }, id);
+    assert.deepEqual(after, { rev: 2, chapter: 3, title: 'Capitolo 1 · Il treno' });
+    assert.equal((await page.$$eval('#view-library .cover .ct', (e) => e.map((x) => x.textContent))).filter((x) => x === 'Una casa a Montemare').length, 1);
+    assert.deepEqual(errors, []);
+  });
 });

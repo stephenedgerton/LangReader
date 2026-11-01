@@ -4,7 +4,7 @@ import { textToChapters, countWords } from './text.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-export async function saveBook({ title, author = '', chapters, cover = null, coverColors = null, series = null, added = Date.now() }) {
+export async function saveBook({ title, author = '', chapters, cover = null, coverColors = null, series = null, rev = 0, added = Date.now() }) {
   const id = uid();
   const split = splitLong(chapters);
   const book = {
@@ -15,9 +15,27 @@ export async function saveBook({ title, author = '', chapters, cover = null, cov
     progress: { chapter: 0, page: 0, frac: 0, done: [] },
     added, lastOpened: 0,
   };
-  if (series) book.series = series; // {id, n}: a book of a bundled graded series
+  if (series) Object.assign(book, { series, rev }); // {id, n}: a book of a bundled graded series, and its text's revision
   book.wordCount = book.chapterWords.reduce((a, b) => a + b, 0);
   await db.putMany('chapters', split.map((c, idx) => ({ key: `${id}:${idx}`, bookId: id, idx, title: c.title, blocks: c.blocks })));
+  await db.put('books', book);
+  return book;
+}
+
+// Give a saved book a new revision of its text, keeping its id, progress, goal and stats. Used when a
+// bundled series book is revised after a reader already has it.
+export async function replaceBookText(book, { title, author, coverColors, chapters, rev }) {
+  const split = splitLong(chapters);
+  for (let idx = split.length; idx < book.chapterCount; idx++) await db.del('chapters', `${book.id}:${idx}`);
+  await db.putMany('chapters', split.map((c, idx) => ({ key: `${book.id}:${idx}`, bookId: book.id, idx, title: c.title, blocks: c.blocks })));
+  Object.assign(book, {
+    title, author, coverColors, rev,
+    chapterCount: split.length,
+    chapterTitles: split.map((c) => c.title),
+    chapterWords: split.map((c) => c.blocks.reduce((n, b) => n + countWords(b.x), 0)),
+  });
+  book.wordCount = book.chapterWords.reduce((a, b) => a + b, 0);
+  if (book.progress.chapter >= split.length) book.progress = { ...book.progress, chapter: split.length - 1, page: 0, frac: 0 };
   await db.put('books', book);
   return book;
 }

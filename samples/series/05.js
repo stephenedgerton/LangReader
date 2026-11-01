@@ -137,7 +137,7 @@ export default book(5, 'Natale al porto', ['#1e4d3a', '#c9302c'], [
     'Poi prende il suo metro giallo dalla tasca. Matteo ha sempre il metro in tasca, anche a Natale. Misura la piccola stanza. Poi misura la stanza di Kate. Poi scrive i numeri sul muro, con una matita.',
     '«Nove metri», dice. «Adesso fa nove metri. Come fuori.»',
     '«Il metro che manca», dice Kate. «Il metro è qui.»',
-    '«Ma io ho battuto su questo muro», dice Matteo. «Un mese fa. Era pieno. Era un muro vero.» Matteo si siede su uno dei piccoli letti. Guarda le sue mani. «Le case non cambiano, Kate. Io lavoro nelle case da quindici anni. Le case non cambiano.»',
+    '«Ma io ho battuto su questo muro», dice Matteo. «Un mese fa. Era pieno. Era un muro vero.» Matteo si siede su uno dei piccoli letti. Guarda le sue mani. «Le case non cambiano, Kate. Io lavoro nelle case da cinque anni. Le case non cambiano.»',
     'Poi guarda la porta, i disegni, il biglietto nella mano di Kate.',
     '«Questa sì», dice piano.',
     'Nebbia salta su un letto, gira tre volte e si mette a dormire, come un gatto che torna a casa.',

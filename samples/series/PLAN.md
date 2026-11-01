@@ -176,7 +176,7 @@ Open threads and small facts to keep straight:
 - **People:** Giulia and Kate use *tu*; Tonino uses *tu* to Kate and she uses *tu* back since book 3.
   Kate and Elena use *tu*; the lawyer, Bellini and the antique dealer use *Lei*.
 - **Matteo:** gave Kate a small grey wooden cat (on the kitchen table, under the clock). He worked ten
-  years in an office in Milan, and has restored houses for fifteen years (book 5 says so). His
+  years in an office in Milan, then came home and has restored houses for five years. His
   grandfather watched the German ships from the tower as a boy and said "non tutti erano amici".
 - **Unexplained so far:** the ticking at night is always the kitchen clock, which never moves.
   Nobody has explained the notes "Per Kate" (Kate thinks Margherita prepared them before she died).

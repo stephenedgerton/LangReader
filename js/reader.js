@@ -688,7 +688,7 @@ function showTipsOnce() {
   el.innerHTML = `
     <h3>Reading tips</h3>
     <ul>
-      <li><b>Tap a word</b> to see its meaning. Tap 1–4 to save it as a LingQ.</li>
+      <li><b>Tap a word</b> to see its meaning. Tap 1–4 to save it as a gem.</li>
       <li><b>Hold a word and drag</b> to select a phrase or a whole sentence. It's saved with its sentence.</li>
       <li><b>Swipe or tap the edges</b> to turn the page. Blue words you skip become known, and you can undo.</li>
       <li><b>☰ Menu</b>, bottom right: themes, page translation and listening.</li>
@@ -757,7 +757,7 @@ function themesSheet() {
       <label class="ts-item"><span class="lbl">Justify Text</span><span class="switch"><input type="checkbox" data-set="justify" ${settings.justify ? 'checked' : ''}><i></i></span></label>
     </div>
     <div class="ts-group">
-      <label class="ts-item"><span class="lbl">Page turn marks blue words known<small>LingQ: words you skip past count as known</small></span><span class="switch"><input type="checkbox" data-set="autoKnown" ${settings.autoKnown ? 'checked' : ''}><i></i></span></label>
+      <label class="ts-item"><span class="lbl">Page turn marks blue words known<small>Words you skip past count as known</small></span><span class="switch"><input type="checkbox" data-set="autoKnown" ${settings.autoKnown ? 'checked' : ''}><i></i></span></label>
       <label class="ts-item"><span class="lbl">Haptics</span><span class="switch"><input type="checkbox" data-set="haptics" ${settings.haptics ? 'checked' : ''}><i></i></span></label>
       <label class="ts-item"><span class="lbl">Translate into</span><select data-set="target">${Object.entries(TARGETS).map(([k, n]) => `<option value="${k}" ${settings.target === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="ts-item"><span class="lbl">Speech Rate</span><input type="range" min="0.5" max="1.3" step="0.05" value="${settings.rate}" data-set="rate"></label>

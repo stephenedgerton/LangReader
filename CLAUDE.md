@@ -89,6 +89,7 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 
 ### UI conventions (`ui.js`)
 - `openSheet()` **replaces `#sheet-body` with a fresh element** every time, so a sheet's listeners never leak into the next one. Attach handlers to the returned body. `full: true` makes it full screen and closable only by its own buttons.
+- The accent is mint green: `--tint` for text and icons (deepened in light mode so it reads on white), `--tint-fill` (`#6fedbd`) for filled buttons, rings and bars, with `--on-tint` (dark green) as the text on it. Orange (`#ff9500`) is kept only for "Still learning"/Hard in reviews and hard books.
 - The reader themes are CSS variables on `#reader[data-theme]`, plus a `.dark` class. While the reader is open, `documentElement[data-appearance]` is set so the shared sheets follow the reader's light/dark appearance.
 - On iOS, `haptic()` (`haptics.js`) clicks a hidden `<input type=checkbox switch>`, because iOS Safari has no Vibration API. It only fires when called synchronously from a user gesture.
 - `storage.js` asks for persistent storage, tracks backup reminders, and saves exports through the iOS share sheet (`navigator.share` with files) when available.

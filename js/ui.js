@@ -24,10 +24,12 @@ export const icons = {
 let onSheetClose = null;
 let closedAt = -Infinity;
 
-export function openSheet(html, { onClose, transparent = false } = {}) {
+// `full` makes it a full-screen page that only its own buttons close (no tap outside, no swipe down).
+export function openSheet(html, { onClose, transparent = false, full = false } = {}) {
   const sheet = $('#sheet'), scrim = $('#scrim');
   if (!sheet.hidden && onSheetClose) { const f = onSheetClose; onSheetClose = null; f(); }
   sheet.classList.remove('closing');
+  sheet.classList.toggle('full', full);
   // Fresh element per sheet so listeners from the previous sheet never linger.
   const body = document.createElement('div');
   body.id = 'sheet-body';
@@ -59,7 +61,7 @@ export function initSheetGestures() {
   const sheet = $('#sheet');
   let y0 = null, dy = 0;
   sheet.addEventListener('touchstart', (e) => {
-    if (sheet.scrollTop > 0) { y0 = null; return; }
+    if (sheet.scrollTop > 0 || sheet.classList.contains('full')) { y0 = null; return; }
     y0 = e.touches[0].clientY; dy = 0;
   }, { passive: true });
   sheet.addEventListener('touchmove', (e) => {
@@ -73,7 +75,7 @@ export function initSheetGestures() {
     if (dy > 90) closeSheet();
     y0 = null;
   });
-  $('#scrim').addEventListener('click', closeSheet);
+  $('#scrim').addEventListener('click', () => { if (!$('#sheet').classList.contains('full')) closeSheet(); });
 }
 
 let toastTimer;

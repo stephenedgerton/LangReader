@@ -1,5 +1,5 @@
 // Achievements, shown as bookmarks (silk ribbons, one colour per kind): for known words, words
-// read, reading streaks and finished books. Internally they're still "badges".
+// read, reading streaks, finished books, reviews done and review streaks. Internally they're still "badges".
 // They're all worked out from your data, so a restored backup earns them back; only the date
 // each one was earned is kept, in localStorage langreader.badges ({id: date, or null when it was
 // already earned the first time we looked}).
@@ -18,15 +18,16 @@ const GROUPS = [
   { kind: 'read', name: 'Words read', icon: '📖', steps: [5000, 25000, 100000, 250000, 500000, 1000000], title: (s) => `${n(s)} words read` },
   { kind: 'streak', name: 'Reading streaks', icon: '🔥', steps: [3, 7, 30, 100, 365], title: (s) => `${s}-day streak` },
   { kind: 'books', name: 'Books finished', icon: '🏆', steps: [1, 3, 10, 25], title: (s) => (s === 1 ? 'First book finished' : `${s} books finished`) },
+  { kind: 'reviews', name: 'Reviews done', icon: '🗂️', steps: [25, 100, 500, 1000, 2500, 5000, 10000], title: (s) => `${n(s)} cards reviewed` },
+  { kind: 'rstreak', name: 'Review streaks', icon: '⚡', steps: [3, 7, 30, 100, 365], title: (s) => `${s}-day review streak` },
 ];
 export const BADGES = GROUPS.flatMap((g) => g.steps.map((s) => ({ id: `${g.kind}-${s}`, kind: g.kind, step: s, icon: g.icon, title: g.title(s) })));
 
-// Longest run of days that met the daily minutes goal.
-function bestStreak(days) {
-  const goal = settings.goalMinutes * 60;
+// Longest run of consecutive days that pass `met` (the daily minutes goal, or reviewing any cards).
+function bestStreak(days, met) {
   let best = 0, run = 0, prev = null;
   for (const d of days) {
-    if ((d.seconds || 0) < goal) { run = 0; prev = null; continue; }
+    if (!met(d)) { run = 0; prev = null; continue; }
     const next = prev && new Date(prev + 'T12:00');
     if (next) next.setDate(next.getDate() + 1);
     run = next && todayKey(next) === d.date ? run + 1 : 1;
@@ -43,7 +44,11 @@ async function measure() {
   const [days, books] = await Promise.all([getDays(), db.all('books')]);
   const finished = books.filter(isFinished).sort((a, b) => (finishedOn(a) || '').localeCompare(finishedOn(b) || ''));
   return {
-    values: { known: counts().known, read: days.reduce((a, d) => a + (d.wordsRead || 0), 0), streak: bestStreak(days), books: finished.length },
+    values: {
+      known: counts().known, read: days.reduce((a, d) => a + (d.wordsRead || 0), 0), books: finished.length,
+      streak: bestStreak(days, (d) => (d.seconds || 0) >= settings.goalMinutes * 60),
+      reviews: days.reduce((a, d) => a + (d.reviews || 0), 0), rstreak: bestStreak(days, (d) => (d.reviews || 0) > 0),
+    },
     finished,
   };
 }
@@ -106,13 +111,13 @@ export async function achievementsSheet() {
   const when = (d) => (d ? new Date(d + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Collected');
   const body = openSheet(`<h2>Bookmarks<button class="x">${icons.close}</button></h2>
     ${GROUPS.map((g) => `
-      <div class="section-title ach-title">${g.name}<small>${n(Math.floor(values[g.kind]))}${g.kind === 'streak' ? ' days best' : ''}</small></div>
+      <div class="section-title ach-title">${g.name}<small>${n(Math.floor(values[g.kind]))}${g.kind === 'streak' || g.kind === 'rstreak' ? ' days best' : ''}</small></div>
       <div class="ach-grid">${BADGES.filter((b) => b.kind === g.kind).map((b) => `
         <div class="ach-item">${bookmarkHTML(b, earned)}<b>${esc(b.title)}</b>
           <small>${b.id in earned ? when(earned[b.id]) : `${Math.floor(Math.min(1, values[g.kind] / b.step) * 100)}%`}</small></div>`).join('')}
       </div>`).join('')}
     ${finished.length ? `<div class="section-title ach-title">Finished</div>
       <div class="shelf">${finished.map((b) => `<div class="book">${coverHTML(b)}</div>`).join('')}</div>` : ''}
-    <p class="muted" style="font-size:13px;margin-top:16px">Streaks count days that meet your ${settings.goalMinutes}-minute reading goal.</p>`);
+    <p class="muted" style="font-size:13px;margin-top:16px">Reading streaks count days that meet your ${settings.goalMinutes}-minute reading goal. Review streaks count days you review at least one card.</p>`);
   body.addEventListener('click', (e) => { if (e.target.closest('.x')) closeSheet(); });
 }

@@ -11,6 +11,7 @@ import { buildQueue, isLingq, rate, readingCredit, preview, ivlLabel, AGAIN, HAR
 import { lookupFreq, dotsFor, loadFreq } from './freq.js';
 import { todayKey, bump } from './stats.js';
 import { openSheet, closeSheet, esc, icons, $, $$ } from './ui.js';
+import { checkBadges, bookmarkHTML } from './achievements.js';
 import { dictHTML, dictionaryHints } from './wordcard.js';
 import { tokenize, normalize } from './text.js';
 import { lookup } from './dictionary.js';
@@ -173,7 +174,8 @@ function cardMode(w, item, pool) {
 export async function reviewSheet({ onClose } = {}) {
   await loadFreq(); // so common words come first
   const onKey = (e) => keydown(e);
-  const body = openSheet('', { onClose: () => { removeEventListener('keydown', onKey); onClose?.(); } });
+  // Full screen, so a stray tap or swipe can't close it mid-session.
+  const body = openSheet('', { full: true, onClose: () => { removeEventListener('keydown', onKey); onClose?.(); } });
   addEventListener('keydown', onKey);
 
   let queue, i, pool, stats, cur = null, revealed = false, extra = 0, streak = 0, busy = false, swipedAt = -1e9, glossSeq = 0;
@@ -268,8 +270,19 @@ export async function reviewSheet({ onClose } = {}) {
         ${stats.best >= 3 ? `<div class="rv-done-sub">Best streak: ${stats.best} in a row</div>` : ''}
       </div>
       ${tricky.length ? `<div class="section-title rv-tricky-title">Still learning</div><div class="list rv-tricky">${tricky.map((w) => `<div class="row"><div class="txt"><div class="w">${esc(w.display || w.term)}</div><div class="m">${esc(w.meaning || '—')}</div></div><button class="rv-say" data-term="${esc(w.display || w.term)}" aria-label="Play">${icons.speaker}</button></div>`).join('')}</div>` : ''}
+      <div class="rv-badges"></div>
       <button class="primary" data-done>Done</button>
       ${keepGoingHTML(more, tricky.length)}`;
+    showNewBadges();
+  };
+  // Bookmarks earned in this session (reviews done, review streaks, or words that just became Known).
+  const showNewBadges = async () => {
+    const box = $('.rv-badges', body);
+    let fresh;
+    try { ({ fresh } = await checkBadges()); } catch { return; }
+    if (!fresh.length || !box?.isConnected) return;
+    box.innerHTML = `<div class="rv-badges-title">New bookmark${fresh.length > 1 ? 's' : ''}!</div>
+      <div class="rv-badges-row">${fresh.map((b) => `<div class="ach-item">${bookmarkHTML(b)}<b>${esc(b.title)}</b></div>`).join('')}</div>`;
   };
   // Optional extras, never pushed: today's remaining due cards first, else cards that aren't due yet,
   // and today's misses once more.
@@ -323,7 +336,7 @@ export async function reviewSheet({ onClose } = {}) {
     busy = true;
     const item = cur.item, w = entry(item.term) || cur.w;
     flyOut(dir ?? (g === AGAIN ? -1 : 1));
-    const snap = { term: w.term, prev: { status: w.status, srs: w.srs }, i, queue, qlen: queue.length, session, stats: { ...stats, tricky: [...stats.tricky] }, streak, counted: null, known: false };
+    const snap = { term: w.term, prev: { status: w.status, srs: w.srs }, i, queue, qlen: queue.length, session, stats: { ...stats, tricky: [...stats.tricky] }, streak, counted: null, known: false, reviewed: false };
     if (g === AGAIN) streak = 0; else { streak++; stats.best = Math.max(stats.best, streak); }
     undo.push(snap);
     // Going over today's misses again is only practice: their schedule was already set today.
@@ -337,6 +350,7 @@ export async function reviewSheet({ onClose } = {}) {
       // Extra practice ahead of schedule doesn't use up tomorrow's share.
       if (!item.ahead) { snap.counted = item.fresh ? 'fresh' : 'reviews'; countDone(snap.counted); }
       stats.n++; if (g > AGAIN) stats.right++;
+      bump('reviews'); snap.reviewed = true; // for the review bookmarks
     }
     if (g === AGAIN && !stats.tricky.includes(w.term)) stats.tricky.push(w.term);
     if (p.status === 5) { stats.known++; if (!w.phrase) { bump('known'); snap.known = true; } }
@@ -353,6 +367,7 @@ export async function reviewSheet({ onClose } = {}) {
     const s = undo.pop();
     if (s.counted) countDone(s.counted, -1);
     if (s.known) bump('known', -1);
+    if (s.reviewed) bump('reviews', -1);
     try { if (s.term) await setWord(s.term, s.prev); } finally { busy = false; }
     queue = s.queue; queue.length = s.qlen; i = s.i; session = s.session; stats = s.stats; streak = s.streak;
     render();

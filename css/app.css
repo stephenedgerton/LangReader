@@ -236,6 +236,10 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   max-width: 640px; margin: 0 auto;
 }
 .sheet.closing { animation: down .2s ease-in forwards; }
+/* Full-screen sheet (the reviews): only its own buttons close it. */
+.sheet.full { top: 0; max-height: none; border-radius: 0; background: var(--bg-elev); padding-top: 0; }
+.sheet.full .grabber { display: none; }
+.sheet.full h2 { position: sticky; top: 0; z-index: 6; margin: 0 -16px 14px; padding: calc(var(--safe-top) + 10px) 16px 8px; background: var(--bg-elev); }
 .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--fill-2); margin: 2px auto 10px; }
 .sheet h2 { font-size: 20px; margin: 4px 0 14px; display: flex; align-items: center; justify-content: space-between; }
 .sheet .x { width: 30px; height: 30px; border-radius: 50%; background: var(--fill); color: var(--label-2); display: grid; place-items: center; }
@@ -612,6 +616,11 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .rv-coffee { font-size: 56px; margin: 10px 0; }
 .rv-done-line { font-size: 16px; color: var(--label); }
 .rv-done-sub { font-size: 14px; color: var(--label-2); margin-top: 4px; }
+.rv-badges:empty { display: none; }
+.rv-badges { text-align: center; margin: 0 0 18px; padding: 14px 10px; border-radius: 14px; background: var(--bg-grouped); animation: card-in .4s cubic-bezier(.2, .9, .3, 1); }
+.rv-badges-title { font-weight: 700; font-size: 16px; margin-bottom: 10px; }
+.rv-badges-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 18px; }
+.rv-badges .ach-item { max-width: 110px; }
 .rv-tricky { margin-bottom: 16px; }
 .rv-tricky .rv-say { margin-left: auto; }
 .review-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -851,6 +860,8 @@ input[type=date] { background: transparent; border: 0; color: var(--tint); font:
 .bookmark.k-read { --rib: #2f5fa8; }
 .bookmark.k-streak { --rib: #c0392b; }
 .bookmark.k-books { --rib: #c9962b; }
+.bookmark.k-reviews { --rib: #6a4c9c; }
+.bookmark.k-rstreak { --rib: #d9662b; }
 .bookmark.locked { --rib: var(--fill-2); filter: none; }
 .bookmark.locked i { filter: grayscale(1); opacity: .35; }
 .bookmark.new::after { content: "NEW"; position: absolute; top: -5px; right: -12px; background: var(--red); color: #fff; font: 800 9px/1 var(--sans); padding: 3px 4px; border-radius: 6px; }

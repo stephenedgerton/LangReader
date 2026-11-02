@@ -247,6 +247,46 @@ describe('reviews', () => {
     assert.deepEqual(errors, []);
   });
 
+  test('the review is full screen: a tap outside or a swipe down cannot close it', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'vocab', settings: { reviewStyle: 'flip' } });
+    await seed(page, [{ term: 'casa', status: 3, srs: due(2) }]);
+    await openReview(page);
+    assert.ok(await page.$('#sheet.full'), 'the sheet is full screen');
+    const box = await page.$eval('#sheet', (el) => { const r = el.getBoundingClientRect(); return { top: r.top, h: r.height }; });
+    assert.equal(box.top, 0); assert.equal(box.h, 664);
+    await page.evaluate(() => document.querySelector('#scrim').click()); await sleep(300);
+    assert.ok(await page.isVisible('#sheet'), 'tapping the scrim leaves it open');
+    await page.click('.sheet h2 .x'); await sleep(300);
+    assert.ok(!(await page.isVisible('#sheet')), 'the close button still closes it');
+    // Other sheets are still the usual bottom sheets.
+    await page.click('#tabbar button[data-tab=home]'); await sleep(300);
+    await page.click('[data-act=achievements]'); await sleep(300);
+    assert.ok(await page.isVisible('#sheet') && !(await page.$('#sheet.full')));
+    assert.deepEqual(errors, []);
+  });
+
+  test('reviewing earns review bookmarks, shown when the session ends', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'vocab', settings: { reviewStyle: 'flip' } });
+    await seed(page, [{ term: 'casa', status: 3, srs: due(2) }]);
+    // 24 cards reviewed on each of the two days before today.
+    await page.evaluate(async () => {
+      const { db } = await import('./js/db.js'), { todayKey } = await import('./js/stats.js');
+      for (const ago of [1, 2]) { const d = new Date(); d.setDate(d.getDate() - ago); await db.put('days', { date: todayKey(d), seconds: 0, wordsRead: 0, known: 0, lingqs: 0, reviews: 12 }); }
+      await (await import('./js/achievements.js')).checkBadges();
+    });
+    await openReview(page);
+    await page.click('[data-flip]'); await page.click('[data-r="3"]');
+    await page.waitForSelector('.rv-badges .bookmark', { timeout: 5000 });
+    const text = await page.textContent('.rv-badges');
+    assert.match(text, /New bookmarks!/); assert.match(text, /25 cards reviewed/); assert.match(text, /3-day review streak/);
+    const b = await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.badges')));
+    assert.match(b['reviews-25'], /^\d{4}-\d\d-\d\d$/);
+    // Undo takes the count back.
+    await page.click('.rv-undo'); await sleep(200);
+    assert.equal(await page.evaluate(async () => (await import('./js/stats.js')).getDays().then((d) => d.at(-1).reviews)), 0);
+    assert.deepEqual(errors, []);
+  });
+
   test('review settings are saved as numbers', async () => {
     const { page } = await openApp(t, srv.url, { hash: 'home' });
     await page.click('[data-act=settings]'); await sleep(300);

@@ -205,7 +205,7 @@ async function renderHome() {
     <div class="section-title">Your Italian</div>
     <div class="stats-grid">
       <div class="stat known"><div class="n">${c.known.toLocaleString()}</div><div class="l">Known words</div></div>
-      <div class="stat lingq"><div class="n">${c.lingqs.toLocaleString()}</div><div class="l">LingQs (learning)</div></div>
+      <div class="stat lingq"><div class="n">${c.lingqs.toLocaleString()}</div><div class="l">Gems (learning)</div></div>
       <div class="stat"><div class="n">${(today.wordsRead || 0).toLocaleString()}</div><div class="l">Words read today</div></div>
       <div class="stat"><div class="n">+${(today.known || 0).toLocaleString()}</div><div class="l">New known today</div></div>
     </div>
@@ -257,12 +257,12 @@ function settingsSheet() {
     <label class="field"><span>Reviews a day (the rest wait, most useful first)</span><select name="reviewsPerDay" data-num>${[10, 20, 30, 50, 100].map((n) => `<option ${+settings.reviewsPerDay === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <label class="field"><span>New cards a day</span><select name="newPerDay" data-num>${[0, 5, 10, 20].map((n) => `<option ${+settings.newPerDay === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <label class="field"><span>Card style</span><select name="reviewStyle">${[['mixed', 'Mixed · flashcards, pick the meaning, fill the gap'], ['flip', 'Flashcards only']].map(([k, n]) => `<option value="${k}" ${settings.reviewStyle === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-    <p class="muted" style="font-size:13px;margin:-4px 0 0">Reading counts as review: LingQs you read past without tapping move forward, ones you look up come back sooner.</p>
+    <p class="muted" style="font-size:13px;margin:-4px 0 0">Reading counts as review: gems you read past without tapping move forward, ones you look up come back sooner.</p>
     <div class="section-title" style="font-size:17px;margin-top:18px">Backup</div>
     <p class="muted storage-status" style="font-size:13px;margin:-4px 0 10px">Last backup: ${backupAge()}.</p>
     <div class="action-list">
       <button data-act="export"><span>Export everything (JSON)</span>${icons.download}</button>
-      <button data-act="csv"><span>Export LingQs for Anki (CSV)</span>${icons.download}</button>
+      <button data-act="csv"><span>Export gems for Anki (CSV)</span>${icons.download}</button>
       <button data-act="import"><span>Restore from backup…</span>${icons.upload}</button>
     </div>
     <div class="action-list" style="margin-top:14px">
@@ -315,7 +315,7 @@ async function exportAll() {
 function exportCSV() {
   const q = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
   const rows = allEntries().filter((w) => w.status >= 1 && w.status <= 4).map((w) => [w.display || w.term, w.meaning, w.example, w.status, w.exampleTr].map(q).join(','));
-  saveFile(`lingqs-${todayKey()}.csv`, 'term,meaning,example,status,example_translation\n' + rows.join('\n'), 'text/csv');
+  saveFile(`gems-${todayKey()}.csv`, 'term,meaning,example,status,example_translation\n' + rows.join('\n'), 'text/csv');
 }
 
 // ---------------- Library ----------------
@@ -476,14 +476,14 @@ function renderVocab() {
     </div>
     <label class="search">${icons.search}<input name="q" type="search" placeholder="Search" value="${esc(vQuery)}" autocomplete="off"></label>
     <div class="seg">
-      ${[['lingqs', 'LingQs'], ['phrases', 'Phrases'], ['known', 'Known'], ['ignored', 'Ignored']].map(([k, l]) => `<button data-f="${k}" class="${vFilter === k ? 'on' : ''}">${l} ${n(k)}</button>`).join('')}
+      ${[['lingqs', 'Gems'], ['phrases', 'Phrases'], ['known', 'Known'], ['ignored', 'Ignored']].map(([k, l]) => `<button data-f="${k}" class="${vFilter === k ? 'on' : ''}">${l} ${n(k)}</button>`).join('')}
     </div>
     ${shown.length ? `<div class="list">${shown.map((w) => `
       <button class="row" data-t="${esc(w.term)}"><div class="txt"><div class="w">${esc(w.display || w.term)}</div>
         ${w.meaning ? `<div class="m">${esc(w.meaning)}</div>` : ''}
         ${w.example && vFilter !== 'ignored' && vFilter !== 'known' ? `<div class="ex">${highlight(w.example, w.display || w.term)}</div>` : ''}</div>${pill(w.status)}</button>`).join('')}</div>
       ${list.length > shown.length ? `<p class="muted" style="text-align:center;font-size:13px">Showing 300 of ${list.length.toLocaleString()} — search to narrow down.</p>` : ''}`
-      : `<div class="empty"><h3>Nothing here yet</h3><p>${vFilter === 'lingqs' ? 'Tap a blue word while reading and choose a meaning to create a LingQ.' : vFilter === 'phrases' ? 'Long-press a word, then tap the last word of a phrase.' : 'Words appear here as you read.'}</p></div>`}
+      : `<div class="empty"><h3>Nothing here yet</h3><p>${vFilter === 'lingqs' ? 'Tap a blue word while reading and choose a meaning to save it as a gem.' : vFilter === 'phrases' ? 'Long-press a word, then tap the last word of a phrase.' : 'Words appear here as you read.'}</p></div>`}
   `;
   if (focused) { const i = $('input[name=q]', v); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
   v.onclick = (e) => {

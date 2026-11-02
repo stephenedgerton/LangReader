@@ -266,7 +266,7 @@ export async function reviewSheet({ onClose } = {}) {
         ${stats.n ? `<div class="rv-ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" pathLength="100"/><circle class="fg" cx="60" cy="60" r="52" pathLength="100" style="--p:${pct}"/></svg><div><b>${pct}%</b><small>remembered</small></div></div>`
           : '<div class="rv-coffee">☕</div>'}
         <div class="rv-done-line">${stats.n ? `${stats.n} card${stats.n === 1 ? '' : 's'} reviewed · ${stats.right} remembered${stats.known ? ` · ${stats.known} now Known` : ''}`
-          : 'Your reading keeps your LingQs fresh. Come back tomorrow.'}</div>
+          : 'Your reading keeps your gems fresh. Come back tomorrow.'}</div>
         ${stats.best >= 3 ? `<div class="rv-done-sub">Best streak: ${stats.best} in a row</div>` : ''}
       </div>
       ${tricky.length ? `<div class="section-title rv-tricky-title">Still learning</div><div class="list rv-tricky">${tricky.map((w) => `<div class="row"><div class="txt"><div class="w">${esc(w.display || w.term)}</div><div class="m">${esc(w.meaning || '—')}</div></div><button class="rv-say" data-term="${esc(w.display || w.term)}" aria-label="Play">${icons.speaker}</button></div>`).join('')}</div>` : ''}
@@ -440,7 +440,7 @@ export async function reviewSheet({ onClose } = {}) {
     const paint = (m, loading = false) => {
       const st = entry(term)?.status ?? 0;
       bar.innerHTML = `<b>${esc(text)}</b><span class="cg-m">${loading ? 'Looking up…' : esc(m || 'No translation found')}</span>`
-        + (!loading && m && st === 0 ? `<button class="cg-add" data-t="${esc(term)}" data-m="${esc(m)}">+ LingQ</button>` : st >= 1 && st <= 4 ? '<small>LingQ</small>' : '');
+        + (!loading && m && st === 0 ? `<button class="cg-add" data-t="${esc(term)}" data-m="${esc(m)}">+ Gem</button>` : st >= 1 && st <= 4 ? '<small>Gem</small>' : '');
     };
     const saved = entry(term)?.meaning;
     if (saved) return paint(saved);
@@ -458,7 +458,7 @@ export async function reviewSheet({ onClose } = {}) {
     bump('lingqs');
     pool.push(w);
     $$('.cw', body).forEach((x) => { if (normalize(x.dataset.w) === term) { x.classList.remove('s0'); x.classList.add('s1'); } });
-    b.outerHTML = '<small>Saved as LingQ</small>';
+    b.outerHTML = '<small>Saved as a gem</small>';
   };
   const translateSentence = async (b) => {
     const w = cur.w, ex = w.example;

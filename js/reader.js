@@ -37,7 +37,7 @@ export function initReader() {
   $('#r-menu-pop').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     toggleMenu(false);
-    ({ contents: contentsSheet, themes: themesSheet, goal: () => goalSheet(R.book), 'translate-page': translatePage, 'speak-page': speakPage, complete: completeChapter })[b.dataset.act]();
+    ({ contents: contentsSheet, themes: themesSheet, goal: () => goalSheet(R.book), 'translate-page': translatePage, 'speak-page': speakPage, 'page-known': markPageKnown, complete: completeChapter })[b.dataset.act]();
   });
 
   initGestures();
@@ -51,6 +51,7 @@ export function initReader() {
     if (R.el.hidden || sheetOpen() || R.busy || R.area.querySelector('.curl') || e.target.matches('input, textarea, select')) return;
     if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); markPageKnown(); }
     if (e.key === 'Escape') closeReader();
   });
   let rz;
@@ -329,23 +330,28 @@ async function transition(fn, dir) {
 }
 
 // LingQ: when you page forward, the blue words you skipped become Known (with Undo).
-function leavePage(p) {
-  if (R.seenPages.has(p)) return;
-  R.seenPages.add(p);
+// `manual` is a swipe up (or the menu): mark this page's blue words now, without turning, and even
+// with automatic marking off. The page counts as read only once, however it's marked.
+function leavePage(p, manual = false) {
+  const first = !R.seenPages.has(p);
+  if (!first && !manual) return;
   // Chapter titles aren't reading, so they never count.
   const spans = spansOnPage(p).filter((s) => !s.closest('h1, h2'));
-  bump('wordsRead', spans.length);
-  // Reading is review: the LingQs (words and phrases) you read past move forward, ones you looked up come back sooner.
-  const lingqs = new Set();
-  for (const s of spans) {
-    const st = statusOf(s.dataset.w);
-    if (st >= 1 && st <= 4) lingqs.add(s.dataset.w);
-    if (s.classList.contains('ph0')) lingqs.add(s.dataset.ph);
+  if (first) {
+    R.seenPages.add(p);
+    bump('wordsRead', spans.length);
+    // Reading is review: the LingQs (words and phrases) you read past move forward, ones you looked up come back sooner.
+    const lingqs = new Set();
+    for (const s of spans) {
+      const st = statusOf(s.dataset.w);
+      if (st >= 1 && st <= 4) lingqs.add(s.dataset.w);
+      if (s.classList.contains('ph0')) lingqs.add(s.dataset.ph);
+    }
+    if (lingqs.size) creditReading(lingqs, R.tapped);
   }
-  if (lingqs.size) creditReading(lingqs, R.tapped);
-  if (!settings.autoKnown) return;
+  if (!settings.autoKnown && !manual) return;
   const blue = [...new Set(spans.filter((s) => statusOf(s.dataset.w) === 0).map((s) => s.dataset.w))];
-  if (!blue.length) return;
+  if (!blue.length) { if (manual) toast('No new words on this page'); return; }
   setMany(blue, 5).then((n) => {
     if (!n) return;
     bump('known', n);
@@ -355,12 +361,19 @@ function leavePage(p) {
         haptic();
         const back = await revertToNew(blue);
         bump('known', -back);
-        bump('wordsRead', -spans.length);
-        R.seenPages.delete(p);
+        if (first) { bump('wordsRead', -spans.length); R.seenPages.delete(p); }
         toast(`${back} word${back === 1 ? '' : 's'} back to new`);
       },
     });
   });
+}
+
+// Swipe up: "I've read this page". The page gives a little nod so the gesture feels answered.
+function markPageKnown() {
+  if (R.busy) return;
+  closeSheet(); closeBubble(); clearPhrase();
+  R.area.animate([{ transform: 'none' }, { transform: 'translateY(-10px)' }, { transform: 'none' }], { duration: 260, easing: 'ease-out' });
+  leavePage(R.page, true);
 }
 
 function markChapterDone(idx) {
@@ -481,6 +494,9 @@ function initGestures() {
       return;
     }
     if (e.type === 'pointercancel') return;
+    // A swipe up marks the page's blue words Known without turning.
+    const dy = e.clientY - sy;
+    if (dy < -50 && Math.abs(dy) > Math.abs(dx) * 1.5) { haptic(); markPageKnown(); return; }
     onTap(e, target);
   };
   area.addEventListener('pointerup', end);
@@ -691,6 +707,7 @@ function showTipsOnce() {
       <li><b>Tap a word</b> to see its meaning. Tap 1–4 to save it as a gem.</li>
       <li><b>Hold a word and drag</b> to select a phrase or a whole sentence. It's saved with its sentence.</li>
       <li><b>Swipe or tap the edges</b> to turn the page. Blue words you skip become known, and you can undo.</li>
+      <li><b>Swipe up</b> to mark the blue words on this page known without turning.</li>
       <li><b>☰ Menu</b>, bottom right: themes, page translation and listening.</li>
     </ul>
     <button class="primary">Got it</button>`;
@@ -811,7 +828,7 @@ function pageWordsSheet() {
   for (const s of spans) if (!uniq.has(s.dataset.w)) uniq.set(s.dataset.w, s);
   const rows = [...uniq.entries()].filter(([t]) => { const st = statusOf(t); return st >= 0 && st <= 4; });
   rows.sort((a, b) => (statusOf(a[0]) || 9) - (statusOf(b[0]) || 9));
-  const pill = (t) => { const s = statusOf(t); return s === 0 ? '<span class="pill" style="background:rgba(80,150,255,.25);color:var(--blue)">New</span>' : `<span class="pill s${s}">${s}</span>`; };
+  const pill = (t) => { const s = statusOf(t); return s === 0 ? '<span class="pill" style="background:color-mix(in srgb, var(--blue) 20%, transparent);color:var(--blue)">New</span>' : `<span class="pill s${s}">${s}</span>`; };
   const blue = rows.filter(([t]) => statusOf(t) === 0).length;
   const body = openSheet(`
     <h2>On This Page<button class="x">${icons.close}</button></h2>

@@ -67,6 +67,27 @@ describe('reader', () => {
     assert.ok(await page.$('p .w.s0[data-w="treno"]'), 'Undo made them blue again');
   });
 
+  test('swiping up marks the page known without turning, even with auto-known off, and Undo restores it', async () => {
+    const { page, errors } = await openApp(t, srv.url, { settings: { autoKnown: false } });
+    await openBook(page);
+    await page.mouse.move(195, 480); await page.mouse.down();
+    for (let y = 460; y >= 300; y -= 20) await page.mouse.move(200, y);
+    await page.mouse.up(); await sleep(400);
+    assert.equal(await pageNo(page), 1, 'stays on the page');
+    const n = +(await page.textContent('#r-toast')).match(/\+(\d+) known/)[1];
+    assert.ok(n > 50);
+    assert.equal(await page.$('p .w.s0[data-w="treno"]'), null, 'body words became known');
+    assert.ok(await page.$('h1 .w.s0[data-w="capitolo"]'), 'chapter title words stay blue');
+    await page.click('#r-toast button'); await sleep(300);
+    assert.ok(await page.$('p .w.s0[data-w="treno"]'), 'Undo made them blue again');
+    // The menu does the same.
+    await page.mouse.click(195, 650); await sleep(250);
+    await page.click('#r-menu'); await page.click('[data-act=page-known]'); await sleep(400);
+    assert.equal(await page.$('p .w.s0[data-w="treno"]'), null);
+    assert.equal(await pageNo(page), 1);
+    assert.deepEqual(errors, []);
+  });
+
   // Regression: a dragged turn moves the content before the page is measured, which used to count the next page too.
   for (const how of ['curl drag', 'slide drag', 'edge tap']) {
     test(`${how} marks only the page you turned off as known`, async () => {

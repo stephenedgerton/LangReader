@@ -100,12 +100,13 @@ describe('library', () => {
     await page.mouse.click(b.x + 4, b.y + 5); await sleep(300);
     await page.click('.wpop [data-s="1"]'); await sleep(300);
     await closeReader(page);
-    await page.click('#tabbar button[data-tab=vocab]'); await sleep(300);
-    await page.click('[data-act=review]'); await sleep(300);
+    await page.click('#tabbar button[data-tab=training]'); await sleep(300);
+    await page.click('#view-training [data-act=words]'); await sleep(300);
     assert.equal(await page.textContent('.flash .fw'), 'treno');
     await page.click('[data-flip]'); await page.click('[data-r="3"]'); await sleep(300);
     assert.match(await page.textContent('.rv-done'), /1 card reviewed · 1 remembered/);
     await page.click('[data-done]'); await sleep(300);
+    await page.click('#tabbar button[data-tab=vocab]'); await sleep(300);
     assert.match(await page.textContent('.row[data-t="treno"] .pill'), /^2$/);
   });
 

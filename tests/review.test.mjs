@@ -1,4 +1,4 @@
-// Daily reviews: FSRS cards, the daily cap, reading as review, the Home card and settings.
+// Daily reviews: FSRS cards, the daily cap, reading as review, the Training tab's Words row and settings.
 import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startServer, openApp, openBook, closeReader, closeBrowser, tapWord, sleep } from './helpers.mjs';
@@ -46,14 +46,14 @@ describe('reviews', () => {
   });
 
   test('the day is capped, the most common words come first, and you can review more', async () => {
-    const { page, errors } = await openApp(t, srv.url, { hash: 'home', settings: { reviewsPerDay: 10, newPerDay: 0, reviewStyle: 'flip' } });
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { reviewsPerDay: 10, newPerDay: 0, reviewStyle: 'flip' } });
     // 12 due cards: common words and a rare one.
     const terms = ['sbadigliare', 'casa', 'tempo', 'giorno', 'uomo', 'vita', 'mano', 'occhi', 'notte', 'porta', 'strada', 'acqua'];
     await seed(page, terms.map((term) => ({ term, srs: { s: 5, d: 5, reps: 2, lapses: 0, ago: 8 } })));
     await page.click('#tabbar button[data-tab=library]');
-    await page.click('#tabbar button[data-tab=home]'); await sleep(300);
-    assert.match(await page.textContent('.review-card'), /Today's Review\s*10 cards · about 1 min/);
-    await page.click('.review-card'); await sleep(400);
+    await page.click('#tabbar button[data-tab=training]'); await sleep(300);
+    assert.match(await page.textContent('.tr-words'), /Bonus: 10 words/);
+    await page.click('.tr-words'); await sleep(400);
     assert.match(await page.textContent('.sheet h2'), /1 of 10/);
     const seen = [];
     for (let i = 0; i < 10; i++) {
@@ -67,7 +67,7 @@ describe('reviews', () => {
     await page.click('[data-extra]'); await sleep(200);
     assert.match(await page.textContent('.sheet h2'), /1 of 2/);
     await page.click('.x'); await sleep(400);
-    assert.match(await page.textContent('#view-home'), /Reviews done for today|Today's Review/);
+    assert.match(await page.textContent('#view-training .tr-words'), /Words done for today/, 'the extra 10 are beyond today’s share');
     const c = await card(page, 'casa');
     assert.ok(c.srs.due > Date.now() + DAY, 'rescheduled');
     assert.deepEqual(errors, []);
@@ -76,9 +76,10 @@ describe('reviews', () => {
   test('Again brings a card back once at the end of the session', async () => {
     const { page } = await openApp(t, srv.url, { hash: 'vocab', settings: { reviewStyle: 'flip' } });
     await seed(page, [{ term: 'casa', status: 3, srs: { s: 5, d: 5, reps: 2, lapses: 0, ago: 8 } }]);
-    await page.click('#tabbar button[data-tab=home]'); await page.click('#tabbar button[data-tab=vocab]'); await sleep(200);
-    assert.match(await page.textContent('#view-vocab [data-act=review]'), /Review \(1\)/);
-    await page.click('#view-vocab [data-act=review]'); await sleep(400);
+    assert.equal(await page.$('#view-vocab [data-act=review]'), null, 'reviews are no longer on the Vocabulary tab');
+    await page.click('#tabbar button[data-tab=training]'); await sleep(300);
+    assert.match(await page.textContent('.tr-words'), /Bonus: 1 word(?!s)/);
+    await page.click('.tr-words'); await sleep(400);
     await page.click('.flash'); await page.click('[data-r="1"]'); await sleep(200);
     assert.match(await page.textContent('.sheet h2'), /2 of 2/);
     assert.equal(await page.textContent('.flash .fw'), 'casa');
@@ -89,10 +90,10 @@ describe('reviews', () => {
     assert.equal(c.srs.lapses, 1);
   });
 
-  // Opens today's review from the Vocabulary tab once the seeded cards are in.
+  // Opens today's review from the Training tab's Words row once the seeded cards are in.
   const openReview = async (page) => {
-    await page.click('#tabbar button[data-tab=home]'); await page.click('#tabbar button[data-tab=vocab]'); await sleep(200);
-    await page.click('#view-vocab [data-act=review]'); await sleep(400);
+    await page.click('#tabbar button[data-tab=home]'); await page.click('#tabbar button[data-tab=training]'); await sleep(300);
+    await page.click('#view-training [data-act=words]'); await sleep(400);
   };
   const due = (reps) => ({ s: 5, d: 5, reps, lapses: 0, ago: 8 });
   const others = ['casa', 'tempo', 'giorno', 'notte'].map((term) => ({ term, status: 5 }));
@@ -242,8 +243,7 @@ describe('reviews', () => {
     assert.equal((await card(page, 'tempo')).srs.reps, 4);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.srsDay')).reviews), 1);
     await page.click('[data-done]'); await sleep(300);
-    await page.click('#tabbar button[data-tab=home]'); await sleep(300);
-    assert.ok(await page.$('button.review-card.done[data-act=review]'), 'the finished card on Home still opens the review');
+    assert.match(await page.textContent('#view-training .tr-words'), /Words done for today/, 'the finished row still opens the review');
     assert.deepEqual(errors, []);
   });
 
@@ -287,9 +287,9 @@ describe('reviews', () => {
     assert.deepEqual(errors, []);
   });
 
-  test('review settings are saved as numbers', async () => {
-    const { page } = await openApp(t, srv.url, { hash: 'home' });
-    await page.click('[data-act=settings]'); await sleep(300);
+  test('review settings are in Training settings, and saved as numbers', async () => {
+    const { page } = await openApp(t, srv.url, { hash: 'training' });
+    await page.click('#view-training [data-act=settings]'); await sleep(300);
     await page.selectOption('select[name=reviewsPerDay]', '50');
     await page.selectOption('select[name=retention]', 'relaxed');
     await page.selectOption('select[name=reviewStyle]', 'flip');

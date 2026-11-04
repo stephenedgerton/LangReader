@@ -96,24 +96,27 @@ export function piperVoice() {
 // Start loading the Piper voice ahead of the first tap (the reader calls this when it opens).
 export function prepareVoice() { const v = piperVoice(); if (v) warmUp(v); }
 
-export function speak(text, { onend, onboundary } = {}) {
+// `slow` (Training's 🐢) speaks at 70% of the usual rate: Piper makes the voice itself slower, rather than
+// stretching the audio.
+export function speak(text, { onend, onboundary, slow = false } = {}) {
   stopSpeaking();
+  const rate = settings.rate * (slow ? 0.7 : 1);
   // Unlock audio on every tap, even while the voice loads, so later clips can play outside a tap.
   const v = piperVoice();
   if (v) unlockAudio();
   if (v && warmUp(v) === 'ready') {
-    speakPiper(text, { voice: v, rate: settings.rate, onend }).catch(() => speakSystem(text, { onend, onboundary }));
+    speakPiper(text, { voice: v, rate, onend }).catch(() => speakSystem(text, { onend, onboundary, rate }));
     return;
   }
-  speakSystem(text, { onend, onboundary });
+  speakSystem(text, { onend, onboundary, rate });
 }
-function speakSystem(text, { onend, onboundary }) {
+function speakSystem(text, { onend, onboundary, rate = settings.rate }) {
   if (!('speechSynthesis' in window)) return;
   const u = new SpeechSynthesisUtterance(text);
   voice = pickVoice() || voice;
   if (voice) u.voice = voice;
   u.lang = voice?.lang || 'it-IT';
-  u.rate = settings.rate;
+  u.rate = rate;
   if (onend) { u.onend = onend; u.onerror = onend; }
   if (onboundary) u.onboundary = onboundary;
   speechSynthesis.speak(u);

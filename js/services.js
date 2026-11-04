@@ -99,10 +99,12 @@ export function piperVoice() {
 export function prepareVoice() { const v = piperVoice(); if (v) warmUp(v); }
 
 // `slow` (Training's 🐢) speaks at 70% of the usual rate: Piper makes the voice itself slower, rather than
-// stretching the audio.
-export function speak(text, { onend, onboundary, slow = false } = {}) {
+// stretching the audio. `rate` multiplies the usual rate too (Focus mode's speed steps). `lang: 'en'` speaks
+// English in a device voice (Focus mode's Dual audio), never Piper.
+export function speak(text, { onend, onboundary, slow = false, rate: times = 1, lang = '' } = {}) {
   stopSpeaking();
-  const rate = settings.rate * (slow ? 0.7 : 1);
+  const rate = settings.rate * times * (slow ? 0.7 : 1);
+  if (lang && lang !== settings.lang) return speakSystem(text, { onend, onboundary, rate, lang });
   // Unlock audio on every tap, even while the voice loads, so later clips can play outside a tap.
   const v = piperVoice();
   if (v) unlockAudio();
@@ -112,12 +114,24 @@ export function speak(text, { onend, onboundary, slow = false } = {}) {
   }
   speakSystem(text, { onend, onboundary, rate });
 }
-function speakSystem(text, { onend, onboundary, rate = settings.rate }) {
-  if (!('speechSynthesis' in window)) return;
+// The best device voice for another language (English for Dual audio), preferring enhanced ones.
+function otherVoice(lang) {
+  const voices = speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith(lang));
+  return voices.find((v) => /premium|enhanced|siri/i.test(v.name) && /en-(us|gb)/i.test(v.lang)) || voices.find((v) => v.default)
+    || voices.find((v) => /en-(us|gb)/i.test(v.lang)) || voices[0] || null;
+}
+function speakSystem(text, { onend, onboundary, rate = settings.rate, lang = '' }) {
+  if (!('speechSynthesis' in window)) { onend?.(); return; }
   const u = new SpeechSynthesisUtterance(text);
-  voice = pickVoice() || voice;
-  if (voice) u.voice = voice;
-  u.lang = voice?.lang || 'it-IT';
+  if (lang) {
+    const v = otherVoice(lang);
+    if (v) u.voice = v;
+    u.lang = v?.lang || ({ en: 'en-US' }[lang] || lang);
+  } else {
+    voice = pickVoice() || voice;
+    if (voice) u.voice = voice;
+    u.lang = voice?.lang || 'it-IT';
+  }
   u.rate = rate;
   if (onend) { u.onend = onend; u.onerror = onend; }
   if (onboundary) u.onboundary = onboundary;

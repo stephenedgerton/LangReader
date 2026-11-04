@@ -107,3 +107,7 @@ The throwaway prototype is on the `prototype/practice-tab` branch (`prototypes/p
 - **Training in Stats**: a section between the word bands and Themes with sentences you can say (say card held for a
   week), mastered and started, the training streak, days trained in the last 30, cards this week, a 14-day bar
   chart of cards a day, and each trained pack's progress.
+
+## Next: Focus mode (PR 4)
+
+Designed in `docs/focus-mode-plan.md`.

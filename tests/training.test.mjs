@@ -117,18 +117,21 @@ describe('training', () => {
     await page.click('[data-a=go]'); await sleep(400);
     assert.match(await page.textContent('.tr-row:nth-child(6) .txt'), /^Sei stanca\?/, 'your partner’s forms');
     assert.match(await page.textContent('.tr-hero'), /0 learned/);
-    // Training just this pack rates for real but leaves today's plan alone.
-    await page.click('[data-act=train]'); await sleep(300);
+    // Training just this pack (in its ⋯) rates for real but leaves today's plan alone.
+    await page.click('[data-act=packmenu]'); await sleep(300);
+    await page.click('[data-a=train]'); await sleep(300);
     await page.click('[data-go]'); await sleep(200);
     await page.click('[data-flip]'); await page.click('[data-r="3"]'); await sleep(300);
     assert.ok(await tr(page, (m) => m.sentence('partner:1').cards.listen), 'rated');
     assert.equal(await tr(page, (m) => m.doneToday().listen), 0, 'today’s plan is untouched');
     await page.click('.x'); await sleep(300);
-    // Play all goes through the pack in order.
+    // ▶ plays the pack right on the page, in the mode the switch is on (Shadowing: three times each).
     await page.evaluate(() => { window.__said = []; });
-    await page.click('[data-act=playall]'); await sleep(1500);
-    assert.deepEqual((await page.evaluate(() => window.__said)).slice(0, 2), ['Buongiorno, amore.', 'Hai dormito bene?']);
-    await page.click('[data-act=playall]');
+    await page.click('[data-act=play]'); await sleep(300);
+    assert.deepEqual(await page.evaluate(() => window.__said), ['Buongiorno, amore.']);
+    assert.ok(await page.$('.tr-row:nth-child(1).now'), 'the one playing is highlighted');
+    await page.click('[data-act=play]'); await sleep(100);
+    assert.equal(await page.$('.tr-row.now'), null, 'a second tap stops it');
     await page.click('[data-act=back]'); await sleep(300);
     assert.match(await page.$$eval('.shelf', (s) => s[1].textContent), /Partner: everyday/, 'now with the ready-made packs you train');
     assert.deepEqual(errors, []);
@@ -158,32 +161,129 @@ describe('training', () => {
     assert.deepEqual(errors, []);
   });
 
-  test('Shadow all: a pack’s sentences one after another, hands-free, without touching today’s plan', async () => {
+  test('a pack’s page: the Shadowing | Recall switch, English a tap away on each row, stars, and Start Focus pinned', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
+    await tr(page, async (m) => { await m.syncPacks(); await m.rateCard('survival:2', 'say', 3); });
+    await page.click('[data-pack=survival]'); await sleep(300);
+    assert.equal(await page.$('[data-act=train]'), null, 'Train has moved to the ⋯ menu');
+    assert.equal(await page.$('[data-act=shadow]'), null, 'Shadow all has gone');
+    assert.equal(await page.textContent('.fc-mode .on'), 'Shadowing');
+    assert.equal(await page.textContent('[data-act=focus]'), 'Start Focus · 30');
+    const pin = await page.$eval('.fc-start', (e) => getComputedStyle(e).position);
+    assert.equal(pin, 'fixed', 'pinned above the tab bar');
+    await page.click('[data-mode=recall]'); await sleep(200);
+    assert.equal(await page.textContent('.fc-mode .on'), 'Recall');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focusMode), 'recall');
+    // Each row's English is a tap away.
+    await page.click('.tr-row:nth-child(1) [data-reveal]');
+    assert.equal(await page.textContent('.tr-row:nth-child(1) .en'), 'Good morning!');
+    assert.equal(await page.$('.tr-row:nth-child(3) .en'), null, 'only that row');
+    await page.click('.tr-row:nth-child(1) [data-reveal]');
+    assert.equal(await page.$('.tr-row:nth-child(1) .en'), null, 'a second tap hides it');
+    const lvl = await tr(page, async (m) => (await import('./js/sentences.js')).level(m.sentence('survival:2')));
+    assert.equal(await page.$$eval('.tr-row:nth-child(2) .stars i.on', (s) => s.length), lvl, 'the level as stars');
+    assert.equal(await page.$$eval('.tr-row:nth-child(2) .stars i', (s) => s.length), 4);
+    // A paused sentence is left out of Focus.
+    await page.click('.tr-row:nth-child(1) [data-sent]'); await sleep(300);
+    await page.click('[data-a=pause]'); await sleep(300);
+    assert.equal(await page.textContent('[data-act=focus]'), 'Start Focus · 29');
+    assert.deepEqual(errors, []);
+  });
+
+  test('Focus, Shadowing: each sentence three times, then the next by itself; Pause, ‹‹ and ››; nothing rated or counted', async () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
     await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push(u.text); setTimeout(() => u.onend?.(), 10); }; });
     await page.click('[data-pack=survival]'); await sleep(300);
-    await page.click('[data-act=shadow]'); await sleep(300);
-    assert.match(await page.textContent('.dr-intro'), /Shadow all.*Hands-free.*30 sentences, 3 times each/s);
-    assert.equal(await page.$('[data-skip-step]'), null);
-    await page.click('[data-go]'); await sleep(200);
-    assert.match(await page.textContent('.dr-step'), /Shadow all\s*1 of 30/);
-    // Three repetitions, then the next sentence starts by itself.
-    await page.waitForFunction(() => document.querySelector('.dr-step')?.textContent.includes('2 of 30'), null, { timeout: 12000 });
+    await page.click('[data-act=focus]'); await sleep(200);
+    assert.deepEqual(await page.evaluate(() => window.__said), ['Buongiorno!'], 'no intro: it plays in the tap');
+    assert.match(await page.textContent('.fc-count'), /Shadowing\s*1 \/ 30/);
+    assert.match(await page.textContent('.fc-togs'), /Translation.*Dual audio.*Repeat\s*3×.*Speed\s*1×/s);
+    await page.waitForFunction(() => document.querySelector('.fc-count')?.textContent.includes('2 / 30'), null, { timeout: 12000 });
+    await page.waitForFunction(() => window.__said.length >= 4);
     assert.deepEqual((await page.evaluate(() => window.__said)).slice(0, 4), ['Buongiorno!', 'Buongiorno!', 'Buongiorno!', 'Buonasera!']);
-    await page.click('[data-pause]'); await sleep(200);
-    assert.match(await page.textContent('.dr-ring'), /Paused/);
+    await page.click('[data-toggle]'); await sleep(200);
+    assert.match(await page.textContent('.fc-phase'), /Paused/);
+    assert.equal(await page.getAttribute('[data-toggle]', 'aria-label'), 'Play');
     const said = (await page.evaluate(() => window.__said)).length;
     await sleep(2500);
     assert.equal((await page.evaluate(() => window.__said)).length, said, 'nothing plays while paused');
-    assert.match(await page.textContent('.dr-step'), /2 of 30/);
-    await page.click('[data-pause]'); await sleep(100);
-    assert.equal(await page.textContent('[data-pause]'), 'Pause');
     await page.click('[data-next]'); await sleep(200);
-    assert.match(await page.textContent('.dr-step'), /3 of 30/, 'Skip moves on');
+    assert.match(await page.textContent('.fc-count'), /3 \/ 30/, '›› moves on');
+    assert.equal((await page.evaluate(() => window.__said)).length, said, 'still paused');
+    await page.click('[data-prev]'); await sleep(200);
+    assert.match(await page.textContent('.fc-count'), /2 \/ 30/, '‹‹ goes back');
+    await page.click('[data-toggle]'); await sleep(200);
+    assert.equal((await page.evaluate(() => window.__said)).at(-1), 'Buonasera!', 'Play starts it again');
     await page.click('.x'); await sleep(300);
     const d = await tr(page, (m) => [m.doneToday(), m.sentence('survival:1').cards]);
-    assert.deepEqual([d[0].shadow, d[0].fresh], [0, 0], 'today’s plan is untouched');
+    assert.deepEqual([d[0].listen, d[0].shadow, d[0].fresh], [0, 0, 0], 'today’s plan is untouched');
     assert.deepEqual(d[1], {}, 'nothing is rated');
+    assert.deepEqual(errors, []);
+  });
+
+  test('Focus: rating is optional, doesn’t advance, and can be changed (one review, today’s counts untouched)', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
+    await page.evaluate(() => { speechSynthesis.speak = (u) => setTimeout(() => u.onend?.(), 10); });
+    await page.click('[data-pack=survival]'); await sleep(300);
+    await page.click('[data-act=focus]'); await sleep(200);
+    await page.click('[data-toggle]'); await sleep(100);
+    assert.match(await page.textContent('.fc-rate'), /Didn’t get it\s*Hard\s*Good\s*Knew it/);
+    assert.doesNotMatch(await page.textContent('.fc-bottom'), /\dd|\dw/, 'no intervals under the grades');
+    await page.click('[data-r="1"]'); await sleep(300);
+    assert.match(await page.textContent('.fc-count'), /1 \/ 30/, 'rating doesn’t advance');
+    let s = await tr(page, (m) => [m.sentence('survival:1').cards.listen, m.doneToday()]);
+    assert.ok(s[0], 'Shadowing rates the listen card');
+    assert.deepEqual(s[1].missed, ['survival:1']);
+    await page.click('[data-r="3"]'); await sleep(300);
+    assert.ok(await page.$('[data-r="3"].on'));
+    assert.equal(await page.$('[data-r="1"].on'), null);
+    s = await tr(page, (m) => [m.sentence('survival:1').cards, m.doneToday()]);
+    assert.deepEqual([s[0].listen.reps, s[0].listen.lapses], [1, 0], 'one review, from where the card was');
+    assert.equal(s[0].say, undefined);
+    assert.ok(s[0].listen.s > 1, 'rated Good, not Again');
+    assert.deepEqual([s[1].listen, s[1].fresh, s[1].missed], [0, 0, []], 'today’s plan is untouched');
+    const drills = await page.evaluate(async () => (await (await import('./js/stats.js')).getDays()).at(-1)?.drills);
+    assert.equal(drills, 1, 'counted once in the stats');
+    assert.deepEqual(errors, []);
+  });
+
+  test('Focus settings are per mode: Repeats 1 plays each sentence once, Dual audio plays the English first; Recall says it after the English', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
+    await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push((u.lang.startsWith('en') ? 'en:' : '') + u.text); setTimeout(() => u.onend?.(), 10); }; });
+    await page.click('[data-pack=survival]'); await sleep(300);
+    await page.click('[data-act=fsettings]'); await sleep(300);
+    assert.match(await page.textContent('#sheet h2'), /Shadowing Settings/);
+    await page.selectOption('select[data-k=repeats]', '1');
+    await page.click('label:has(input[data-k=enFirst])');
+    assert.equal(await page.textContent('[data-start]'), 'Start Shadowing · 30', 'Start is pinned at the bottom');
+    await page.click('[data-start]'); await sleep(200);
+    await page.waitForFunction(() => window.__said.length >= 4, null, { timeout: 12000 });
+    assert.deepEqual((await page.evaluate(() => window.__said)).slice(0, 4), ['en:Good morning!', 'Buongiorno!', 'en:Good evening!', 'Buonasera!']);
+    assert.equal(await page.$$eval('.fc-reps i', (r) => r.length), 1);
+    await page.click('.x'); await sleep(300);
+    const f = await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focus);
+    assert.deepEqual(f, { shadow: { repeats: 1, enFirst: true } }, 'only Shadowing changed');
+    // Recall: the English, a gap to say it (the Italian hidden), then the Italian.
+    await page.click('[data-mode=recall]'); await sleep(200);
+    await page.evaluate(() => { window.__said = []; });
+    await page.click('[data-act=focus]'); await sleep(300);
+    assert.deepEqual(await page.evaluate(() => window.__said), ['en:Good morning!']);
+    assert.match(await page.textContent('.fc-text'), /Good morning!\s*Say it in Italian/);
+    assert.match(await page.textContent('.fc-phase'), /Your turn/);
+    await page.waitForFunction(() => window.__said.length >= 2, null, { timeout: 8000 });
+    assert.equal((await page.evaluate(() => window.__said))[1], 'Buongiorno!');
+    await sleep(100);
+    assert.match(await page.textContent('.fc-text .dr-it'), /Buongiorno!/, 'shown once it plays');
+    // The toggle row changes the same settings: Repeat goes round 1–5.
+    await page.click('[data-tog=rep]'); await sleep(100);
+    assert.match(await page.textContent('[data-tog=rep]'), /2×/);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focus.recall.repeats), 2);
+    // Settings from inside the session, in the same sheet; Done comes back to it.
+    await page.click('[data-gear]'); await sleep(200);
+    assert.match(await page.textContent('#sheet h2'), /Recall Settings/);
+    await page.click('[data-close-set]'); await sleep(200);
+    assert.ok(await page.$('.fc-ctrl'));
+    await page.click('.x'); await sleep(300);
     assert.deepEqual(errors, []);
   });
 

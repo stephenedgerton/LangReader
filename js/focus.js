@@ -41,6 +41,24 @@ export function setFocusCfg(mode, patch) {
 const SPEEDS = [0.75, 0.9, 1, 1.1];
 const x = (n) => `${n}×`;
 
+// The row of toggles over the sentence (Focus screen and the daily session): each writes the mode's settings.
+// `keys` picks which ones show: en (Translation: English shown ↔ tap to reveal), dual (English first),
+// rep (Repeat, round 1–5), speed (round 0.75–1.1×).
+export function toggleRowHTML(mode, keys = ['en', 'dual', 'rep', 'speed']) {
+  const c = focusCfg(mode);
+  const t = (k, label, on, val = '') => `<button class="fc-tog${on ? ' on' : ''}" data-tog="${k}" aria-pressed="${on}"><span>${label}</span>${val ? `<b>${val}</b>` : ''}</button>`;
+  const all = { en: () => t('en', 'Translation', c.en === 'shown'), dual: () => t('dual', 'Dual audio', c.enFirst),
+    rep: () => t('rep', 'Repeat', c.repeats > 1, x(c.repeats)), speed: () => t('speed', 'Speed', c.speed !== 1, x(c.speed)) };
+  return `<div class="fc-togs" style="grid-template-columns:repeat(${keys.length},1fr)">${keys.map((k) => all[k]()).join('')}</div>`;
+}
+export function flipToggle(mode, k) {
+  const c = focusCfg(mode);
+  if (k === 'en') setFocusCfg(mode, { en: c.en === 'shown' ? 'tap' : 'shown' });
+  if (k === 'dual') setFocusCfg(mode, { enFirst: !c.enFirst });
+  if (k === 'rep') setFocusCfg(mode, { repeats: c.repeats % 5 + 1 });
+  if (k === 'speed') setFocusCfg(mode, { speed: SPEEDS[(SPEEDS.indexOf(c.speed) + 1) % SPEEDS.length] });
+}
+
 const ICON = {
   play: '<svg viewBox="0 0 24 24" class="solid"><path d="M7 4.5v15l13-7.5z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" class="solid"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
@@ -53,9 +71,10 @@ const ICON = {
 // items: [{id, text, en}]. Calls on.show(i) when it moves to a sentence, on.phase(name, {rep, ms}) as each part
 // starts ('en', 'it', 'turn', 'rep' when a repetition ends, 'done' after the last), on.sentenceDone(item) when a
 // sentence has played all its repeats, on.state() when it starts or stops playing, on.end() at the end of the list.
-// The mode's settings are read at the start of each sentence, so changes apply from the next one.
-export function createPlayer({ items, mode, at = 0, slow = () => false, on = {} }) {
-  const p = { i: Math.max(0, Math.min(at, items.length - 1)), rep: 0, playing: false, ended: false, cfg: focusCfg(mode) };
+// The mode's settings are read at the start of each sentence, so changes apply from the next one; `config` can
+// adjust them (the daily session's Shadow plays one sentence at a time, so it turns Loop off).
+export function createPlayer({ items, mode, at = 0, slow = () => false, config = () => focusCfg(mode), on = {} }) {
+  const p = { i: Math.max(0, Math.min(at, items.length - 1)), rep: 0, playing: false, ended: false, cfg: config() };
   let run = 0, timer = null;
   const lens = new Map(); // `${text}|${rate}` -> how long the Italian took, for Recall's gap before it
   const halt = () => { run++; clearTimeout(timer); timer = null; };
@@ -95,7 +114,7 @@ export function createPlayer({ items, mode, at = 0, slow = () => false, on = {} 
     const ask = () => turn(lens.get(key) || guess(item.text, r), () => italian(() => wait(700, next)));
     return withEN ? english(ask) : ask();
   }
-  function startSentence() { p.cfg = focusCfg(mode); p.rep = 0; rep(); }
+  function startSentence() { p.cfg = config(); p.rep = 0; rep(); }
   function advance() {
     if (p.i + 1 < items.length) return goto(p.i + 1);
     if (p.cfg.loop && items.length) return goto(0);
@@ -176,7 +195,8 @@ export function focusSettingsSheet(mode, { onStart, count = 0 } = {}) {
 }
 
 // ---------- the Focus screen ----------
-const GRADES = [[AGAIN, 'Didn’t get it', 'again'], [HARD, 'Hard', 'hard'], [GOOD, 'Good', 'good'], [EASY, 'Knew it', 'easy']];
+// Labels say how well you knew it, not intervals. Shared with the daily session's Say it.
+export const GRADES = [[AGAIN, 'Didn’t get it', 'again'], [HARD, 'Hard', 'hard'], [GOOD, 'Good', 'good'], [EASY, 'Knew it', 'easy']];
 
 export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
   const items = ids.map(sentence).filter(Boolean).map((s) => ({ id: s.id, text: textOf(s), en: s.en, ctx: s.ctx }));
@@ -211,11 +231,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
   const head = () => `<h2><span>${esc(title)}</span><span class="rv-hbtns"><button class="fc-gear" data-gear aria-label="${M.name} settings">${icons.gear}</button><button class="x" aria-label="Close">${icons.close}</button></span></h2>`;
   const item = () => items[player.i];
 
-  const togs = () => {
-    const c = focusCfg(mode);
-    const t = (k, label, on, val = '') => `<button class="fc-tog${on ? ' on' : ''}" data-tog="${k}" aria-pressed="${on}"><span>${label}</span>${val ? `<b>${val}</b>` : ''}</button>`;
-    return `<div class="fc-togs">${t('en', 'Translation', c.en === 'shown')}${t('dual', 'Dual audio', c.enFirst)}${t('rep', 'Repeat', c.repeats > 1, x(c.repeats))}${t('speed', 'Speed', c.speed !== 1, x(c.speed))}</div>`;
-  };
+  const togs = () => toggleRowHTML(mode);
 
   // What's visible: Recall keeps the Italian back until it has played; "hidden from the 2nd repeat" hides it
   // after the first time through. A hidden part can be tapped to show it.
@@ -305,11 +321,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
     const row = $('.fc-rate', body); if (row) row.innerHTML = rateHTML();
   };
   const setTog = (k) => {
-    const c = focusCfg(mode);
-    if (k === 'en') setFocusCfg(mode, { en: c.en === 'shown' ? 'tap' : 'shown' });
-    if (k === 'dual') setFocusCfg(mode, { enFirst: !c.enFirst });
-    if (k === 'rep') setFocusCfg(mode, { repeats: c.repeats % 5 + 1 });
-    if (k === 'speed') setFocusCfg(mode, { speed: SPEEDS[(SPEEDS.indexOf(c.speed) + 1) % SPEEDS.length] });
+    flipToggle(mode, k);
     haptic();
     $('.fc-togs', body).outerHTML = togs();
     if (k === 'en') { cur.tapEN = false; drawText(); }

@@ -56,10 +56,10 @@ rate to advance). Focus mode brings the player to pack pages first; the daily se
   add `js/focus.js` to `SHELL`.
 
 ## Also on the list (found in the same review)
-- Bugs: the icons inside the Shadow ring are drawn sideways (`.dr-ring svg { transform: rotate(-90deg) }` also
+- Bugs (fixed in PR 5): the icons inside the Shadow ring are drawn sideways (`.dr-ring svg { transform: rotate(-90deg) }` also
   turns `.mid svg`; use `.dr-ring > svg`). For a one-word sentence the first Say it hint shows the whole answer;
   go straight to the first-letter hint.
-- After Focus mode, the daily session (`drill.js`): actions and ratings pinned to the bottom, step intros only
+- After Focus mode, the daily session (`drill.js`, built in PR 5; see below): actions and ratings pinned to the bottom, step intros only
   the first time, the same rating labels and toggle row, Next only after Shadow's repeats, Listen with two or
   three grades, the context chip next to the English prompt, and an end screen listing the missed sentences
   with ▶.
@@ -84,3 +84,25 @@ Choices made where the decisions above left room:
   back with ‹‹ still re-rates from the first snapshot, so it's never two reviews).
 - Rating Again puts the sentence in today's missed list, as elsewhere; changing it to another grade takes it out.
 - At the end of the list (Loop off) the screen says so, with "Play again from the start" and Done.
+
+### The daily session (PR 5)
+Choices made for the "After Focus mode, the daily session" bullet:
+- **Listen has three grades:** Didn't get it (Again), Mostly (Hard), Got it (Good). Hearing is rarely a clean
+  yes or no, and Easy isn't needed for recognition. Say it has Focus's four. Neither shows intervals.
+- **Intros show once per step, forever, on this device** (localStorage `langreader.trainIntros`, set when you
+  start or skip the step from its intro). Afterwards a step starts on its first card, so Listen still plays in the
+  tap that opened the session. The step line under the progress bar has ⓘ (the intro again, with "Carry on")
+  and **Skip step**. The Words step keeps its intro, since it's the button that opens the reviews.
+- **The toggle row shares Focus mode's settings:** Listen and Shadow use Shadowing's (`settings.focus.shadow`),
+  Say it uses Recall's (`settings.focus.recall`), so a change applies in both places. Each step shows only the
+  toggles that mean something there: Listen has Translation (the English on the back shown or a tap away) and
+  Speed; Shadow has all four, plus Shadowing's Your turn and Italian-text settings from the sheet; Say it has Dual
+  audio (the English prompt is spoken when the card appears; on by default, as in Recall) and Speed.
+- **Shadow is Focus's Shadowing for one sentence** (`createPlayer()` with a new `config` option that turns Loop
+  off), drawn on the ring. While it plays the bottom has Pause/Play; Next sentence and Once more appear once
+  the repeats are done. It's still not rated or scheduled.
+- **The context chip** sits inline after Say it's English prompt; on Listen's card it stays in the corner.
+- **The end screen** lists the sentences rated Again (or "Still learning" when going over them), each with ▶ and
+  its words tappable, above Done; "Go over the ones I missed" stays.
+- **The one-word hint:** the first hint for a one-word sentence goes straight to the first-letter hint (the
+  button then says Show it), so the next tap shows the answer.

@@ -37,7 +37,8 @@ describe('training', () => {
   });
 
   test('a session: Listen, Shadow, then Say it with hints, and the plan is done for today', async () => {
-    const { page, errors } = await openApp(t, srv.url, { hash: 'training' });
+    // One repeat a sentence keeps Shadow short; the daily session shares Focus's Shadowing settings.
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { focus: { shadow: { repeats: 1 } } } });
     await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push(u.text); setTimeout(() => u.onend?.(), 10); }; });
     await page.click('[data-act=start]'); await sleep(300);
     // Today's sentences don't change with who's speaking, so it doesn't ask.
@@ -46,35 +47,48 @@ describe('training', () => {
     await page.click('[data-go]'); await sleep(250);
     assert.deepEqual(await page.evaluate(() => window.__said), ['Buongiorno!'], 'Listen plays the sentence straight away');
     assert.equal(await page.$eval('.flash', (e) => e.classList.contains('flipped')), false, 'the text is on the back until you reveal it');
-    for (let i = 0; i < 4; i++) { await page.click('[data-flip]'); await sleep(100); await page.click('[data-r="3"]'); await sleep(150); }
+    assert.match(await page.textContent('.fc-togs'), /^\s*Translation\s*Speed\s*1×\s*$/, 'Listen’s toggles');
+    await page.click('[data-flip]'); await sleep(100);
+    assert.match(await page.textContent('.dr-bottom'), /Didn’t get it\s*Mostly\s*Got it\s*$/, 'three grades, no intervals');
+    await page.click('[data-r="3"]'); await sleep(150);
+    for (let i = 0; i < 3; i++) { await page.click('[data-flip]'); await sleep(100); await page.click('[data-r="3"]'); await sleep(150); }
 
     assert.match(await page.textContent('.dr-intro'), /Shadow/);
     await page.click('[data-go]'); await sleep(200);
     assert.match(await page.textContent('.dr-shadow'), /Buongiorno!\s*Good morning!/, 'new sentences are shadowed first');
-    for (let i = 0; i < 4; i++) { await page.click('[data-next]'); await sleep(150); }
+    assert.equal(await page.$('[data-next]'), null, 'Next waits for the repeats');
+    assert.match(await page.textContent('.dr-bottom'), /Pause/);
+    assert.equal(await page.$eval('.dr-ring .mid svg', (e) => getComputedStyle(e).transform), 'none', 'the icon in the ring is upright');
+    for (let i = 0; i < 4; i++) { await page.waitForSelector('[data-next]', { timeout: 8000 }); await page.click('[data-next]'); await sleep(150); }
 
     assert.match(await page.textContent('.dr-intro'), /Say it/);
     await page.click('[data-go]'); await sleep(200);
     assert.equal(await page.textContent('.dr-prompt'), 'Good morning!');
     assert.equal(await page.$('.dr-hint-text'), null, 'no hint until you ask');
     await page.click('[data-hint]'); await sleep(100);
-    assert.equal(await page.textContent('.dr-hint-text'), 'Buongiorno!', 'one word: the first word is the whole hint');
+    assert.equal(await page.textContent('.dr-hint-text'), 'B_________!', 'one word: straight to the first letter, not the whole answer');
+    assert.match(await page.textContent('[data-hint]'), /Show it/);
     await page.click('[data-flip]'); await sleep(200);
+    assert.match(await page.textContent('.dr-bottom'), /Didn’t get it\s*Hard\s*Good\s*Knew it/);
     assert.ok(await page.$eval('[data-r="3"]', (b) => b.disabled), 'Good is off after a hint');
     assert.ok(await page.$eval('[data-r="2"]', (b) => !b.disabled));
     await page.click('[data-r="2"]'); await sleep(200);
-    // The second sentence: hints step by step, then the answer counts as Again.
+    // The second sentence: the next hint after the first letter shows the answer, which counts as Again.
     assert.equal(await page.textContent('.dr-prompt'), 'Good evening!');
-    await page.click('[data-hint]'); await page.click('[data-hint]'); await sleep(100);
+    await page.click('[data-hint]'); await sleep(100);
     assert.equal(await page.textContent('.dr-hint-text'), 'B________!');
     await page.click('[data-hint]'); await sleep(200);
-    assert.match(await page.textContent('.rv-actions'), /counts as Again/);
+    assert.match(await page.textContent('.dr-bottom'), /counts as Again/);
     await page.click('[data-r="1"]'); await sleep(200);
     for (let i = 0; i < 3; i++) { await page.click('[data-flip]'); await sleep(100); await page.click('[data-r="3"]'); await sleep(150); }
 
     assert.match(await page.textContent('.rv-done'), /Done for today/);
     assert.match(await page.textContent('.rv-done'), /9 cards · 4 shadowed · 1 to go over/);
     assert.ok(await page.$('[data-missed]'), 'the miss can be gone over again');
+    assert.match(await page.textContent('.dr-missed'), /^\s*Buonasera!\s*Good evening!\s*$/, 'the end screen lists it');
+    await page.evaluate(() => { window.__said = []; });
+    await page.click('.dr-mplay');
+    assert.deepEqual(await page.evaluate(() => window.__said), ['Buonasera!'], 'with ▶');
     const s = await tr(page, (m) => [m.sentence('survival:1'), m.sentence('survival:2'), m.doneToday()]);
     assert.ok(s[0].cards.listen && s[0].cards.say, 'a sentence holds a listen and a say card');
     assert.equal(s[1].cards.say.lapses, 0); assert.ok(s[1].cards.say.s < 1, 'shown = Again');
@@ -89,13 +103,52 @@ describe('training', () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
     await page.click('[data-act=start]'); await sleep(300);
     await page.click('[data-go]'); await sleep(200);
-    await page.click('[data-flip]'); await page.click('[data-r="4"]'); await sleep(300);
+    await page.click('[data-flip]'); await page.click('[data-r="3"]'); await sleep(300);
     assert.equal(await tr(page, (m) => m.doneToday().listen), 1);
     await page.click('.rv-undo'); await sleep(300);
     assert.match(await page.textContent('.dr-step'), /1 of 4/);
     const back = await tr(page, (m) => [m.sentence('survival:1').cards, m.doneToday()]);
     assert.deepEqual(back[0], {}, 'the sentence is new again');
     assert.deepEqual([back[1].listen, back[1].fresh], [0, 0]);
+    assert.deepEqual(errors, []);
+  });
+
+  test('step intros show the first time only; ⓘ shows one again, Skip step skips it, and the toggles are Focus’s', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
+    await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push((u.lang.startsWith('en') ? 'en:' : '') + u.text); setTimeout(() => u.onend?.(), 10); }; });
+    await page.click('[data-act=start]'); await sleep(300);
+    assert.ok(await page.$('.dr-intro'), 'the first time, Listen has its intro');
+    await page.click('[data-go]'); await sleep(200);
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.trainIntros'))), ['listen']);
+    // The Translation toggle is Shadowing's: the English is a tap away on the back of the card.
+    await page.click('[data-tog=en]'); await sleep(100);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focus.shadow.en), 'tap');
+    await page.click('[data-flip]'); await sleep(200);
+    assert.equal(await page.$('.face.back .dr-en'), null);
+    await page.click('.face.back [data-reveal=en]');
+    assert.equal(await page.textContent('.face.back .dr-en'), 'Good morning!');
+    await page.click('.x'); await sleep(300);
+    // Again: no intro, the card plays straight away.
+    await page.evaluate(() => { window.__said = []; });
+    await page.click('[data-act=start]'); await sleep(300);
+    assert.equal(await page.$('.dr-intro'), null, 'no intro the second time');
+    assert.match(await page.textContent('.dr-step'), /Listen.*1 of \d.*Skip step/s);
+    const said = await page.evaluate(() => window.__said);
+    assert.equal(said.length, 1); assert.doesNotMatch(said[0], /^en:/, 'the Italian plays in the tap');
+    await page.click('[data-info]'); await sleep(200);
+    assert.match(await page.textContent('.dr-intro'), /Listen/);
+    await page.click('[data-go]'); await sleep(200);
+    assert.match(await page.textContent('.dr-step'), /Listen.*1 of/s, 'Carry on comes back to the card');
+    await page.click('[data-skip-step]'); await sleep(200);
+    assert.match(await page.textContent('.dr-intro'), /Shadow/, 'Shadow is new, so it has its intro');
+    await page.click('[data-skip-step]'); await sleep(200);
+    assert.match(await page.textContent('.dr-intro'), /Say it/);
+    // Say it uses Recall's settings: with Dual audio on (Recall's default) the English prompt is spoken.
+    await page.evaluate(() => { window.__said = []; });
+    await page.click('[data-go]'); await sleep(200);
+    assert.match(await page.textContent('.fc-togs'), /^\s*Dual audio\s*Speed\s*1×\s*$/);
+    assert.deepEqual(await page.evaluate(() => window.__said), ['en:Good morning!']);
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.trainIntros'))), ['listen', 'shadow', 'say']);
     assert.deepEqual(errors, []);
   });
 

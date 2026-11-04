@@ -23,9 +23,12 @@ export function openWordCard(opts) {
   const long = phrase && term.split(' ').length >= 6;
   const isSentence = phrase && tokenize(context).filter((t) => t.type === 'w').map((t) => normalize(t.text)).join(' ') === term;
   let sentTr = e.example === context.slice(0, 600) ? e.exampleTr || '' : '';
+  // "Train this sentence" on a highlighted part of a sentence trains just that part.
+  const part = phrase && !isSentence;
+  const trainIt = part ? display : context;
 
   const ctxHTML = context
-    ? `<div class="ctx${isSentence ? ' bare' : ''}">${isSentence ? '' : highlight(context, display)}<span class="tr"${sentTr ? '' : ' hidden'}>${esc(sentTr)}</span><div class="ctx-actions">${sentTr ? '' : `<button class="tr-btn">Translate sentence</button>`}<a class="gt-link" href="${googleTranslateURL(context)}" target="_blank" rel="noopener">Google Translate ↗</a>${opts.onSaveSentence && !isSentence ? '<button class="sent-btn">Save whole sentence</button>' : ''}</div>${trainButtonHTML(context, 'ctx-train')}</div>`
+    ? `<div class="ctx${isSentence ? ' bare' : ''}">${isSentence ? '' : highlight(context, display)}<span class="tr"${sentTr ? '' : ' hidden'}>${esc(sentTr)}</span><div class="ctx-actions">${sentTr ? '' : `<button class="tr-btn">Translate sentence</button>`}<a class="gt-link" href="${googleTranslateURL(context)}" target="_blank" rel="noopener">Google Translate ↗</a>${opts.onSaveSentence && !isSentence ? '<button class="sent-btn">Save whole sentence</button>' : ''}</div>${trainButtonHTML(trainIt, 'ctx-train', part ? 'Train this phrase' : undefined)}</div>`
     : '';
 
   const body = openSheet(`
@@ -53,10 +56,11 @@ export function openWordCard(opts) {
       <div class="dicts">${dictionaryLinks(term).filter((d) => !long || /Reverso|Google/.test(d.name)).map((d) => `<a href="${d.url}" target="_blank" rel="noopener">${d.name}</a>`).join('')}</div>
     </div>`, { onClose: () => { dismiss(); opts.onClose?.(); }, transparent: true });
 
-  // Like the bubble: closing the card on a New word or phrase you looked up makes it LingQ 1.
+  // Like the bubble: closing the card on a New word you looked up makes it LingQ 1. A phrase is only saved
+  // when you give it a status (or a meaning).
   let removed = false;
   function dismiss() {
-    if (removed || entry(term)) return;
+    if (removed || phrase || entry(term)) return;
     const best = cur.meaning ? null : [...dictHints, ...mtHints][0];
     save({ status: 1, ...(best && { meaning: best.text }) });
   }
@@ -140,9 +144,9 @@ export function openWordCard(opts) {
     }
     if (t.matches('.sent-btn')) return opts.onSaveSentence();
     if (t.matches('[data-train]')) {
-      const r = await onTrainButton(t, { it: context, en: sentTr, term, from: opts.from });
+      const r = await onTrainButton(t, { it: trainIt, en: part ? '' : sentTr, term, from: opts.from });
       // The translation it fetched is the sentence's, so show it like "Translate sentence" would.
-      if (r?.en && !sentTr) { sentTr = r.en; const tr = $('.ctx .tr', body); tr.textContent = sentTr; tr.hidden = false; $('.ctx .tr-btn', body)?.remove(); }
+      if (r?.en && !sentTr && !part) { sentTr = r.en; const tr = $('.ctx .tr', body); tr.textContent = sentTr; tr.hidden = false; $('.ctx .tr-btn', body)?.remove(); }
       return;
     }
     if (t.matches('.tr-btn')) {

@@ -99,14 +99,23 @@ describe('words', () => {
     assert.equal(await text(page, '.wpop .wp-term'), 'treno arrivò a Bologna');
   });
 
-  test('closing a new phrase saves it as LingQ 1; a second tap on it drills into the word', async () => {
+  test('closing a new phrase saves nothing; picking a status makes it a gem, and a second tap drills into the word', async () => {
     const { page, errors } = await openApp(t, srv.url, { mt: 'a small suitcase' });
     await openBook(page);
-    await holdWord(page, 'valigia');
-    const b = await (await page.$('.w[data-w="nuovo"]')).boundingBox();
-    await page.mouse.move(b.x + 4, b.y + 5, { steps: 6 });
-    await page.mouse.up(); await sleep(500);
+    const select = async () => {
+      await holdWord(page, 'valigia');
+      const b = await (await page.$('.w[data-w="nuovo"]')).boundingBox();
+      await page.mouse.move(b.x + 4, b.y + 5, { steps: 6 });
+      await page.mouse.up(); await sleep(500);
+    };
+    await select();
     await page.mouse.click(10, 450); await sleep(500); // tap off
+    assert.equal(await page.$('.phr'), null, 'highlighting a phrase doesn’t make it a gem');
+    assert.equal(await page.evaluate(() => import('./js/vocab.js').then((v) => v.entry('valigia piccola e un quaderno nuovo') || null)), null);
+    assert.equal(await page.$('.w.s1[data-w="valigia"]'), null, 'nor the words in it');
+    await select();
+    await page.click('.wpop [data-s="1"]'); await sleep(300);
+    await page.mouse.click(10, 450); await sleep(500);
     assert.equal(await page.getAttribute('.phr', 'class'), 'phr s1');
     assert.equal(await page.getAttribute('.phr', 'data-ph'), 'valigia piccola e un quaderno nuovo');
 

@@ -67,6 +67,10 @@ The throwaway prototype is on the `prototype/practice-tab` branch (`prototypes/p
   🔊 button and level dots. **Play all** plays the pack; **Show English** shows the translations.
 
 ### Adding sentences (PR 2)
+- Built in PR 2. Two choices made while building it: "Train this sentence" adds in one tap (no confirm sheet;
+  you can edit the sentence afterwards), and New Sentence has both an Italian and an English field rather than
+  guessing the language: fill one, and it offers MyMemory's version of the other. Your own sentences come before
+  ready-made ones among the new ones (after the focus pack's), since you added them because you want them.
 - From the reader: "Train this sentence" in the word bubble and card takes the sentence the word is in,
   into From reading. From a word's card: add its example sentence. The English comes from "Translate
   sentence" (reusing `exampleTr`).

@@ -1,7 +1,7 @@
 // Unit tests for Training's pure parts: gendered forms, hints, levels and today's plan (no browser).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { genderize, genderProblems, hint, level, mastered, buildPlan } from '../js/sentences.js';
+import { genderize, genderProblems, hint, level, mastered, buildPlan, newOrder, sameText } from '../js/sentences.js';
 import { schedule, GOOD } from '../js/srs.js';
 
 const DAY = 86400000;
@@ -66,4 +66,21 @@ test('a sentence started in one direction is due in the other, misses are shadow
   assert.deepEqual(p.say, ['half']);
   assert.deepEqual(p.listen, []);
   assert.deepEqual(p.shadow, ['miss']);
+});
+
+test('new sentences: the focus pack first, then your own, then the ready-made ones in pack order', () => {
+  const s = (id, packs, extra = {}) => ({ id, packs, created: 0, cards: {}, ...extra });
+  const list = [
+    s('b2', ['survival'], { bundled: 'survival', order: 2 }), s('b1', ['survival'], { bundled: 'survival', order: 1 }),
+    s('mine2', ['p1'], { created: 20 }), s('mine1', ['reading'], { created: 10 }),
+    s('fb', ['partner'], { bundled: 'partner', order: 10001 }), s('fo', ['partner'], { created: 30 }),
+  ];
+  assert.deepEqual(newOrder(list).map((x) => x.id), ['mine1', 'mine2', 'fo', 'b1', 'b2', 'fb']);
+  assert.deepEqual(newOrder(list, 'partner').map((x) => x.id), ['fo', 'fb', 'mine1', 'mine2', 'b1', 'b2']);
+  assert.equal(list[0].id, 'b2', 'the list itself is left alone');
+});
+
+test('the same sentence, whatever its case, punctuation and spacing', () => {
+  assert.ok(sameText('Dov’è la stazione?', "dov'è  la Stazione"));
+  assert.ok(!sameText('Dov’è la stazione?', 'Dov’è la stazione centrale?'));
 });

@@ -39,6 +39,8 @@ const defaults = {
   trainPacks: null,        // ids of the ready-made packs you train (null: DEFAULT_PACKS in samples/packs/index.js)
   trainMe: '',             // m | f: picks gendered forms about you ('' until asked; masculine meanwhile)
   trainPartner: '',        // m | f: the same, about your partner
+  trainFocus: '',          // the pack new sentences come from first ('' for none)
+  trainLastPack: '',       // the pack New Sentence last added to
 };
 
 let stored = {};

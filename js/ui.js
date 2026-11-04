@@ -50,7 +50,8 @@ export function closeSheet() {
   sheet.classList.add('closing');
   scrim.hidden = true;
   const f = onSheetClose; onSheetClose = null;
-  setTimeout(() => { sheet.hidden = true; sheet.classList.remove('closing'); }, 190);
+  // Unless another sheet opened meanwhile (openSheet clears .closing).
+  setTimeout(() => { if (sheet.classList.contains('closing')) { sheet.hidden = true; sheet.classList.remove('closing'); } }, 190);
   if (f) f();
 }
 export const sheetClosedAt = () => closedAt;
@@ -81,7 +82,7 @@ export function initSheetGestures() {
 let toastTimer;
 // opts.action + opts.onAction add a button (e.g. "Undo") and keep the toast up a little longer.
 export function toast(msg, opts = {}) {
-  const el = opts.el || $('#r-toast');
+  const el = opts.el || ($('#reader').hidden ? $('#app-toast') : $('#r-toast'));
   el.textContent = msg;
   el.classList.toggle('has-action', !!opts.action);
   if (opts.action) {

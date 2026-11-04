@@ -290,7 +290,9 @@ function settingsSheet() {
       if (data.chapters) await db.putMany('chapters', data.chapters);
       for (const d of data.days || []) await db.put('days', d);
       for (const c of data.collections || []) await db.put('collections', c);
-      if (data.sentences) { await db.putMany('sentences', data.sentences); forgetSentences(); }
+      if (data.packs) await db.putMany('packs', data.packs);
+      if (data.sentences) await db.putMany('sentences', data.sentences);
+      forgetSentences();
       alert('Backup restored.');
       closeSheet(); await refreshBooks(); show(tab);
     } catch (err) { alert('Could not read backup: ' + err.message); }
@@ -298,7 +300,7 @@ function settingsSheet() {
 }
 
 async function exportAll() {
-  const data = { app: 'LangReader', version: 1, exported: new Date().toISOString(), words: allEntries(), books: await db.all('books'), chapters: await db.all('chapters'), days: await db.all('days'), collections: await db.all('collections'), sentences: await db.all('sentences') };
+  const data = { app: 'LangReader', version: 1, exported: new Date().toISOString(), words: allEntries(), books: await db.all('books'), chapters: await db.all('chapters'), days: await db.all('days'), collections: await db.all('collections'), sentences: await db.all('sentences'), packs: await db.all('packs') };
   if (await saveFile(`langreader-backup-${todayKey()}.json`, JSON.stringify(data), 'application/json')) markBackedUp();
 }
 function exportCSV() {

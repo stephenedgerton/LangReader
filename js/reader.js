@@ -604,6 +604,7 @@ function openWord(el) {
     display: el.textContent.replace(/’/g, "'"), context: sentenceOf(el),
     onClose: () => unsel(i),
     onExpand: () => openWordFull(R.spans[i]),
+    train: { it: sentenceOf(el), term: el.dataset.w, from: R.book.title },
   });
 }
 
@@ -612,7 +613,7 @@ function openWordFull(el) {
   setSel(i);
   const inPhrase = el.dataset.ph && el.dataset.ph !== term ? el.dataset.ph : null;
   openWordCard({
-    term, display: el.textContent.replace(/’/g, "'"), context: sentenceOf(el), inPhrase,
+    term, display: el.textContent.replace(/’/g, "'"), context: sentenceOf(el), inPhrase, from: R.book.title,
     onClose: () => unsel(i),
     onOpenPhrase: () => {
       const ph = phraseAt(R.spans[i]);
@@ -685,7 +686,7 @@ function openPhraseCard(a, b, context) {
   setSel(a, b);
   const display = textBetween(spans[0], spans[spans.length - 1]);
   openWordCard({
-    term: spans.map((s) => s.dataset.w).join(' '), display, phrase: true,
+    term: spans.map((s) => s.dataset.w).join(' '), display, phrase: true, from: R.book.title,
     context: context || contextOf(spans), onClose: () => unsel(a, b),
   });
 }

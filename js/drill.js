@@ -15,9 +15,8 @@ import { lookup } from './dictionary.js';
 import { dictionaryHints } from './wordcard.js';
 import { preview, ivlLabel, AGAIN, HARD, GOOD, EASY } from './srs.js';
 import { hint } from './sentences.js';
-import { STEPS, todaysPlan, sentence, textOf, rateCard, undoRate, countDone, stepFinished } from './training.js';
+import { STEPS, todaysPlan, sentence, textOf, rateCard, undoRate, countDone, stepFinished, packMeta } from './training.js';
 import { retention, todaysCount, reviewSheet } from './review.js';
-import { packInfo } from '../samples/packs/index.js';
 
 const ICON = {
   listen: '<svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.5"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.5"/></svg>',
@@ -51,7 +50,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     steps = STEPS.filter((s) => plan[s.k].length).map((s) => ({ k: s.k, ids: plan[s.k] }));
     if (counts && settings.trainWords && todaysCount()) steps.push({ k: 'words', ids: [] });
   }
-  const title = only ? packInfo(only)?.name || 'Pack' : practice ? 'Missed sentences' : extra ? 'Extra Training' : "Today's Training";
+  const title = only ? packMeta(only)?.name || 'Pack' : practice ? 'Missed sentences' : extra ? 'Extra Training' : "Today's Training";
   const onKey = (e) => keydown(e);
   const body = openSheet('', { full: true, onClose: () => { removeEventListener('keydown', onKey); stopShadow(); stopSpeaking(); saving.catch(() => {}).then(() => onClose?.()); } });
   body.classList.add('drill');

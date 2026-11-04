@@ -1,0 +1,33 @@
+// Travel. [key, Italian, English, context]
+// Keys are permanent: append, never renumber.
+const ST = 'at the station', H = 'at the hotel', S = 'to a stranger';
+export const SENTENCES = [
+  [1, 'Un biglietto per Genova, per favore.', 'A ticket to Genoa, please.', ST],
+  [2, 'Andata e ritorno, per favore.', 'A return, please.', ST],
+  [3, 'Da che binario parte il treno?', 'Which platform does the train leave from?', ST],
+  [4, 'Il treno è in ritardo?', 'Is the train late?', ST],
+  [5, 'A che ora arriviamo?', 'What time do we get in?', ST],
+  [6, 'Devo cambiare treno?', 'Do I have to change trains?', ST],
+  [7, 'Questo posto è libero?', 'Is this seat free?', 'on the train'],
+  [8, 'Ho prenotato una camera per tre notti.', 'I’ve booked a room for three nights.', H],
+  [9, 'Avete una camera libera per stanotte?', 'Do you have a room free tonight?', H],
+  [10, 'La colazione è compresa?', 'Is breakfast included?', H],
+  [11, 'A che ora bisogna lasciare la camera?', 'What time do we have to check out?', H],
+  [12, 'Posso lasciare qui le valigie?', 'Can I leave my suitcases here?', H],
+  [13, 'Qual è la password del wifi?', 'What’s the wifi password?', H],
+  [14, 'La doccia non funziona.', 'The shower isn’t working.', H],
+  [15, 'Mi può chiamare un taxi?', 'Could you call me a taxi?', H],
+  [16, 'Quanto costa andare all’aeroporto?', 'How much is it to the airport?', 'to a taxi driver'],
+  [17, 'Il mio volo è stato cancellato.', 'My flight has been cancelled.'],
+  [18, 'Dove si ritirano i bagagli?', 'Where do you collect your luggage?', S],
+  [19, 'Ho perso il passaporto.', 'I’ve lost my passport.'],
+  [20, 'Ho bisogno di un medico.', 'I need a doctor.'],
+  [21, 'Vorrei noleggiare una macchina.', 'I’d like to hire a car.'],
+  [22, 'Si può fare il bagno qui?', 'Can you swim here?', S],
+  [23, 'Quanto costa un ombrellone per la giornata?', 'How much is a beach umbrella for the day?', 'at the beach'],
+  [24, 'Ci può fare una foto?', 'Could you take a photo of us?', S],
+  [25, 'Che cosa c’è da vedere qui?', 'What is there to see here?', S],
+  [26, 'A che ora apre il museo?', 'What time does the museum open?', S],
+  [27, 'Siamo qui per una settimana.', 'We’re here for a week.'],
+  [28, 'Ci siamo divertiti tantissimo.', 'We had a wonderful time.'],
+];

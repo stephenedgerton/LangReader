@@ -95,3 +95,15 @@ The throwaway prototype is on the `prototype/practice-tab` branch (`prototypes/p
    your own packs, editing, moving and copying between packs, deleting, focus.
 3. **The rest**: the other ready-made packs, Shadow all, and Training in the Stats tab. Badges for Training
    come later, once there's real data for their levels.
+
+### The rest (PR 3)
+- Built in PR 3. The seven packs (Café & restaurant, Directions, Shopping, Small talk, Travel, Feelings, When I don't
+  understand) are off until added, and aren't held to the common-lemmas cap; modern words the 19th-century lemma list
+  lacks (*autobus, aeroporto, prenotato* …) are in `EXTRA` in `tools/check-sentences.mjs`. No sentence repeats one in
+  another pack, since each copy would be trained separately.
+- **Shadow all** is the pack page's Shadow button: every sentence in the pack that isn't paused, three times each,
+  moving on by itself, with Pause and Skip. It's practice, like Play all: nothing is rated and today's plan is
+  untouched. It keeps the screen awake where the browser allows.
+- **Training in Stats**: a section between the word bands and Themes with sentences you can say (say card held for a
+  week), mastered and started, the training streak, days trained in the last 30, cards this week, a 14-day bar
+  chart of cards a day, and each trained pack's progress.

@@ -1,0 +1,33 @@
+// Small talk. [key, Italian, English, context]
+// Keys are permanent: append, never renumber.
+const N = 'to a neighbour', S = 'to a stranger', F = 'to a friend';
+export const SENTENCES = [
+  [1, 'Che bella giornata!', 'What a lovely day!'],
+  [2, 'Fa caldo oggi, eh?', 'It’s hot today, isn’t it?'],
+  [3, 'Pare che domani piova.', 'Apparently it’s going to rain tomorrow.'],
+  [4, 'Da quanto tempo abita qui?', 'How long have you lived here?', N],
+  [5, 'Lei è di qui?', 'Are you from here?', N],
+  [6, 'Di che cosa si occupa?', 'What do you do for a living?', S],
+  [7, 'Sono insegnante.', 'I’m a teacher.'],
+  [8, 'Lavoro da casa.', 'I work from home.'],
+  [9, 'Ha figli?', 'Do you have children?', S],
+  [10, 'Ho due fratelli.', 'I have two brothers.'],
+  [11, 'Mi piace molto questo paese.', 'I really like this town.'],
+  [12, 'Sono qui in vacanza.', 'I’m here on holiday.'],
+  [13, 'È la prima volta che vengo in Italia.', 'It’s my first time in Italy.'],
+  [14, 'Studio l’italiano da un anno.', 'I’ve been learning Italian for a year.'],
+  [15, 'Il suo cane è bellissimo!', 'Your dog is gorgeous!', N],
+  [16, 'Come si chiama?', 'What’s its name?', 'about their dog'],
+  [17, 'Ci conosciamo?', 'Have we met?', S],
+  [18, 'Come va? Tutto bene?', 'How’s it going? All good?', F],
+  [19, 'Non c’è male, grazie.', 'Not bad, thanks.'],
+  [20, 'Che cosa fai di bello questo fine settimana?', 'Doing anything nice this weekend?', F],
+  [21, 'Hai visto la partita ieri sera?', 'Did you see the match last night?', F],
+  [22, 'Ti piace cucinare?', 'Do you like cooking?', F],
+  [23, 'Mi ricordo di te!', 'I remember you!', F],
+  [24, 'Salutami tua sorella.', 'Say hi to your sister for me.', F],
+  [25, 'Che tempo fa da voi?', 'What’s the weather like where you are?', F],
+  [26, 'Beh, adesso devo andare.', 'Well, I’ve got to go now.'],
+  [27, 'È stato un piacere parlare con Lei.', 'It was nice talking to you.', S],
+  [28, 'Alla prossima!', 'See you next time!', F],
+];

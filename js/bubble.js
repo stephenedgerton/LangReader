@@ -1,6 +1,7 @@
 // Quick-lookup bubble shown above a tapped word (LingQ's mobile popup). "More" opens the full card.
 import { esc, icons } from './ui.js';
-import { entry, setWord } from './vocab.js';
+import { entry, setWord, onChange } from './vocab.js';
+import { normalize } from './text.js';
 import { translate, speak } from './services.js';
 import { lookup } from './dictionary.js';
 import { dictionaryHints } from './wordcard.js';
@@ -29,7 +30,8 @@ export function closeBubble({ expand = false } = {}) {
 }
 
 // opts: {anchor (element, or a function returning it), container, term, display, context, phrase, onExpand, onClose,
-//   train: {it, term, from} for "Train this sentence"}
+//   train: {it, term, from} for "Train this sentence"}. Without onExpand there's no ⋯ (the full card would replace
+//   the sheet the bubble is in).
 export function openBubble(opts) {
   closeBubble();
   const { container, term, display, context, phrase = false } = opts;
@@ -50,7 +52,7 @@ export function openBubble(opts) {
     <div class="wp-status">
       ${[1, 2, 3, 4].map((s) => `<button class="s${s}" data-s="${s}">${s}</button>`).join('')}
       <button class="s5" data-s="5" aria-label="Known">${icons.check}</button>
-      <button class="wp-more" data-more aria-label="More">${icons.more}</button>
+      ${opts.onExpand ? `<button class="wp-more" data-more aria-label="More">${icons.more}</button>` : ''}
     </div>
     ${opts.train ? trainButtonHTML(opts.train.it, 'wp-train') : ''}
     <div class="wp-arrow"></div>`;
@@ -118,9 +120,9 @@ export function openBubble(opts) {
     e.stopPropagation();
     if (b.dataset.speak != null) return speak(display);
     if (b.dataset.train != null) return onTrainButton(b, opts.train).then(() => { if (current?.el === el && anchor()?.isConnected) position(el, anchor(), container); });
-    if (b.dataset.more != null) { closeBubble({ expand: true }); return opts.onExpand(); }
+    if (b.dataset.more != null) { if (!opts.onExpand) return; closeBubble({ expand: true }); return opts.onExpand(); }
     if (b.dataset.mean != null) {
-      if (cur.meaning || !suggestion) { closeBubble({ expand: true }); return opts.onExpand(); }
+      if (cur.meaning || !suggestion) { if (!opts.onExpand) return; closeBubble({ expand: true }); return opts.onExpand(); }
       haptic();
       return save({ meaning: suggestion.text, status: cur.status >= 1 && cur.status <= 4 ? cur.status : 1 });
     }
@@ -154,4 +156,24 @@ function position(el, anchor, container) {
   el.style.top = (placeAbove ? Math.max(8, above) : below) + 'px';
   el.classList.toggle('below', !placeAbove);
   el.querySelector('.wp-arrow').style.left = Math.max(16, Math.min(w - 16, cx - left)) + 'px';
+}
+
+// The same bubble for a word on a Training or review card: `span` is a `.cw[data-w]` inside the sheet body `root`,
+// which holds the bubble. Every `.cw` of that word in `root` follows its status (s0 New … s4), while the bubble is open
+// and after (closing it on a New word makes it a gem, as in the reader). Speaks the word, in the tap, for iOS.
+export function openCardBubble(span, { root, context }) {
+  const term = normalize(span.dataset.w);
+  if (settings.speakOnTap) speak(span.dataset.w);
+  const recolour = () => root.querySelectorAll('.cw').forEach((x) => {
+    if (normalize(x.dataset.w) !== term) return;
+    const st = entry(term)?.status ?? 0;
+    x.classList.remove('s0', 's1', 's2', 's3', 's4');
+    if (st >= 0 && st <= 4) x.classList.add('s' + st);
+  });
+  const off = onChange((terms) => { if (!root.isConnected) return off(); if (terms?.includes(term)) recolour(); });
+  span.classList.add('on');
+  openBubble({
+    anchor: span, container: root, term, display: span.dataset.w.replace(/’/g, "'"), context,
+    onClose: () => span.classList.remove('on'),
+  });
 }

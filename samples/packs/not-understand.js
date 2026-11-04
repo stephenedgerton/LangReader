@@ -1,0 +1,32 @@
+// When I don't understand. [key, Italian, English, context]
+// `{o|a}` is a form that follows your gender (see js/sentences.js). Keys are permanent: append, never renumber.
+const S = 'to a stranger', F = 'to a friend';
+export const SENTENCES = [
+  [1, 'Come, scusi?', 'Sorry, what was that?', S],
+  [2, 'Può parlare più lentamente?', 'Could you speak more slowly?', S],
+  [3, 'Parla un po’ troppo veloce per me.', 'You’re speaking a bit too fast for me.', S],
+  [4, 'Non ho capito l’ultima parola.', 'I didn’t catch the last word.', S],
+  [5, 'Può ripetere l’ultima frase?', 'Could you repeat the last sentence?', S],
+  [6, 'Può scriverlo, per favore?', 'Could you write it down, please?', S],
+  [7, 'Come si scrive?', 'How do you spell it?'],
+  [8, 'Come si pronuncia?', 'How do you pronounce it?'],
+  [9, 'Che cosa significa questa parola?', 'What does this word mean?'],
+  [10, 'Non conosco questa parola.', 'I don’t know this word.'],
+  [11, 'Può dirlo in un altro modo?', 'Could you put it another way?', S],
+  [12, 'Vuole dire che è chiuso?', 'Do you mean it’s closed?', S],
+  [13, 'Ho capito bene?', 'Did I understand that right?'],
+  [14, 'Il mio italiano non è ancora molto buono.', 'My Italian isn’t very good yet.'],
+  [15, 'Capisco meglio di come parlo.', 'I understand better than I speak.'],
+  [16, 'Scusa, mi sono pers{o|a}. Di che cosa parlate?', 'Sorry, I’m lost. What are you talking about?', F],
+  [17, 'Si dice così?', 'Is that how you say it?'],
+  [18, 'Mi correggi, se sbaglio?', 'Will you correct me when I make mistakes?', F],
+  [19, 'Ho sbagliato?', 'Did I get it wrong?'],
+  [20, 'Aspetta, cerco la parola.', 'Hang on, I’m looking for the word.', F],
+  [21, 'Non so come si dice.', 'I don’t know how to say it.'],
+  [22, 'È una cosa che si usa in cucina.', 'It’s a thing you use in the kitchen.'],
+  [23, 'Mi è sfuggito il nome.', 'The name has slipped my mind.'],
+  [24, 'Me lo spieghi?', 'Will you explain it to me?', F],
+  [25, 'In inglese si dice così.', 'That’s how you say it in English.'],
+  [26, 'Ah, adesso ho capito!', 'Oh, now I get it!'],
+  [27, 'Grazie della pazienza.', 'Thanks for being patient.', S],
+];

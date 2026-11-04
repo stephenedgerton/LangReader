@@ -18,6 +18,7 @@ import { lookup } from './dictionary.js';
 import { haptic } from './haptics.js';
 import { speak, translate, dictionaryLinks } from './services.js';
 import { trainButtonHTML, onTrainButton } from './mysentences.js';
+import { openCardBubble, closeBubble, bubbleOpen } from './bubble.js';
 
 const DAY_KEY = 'langreader.srsDay';
 export const RETENTION = { relaxed: 0.8, normal: 0.85, intense: 0.9 };
@@ -176,10 +177,10 @@ export async function reviewSheet({ onClose } = {}) {
   await loadFreq(); // so common words come first
   const onKey = (e) => keydown(e);
   // Full screen, so a stray tap or swipe can't close it mid-session.
-  const body = openSheet('', { full: true, onClose: () => { removeEventListener('keydown', onKey); onClose?.(); } });
+  const body = openSheet('', { full: true, onClose: () => { removeEventListener('keydown', onKey); closeBubble(); onClose?.(); } });
   addEventListener('keydown', onKey);
 
-  let queue, i, pool, stats, cur = null, revealed = false, extra = 0, streak = 0, busy = false, swipedAt = -1e9, glossSeq = 0;
+  let queue, i, pool, stats, cur = null, revealed = false, extra = 0, streak = 0, busy = false, swipedAt = -1e9;
   // session: 'today' (today's cards), 'ahead' (extra practice, not due yet) or 'missed' (today's misses again,
   // which doesn't touch their schedule).
   let session = 'today';
@@ -243,6 +244,7 @@ export async function reviewSheet({ onClose } = {}) {
   const paintActions = () => { $('.rv-actions', body).innerHTML = actionsHTML(); };
 
   const render = () => {
+    closeBubble();
     if (i >= queue.length) return renderDone();
     const item = queue[i], w = entry(item.term);
     if (!w || w.status < 1 || w.status > 4) { i++; return render(); } // changed elsewhere meanwhile
@@ -257,6 +259,7 @@ export async function reviewSheet({ onClose } = {}) {
   };
 
   const renderDone = () => {
+    closeBubble();
     cur = null;
     const nx = todaysQueue(extra + 10), more = nx.due.length + nx.fresh.length;
     $('#sheet').scrollTop = 0;
@@ -429,38 +432,8 @@ export async function reviewSheet({ onClose } = {}) {
     box.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
   };
 
-  // Tap a word in the sentence: its meaning shows under the sentence (saved meaning, Wiktionary, then
-  // machine translation), and a New word can be saved as a LingQ from there.
-  const showGloss = async (span) => {
-    const text = span.dataset.w, term = normalize(text), face = span.closest('.face');
-    if (settings.speakOnTap) speak(text); // synchronously, in the tap, for iOS
-    $$('.cw.on', body).forEach((x) => x.classList.remove('on'));
-    span.classList.add('on');
-    let bar = $('.cgloss', face);
-    if (!bar) { bar = document.createElement('div'); bar.className = 'cgloss'; $('.fc', face).after(bar); }
-    const paint = (m, loading = false) => {
-      const st = entry(term)?.status ?? 0;
-      bar.innerHTML = `<b>${esc(text)}</b><span class="cg-m">${loading ? 'Looking up…' : esc(m || 'No translation found')}</span>`
-        + (!loading && m && st === 0 ? `<button class="cg-add" data-t="${esc(term)}" data-m="${esc(m)}">+ Gem</button>` : st >= 1 && st <= 4 ? '<small>Gem</small>' : '');
-    };
-    const saved = entry(term)?.meaning;
-    if (saved) return paint(saved);
-    paint('', true);
-    const seq = ++glossSeq;
-    let m = '';
-    if (settings.target === 'en') { try { const r = await lookup(text); m = (r && dictionaryHints(r)[0]?.text) || ''; } catch {} }
-    if (!m) { try { m = (await translate(text, { word: true })).main || ''; } catch {} }
-    if (seq === glossSeq && bar.isConnected) paint(m);
-  };
-  const addLingq = async (b) => {
-    haptic();
-    const term = b.dataset.t, m = b.dataset.m;
-    const w = await setWord(term, { status: 1, meaning: m, ...(cur?.w.example && { example: cur.w.example, ...(cur.w.exampleTr && { exampleTr: cur.w.exampleTr }) }) });
-    bump('lingqs');
-    pool.push(w);
-    $$('.cw', body).forEach((x) => { if (normalize(x.dataset.w) === term) { x.classList.remove('s0'); x.classList.add('s1'); } });
-    b.outerHTML = '<small>Saved as a gem</small>';
-  };
+  // Tap a word in the sentence: the reader's bubble, with its meaning and statuses.
+  const showWord = (span) => openCardBubble(span, { root: body, context: cur?.w.example || '' });
   const translateSentence = async (b) => {
     const w = cur.w, ex = w.example;
     b.disabled = true; b.lastChild.textContent = 'Translating…';
@@ -539,6 +512,8 @@ export async function reviewSheet({ onClose } = {}) {
   start(); render();
   body.onclick = (e) => {
     const b = e.target.closest('button');
+    // With a word's bubble open, a tap elsewhere only closes it (as in the reader), except on ✕.
+    if (bubbleOpen()) { closeBubble(); if (!b?.matches('.x')) return; }
     if (b) {
       if (b.matches('.x') || b.dataset.done != null) return closeSheet();
       if (b.matches('.rv-undo')) return undoLast();
@@ -559,7 +534,6 @@ export async function reviewSheet({ onClose } = {}) {
           $('.rv-tr', body)?.remove();
         });
       }
-      if (b.matches('.cg-add')) return addLingq(b);
       if (b.dataset.term) return sayBtn(b, b.dataset.term);
       if (b.dataset.say) return sayBtn(b, b.dataset.say === 'word' ? shown() : cur.w.example);
       if (b.matches('.rv-edit')) return editMeaning();
@@ -571,10 +545,10 @@ export async function reviewSheet({ onClose } = {}) {
       if (b.dataset.r != null) { haptic(); return grade(+b.dataset.r); }
       return;
     }
-    if (e.target.closest('input, form, a, .cgloss')) return;
+    if (e.target.closest('input, form, a')) return;
     if (!cur || !e.target.closest('.flash') || performance.now() - swipedAt < 400) return;
     const cw = e.target.closest('.cw');
-    if (cw) return showGloss(cw);
+    if (cw) return showWord(cw);
     flip();
   };
 }

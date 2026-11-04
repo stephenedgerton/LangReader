@@ -25,6 +25,8 @@ describe('training', () => {
     assert.match(shelves[0], /^\s*New Pack\s*Your own sentences\s*$/, 'Your Packs: nothing yet but New Pack');
     assert.match(shelves[1], /Survival\s*Ready-made\s*0 of 30 learned/);
     assert.match(shelves[2], /Partner: everyday\s*Ready-made\s*30 sentences.*Partner: plans & errands\s*Ready-made\s*30 sentences/);
+    assert.match(shelves[2], /Café & restaurant\s*Ready-made\s*30 sentences.*When I don’t understand\s*Ready-made\s*27 sentences/);
+    assert.equal(await page.$$eval('.shelf:nth-of-type(3) .pack, .shelf', (s) => s.at(-1).querySelectorAll('.pack').length), 9, 'nine packs to add');
     assert.equal(await tr(page, (m) => m.trainingList().length), 30);
     await page.click('#tabbar button[data-tab=home]'); await sleep(300);
     assert.match(await page.textContent('.training-card'), /Today's Training\s*3 steps · about \d+ min/);
@@ -153,6 +155,83 @@ describe('training', () => {
     assert.match(card, /Say it\s*8/);
     const s = await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')));
     assert.deepEqual([s.trainShadow, s.trainSay, s.trainNew], [0, 10, 8]);
+    assert.deepEqual(errors, []);
+  });
+
+  test('Shadow all: a pack’s sentences one after another, hands-free, without touching today’s plan', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
+    await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push(u.text); setTimeout(() => u.onend?.(), 10); }; });
+    await page.click('[data-pack=survival]'); await sleep(300);
+    await page.click('[data-act=shadow]'); await sleep(300);
+    assert.match(await page.textContent('.dr-intro'), /Shadow all.*Hands-free.*30 sentences, 3 times each/s);
+    assert.equal(await page.$('[data-skip-step]'), null);
+    await page.click('[data-go]'); await sleep(200);
+    assert.match(await page.textContent('.dr-step'), /Shadow all\s*1 of 30/);
+    // Three repetitions, then the next sentence starts by itself.
+    await page.waitForFunction(() => document.querySelector('.dr-step')?.textContent.includes('2 of 30'), null, { timeout: 12000 });
+    assert.deepEqual((await page.evaluate(() => window.__said)).slice(0, 4), ['Buongiorno!', 'Buongiorno!', 'Buongiorno!', 'Buonasera!']);
+    await page.click('[data-pause]'); await sleep(200);
+    assert.match(await page.textContent('.dr-ring'), /Paused/);
+    const said = (await page.evaluate(() => window.__said)).length;
+    await sleep(2500);
+    assert.equal((await page.evaluate(() => window.__said)).length, said, 'nothing plays while paused');
+    assert.match(await page.textContent('.dr-step'), /2 of 30/);
+    await page.click('[data-pause]'); await sleep(100);
+    assert.equal(await page.textContent('[data-pause]'), 'Pause');
+    await page.click('[data-next]'); await sleep(200);
+    assert.match(await page.textContent('.dr-step'), /3 of 30/, 'Skip moves on');
+    await page.click('.x'); await sleep(300);
+    const d = await tr(page, (m) => [m.doneToday(), m.sentence('survival:1').cards]);
+    assert.deepEqual([d[0].shadow, d[0].fresh], [0, 0], 'today’s plan is untouched');
+    assert.deepEqual(d[1], {}, 'nothing is rated');
+    assert.deepEqual(errors, []);
+  });
+
+  test('the Stats tab shows Training: sentences you can say, the streak, cards a day and each pack', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'stats' });
+    assert.match(await page.textContent('.st-train'), /start after your first session/);
+    await tr(page, async (m) => {
+      await m.syncPacks();
+      for (const id of ['survival:1', 'survival:2', 'survival:3']) await m.rateCard(id, 'say', 3);
+      const s = m.sentence('survival:1');
+      await m.putSentence({ ...s, cards: { ...s.cards, say: { ...s.cards.say, s: 20 } } });
+      m.stepFinished();
+    });
+    await page.click('#tabbar [data-tab="training"]'); await sleep(300);
+    await page.click('#tabbar [data-tab="stats"]'); await sleep(600);
+    const card = (await page.textContent('.st-train')).replace(/\s+/g, ' ');
+    assert.match(card, /1 ?sentence you can say/);
+    assert.match(card, /Of 30 in your packs, you've started 3\./);
+    assert.match(card, /🔥 1 ?day in a row 1 ?of the last 30 days 3 ?cards this week/);
+    assert.equal(await page.$$eval('.bars .bar', (b) => b.length), 14);
+    assert.equal(await page.$$eval('.bars .bar:not(.zero)', (b) => b.length), 1, 'only today has cards');
+    assert.match(await page.getAttribute('.st-packs .band', 'title'), /^Survival: 1 learned, 2 started, of 30$/);
+    await page.$eval('.bars', (e) => e.scrollIntoView({ block: 'center' })); await sleep(200);
+    const box = await page.$eval('.bars .hit', (r) => { const b = r.getBoundingClientRect(); return { x: b.right - 4, y: b.top + b.height / 2 }; });
+    await page.mouse.move(box.x, box.y); await sleep(100);
+    assert.match(await page.textContent('.st-bars .tip'), /3 cards/);
+    assert.deepEqual(errors, []);
+  });
+
+  test('tapping a word on a card opens the reader’s bubble, and its status colours the card', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
+    await page.click('[data-act=start]'); await sleep(300);
+    await page.click('[data-go]'); await sleep(200);
+    await page.click('[data-flip]'); await sleep(200);
+    await page.click('.face.back .cw[data-w="Buongiorno"]'); await sleep(400);
+    assert.match(await page.textContent('#sheet .wpop .wp-term'), /Buongiorno/);
+    assert.match(await page.textContent('#sheet .wpop .wp-mean'), /mock translation/);
+    assert.equal(await page.$('#sheet .wpop .wp-more'), null, 'no ⋯: the full card would replace the session');
+    await page.click('#sheet .wpop [data-s="3"]'); await sleep(300);
+    assert.ok(await page.$('.face.back .cw.s3[data-w="Buongiorno"]'), 'recoloured while the bubble is open');
+    const w = await page.evaluate(() => import('./js/vocab.js').then((v) => v.entry('buongiorno')));
+    assert.deepEqual([w.status, w.meaning, w.example], [3, 'mock translation', 'Buongiorno!']);
+    // A tap elsewhere closes the bubble and does nothing else.
+    await page.click('[data-r="3"]'); await sleep(200);
+    assert.equal(await page.$('#sheet .wpop'), null);
+    assert.match(await page.textContent('.dr-step'), /1 of 4/, 'not rated');
+    await page.click('[data-r="3"]'); await sleep(200);
+    assert.match(await page.textContent('.dr-step'), /2 of 4/);
     assert.deepEqual(errors, []);
   });
 });

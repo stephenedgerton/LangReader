@@ -202,13 +202,19 @@ describe('reviews', () => {
     assert.ok(await page.$('.face.front .cw.s0[data-w="arrivò"]'), 'other words are tappable and coloured New');
     await page.click('.face.front .cw[data-w="arrivò"]'); await sleep(500);
     assert.equal(await page.$eval('.flash', (e) => e.classList.contains('flipped')), false, 'looking up a word does not flip');
-    assert.match(await page.textContent('.face.front .cgloss'), /arrivò\s*he\/she arrived, reached/);
-    await page.click('.face.front .cg-add'); await sleep(200);
+    // The reader's bubble, minus ⋯ (the full card would replace the review).
+    assert.match(await page.textContent('#sheet .wpop .wp-term'), /arrivò/);
+    assert.match(await page.textContent('#sheet .wpop .wp-mean'), /he\/she arrived, reached/);
+    assert.equal(await page.$('#sheet .wpop .wp-more'), null);
+    await page.click('#sheet .wpop .wp-mean'); await sleep(300);
     const a = await card(page, 'arrivò');
     assert.equal(a.status, 1);
     assert.equal(a.meaning, 'he/she arrived, reached');
     assert.equal(a.example, 'Il treno arrivò alla stazione.');
     assert.ok(await page.$('.face.front .cw.s1[data-w="arrivò"]'), 'recoloured as a LingQ');
+    await page.click('[data-flip]'); await sleep(100);
+    assert.equal(await page.$('#sheet .wpop'), null, 'a tap with the bubble open only closes it');
+    assert.equal(await page.$eval('.flash', (e) => e.classList.contains('flipped')), false);
     await page.click('[data-flip]'); await sleep(100);
     await page.click('.rv-tr'); await sleep(300);
     assert.equal(await page.textContent('.face.back .ft'), 'mock translation');

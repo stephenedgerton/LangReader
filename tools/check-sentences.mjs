@@ -16,7 +16,8 @@ import { loadFreqList } from './check-series.mjs';
 export const MIN = 20, MAX = 40, COMMON = 2000, MAX_UNCOMMON = 12;
 // Words the lemma list doesn't have but that are fine (checked by hand). The list comes from 19th- and
 // early 20th-century novels, so everyday modern words can be missing.
-export const EXTRA = new Set(['ok', 'cucino', 'prenoto', 'supermercato', 'bolletta']);
+export const EXTRA = new Set(['ok', 'cucino', 'prenoto', 'prenotato', 'supermercato', 'bolletta', 'vegetariano', 'vegetariana',
+  'allergico', 'allergica', 'mappa', 'autobus', 'incartare', 'euro', 'etto', 'salutami', 'password', 'wifi', 'taxi', 'aeroporto', 'foto']);
 
 export async function analyse(freq = loadFreqList()) {
   const names = new Set(NAMES.map(normalize));

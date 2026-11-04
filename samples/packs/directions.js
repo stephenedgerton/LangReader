@@ -1,0 +1,33 @@
+// Directions. [key, Italian, English, context]
+// `{o|a}` is a form that follows your gender (see js/sentences.js). Keys are permanent: append, never renumber.
+const S = 'to a stranger', G = 'giving directions', F = 'to a friend';
+export const SENTENCES = [
+  [1, 'Scusi, dov’è la stazione?', 'Excuse me, where’s the station?', S],
+  [2, 'Come arrivo in centro?', 'How do I get to the centre?', S],
+  [3, 'È lontano da qui?', 'Is it far from here?', S],
+  [4, 'Ci si può andare a piedi?', 'Can you walk there?', S],
+  [5, 'Quanto ci vuole a piedi?', 'How long does it take on foot?', S],
+  [6, 'Vada sempre dritto.', 'Go straight on.', G],
+  [7, 'Giri a destra al semaforo.', 'Turn right at the traffic lights.', G],
+  [8, 'Prenda la seconda a sinistra.', 'Take the second on the left.', G],
+  [9, 'È in fondo alla strada.', 'It’s at the end of the street.', G],
+  [10, 'È dietro la chiesa.', 'It’s behind the church.', G],
+  [11, 'È proprio qui di fronte.', 'It’s right across the road.', G],
+  [12, 'Dopo il ponte, giri a sinistra.', 'After the bridge, turn left.', G],
+  [13, 'Continui fino all’incrocio.', 'Carry on to the crossroads.', G],
+  [14, 'L’entrata è dall’altra parte.', 'The entrance is on the other side.', G],
+  [15, 'Mi sono pers{o|a}.', 'I’m lost.', S],
+  [16, 'Me lo può indicare sulla mappa?', 'Can you show me on the map?', S],
+  [17, 'C’è una farmacia qui vicino?', 'Is there a chemist’s near here?', S],
+  [18, 'Dove si prende l’autobus per il mare?', 'Where do you get the bus to the sea?', S],
+  [19, 'Quale autobus va in centro?', 'Which bus goes to the centre?', S],
+  [20, 'A quale fermata devo scendere?', 'Which stop do I get off at?', S],
+  [21, 'È questa la strada per il porto?', 'Is this the way to the harbour?', S],
+  [22, 'Sto cercando questo indirizzo.', 'I’m looking for this address.', S],
+  [23, 'Sa dove si trova il museo?', 'Do you know where the museum is?', S],
+  [24, 'Devo attraversare la piazza?', 'Do I have to cross the square?', S],
+  [25, 'È al secondo piano.', 'It’s on the second floor.', G],
+  [26, 'Non sono di qui, mi dispiace.', 'I’m not from here, sorry.', S],
+  [27, 'Grazie, molto gentile!', 'Thanks, that’s very kind!', S],
+  [28, 'Ci vediamo davanti alla stazione.', 'Let’s meet in front of the station.', F],
+];

@@ -1,10 +1,14 @@
 // The Stats tab: your vocabulary against the most common words in Italian fiction (js/freq.js), a rough
-// level, coverage of a typical novel and its trend, frequency bands and themes.
+// level, coverage of a typical novel and its trend, frequency bands and themes, and Training (sentences you can
+// say, the training streak, cards a day and each pack's progress).
 import { openSheet, closeSheet, esc, icons, $ } from './ui.js';
 import { loadFreq, lemmaStates, wordStats, themeWords, recordSnapshot, bandLabel, freqSource, COMFORT, LEVELS } from './freq.js';
 import { THEMES } from './themes.js';
 import { getDays, todayKey } from './stats.js';
 import { openWordCard } from './wordcard.js';
+import { loadSentences, syncPacks, packSentences, packMeta, isTrained, readingPack, ownPacks, trainingStreak } from './training.js';
+import { learned, mastered, isNew } from './sentences.js';
+import { PACKS } from '../samples/packs/index.js';
 
 const pct = (x, d = 0) => `${x.toFixed(d)}%`;
 // Known is solid; learning (LingQs) is a hatched layer on top, so the two never rely on colour alone.
@@ -19,7 +23,9 @@ export async function renderStats(v) {
   const st = lemmaStates();
   const s = wordStats(st);
   recordSnapshot(s);
-  const days = (await getDays()).filter((d) => d.cover != null);
+  const allDays = await getDays();
+  const train = await trainingHTML(allDays);
+  const days = allDays.filter((d) => d.cover != null);
   if (!days.length || days.at(-1).date !== todayKey()) days.push({ date: todayKey(), cover: s.coverage.known, lemmas: s.known });
   const next = s.next ? LEVELS.find(([, n]) => n === s.next.level)[0] : null;
   const prevAt = LEVELS.filter(([n]) => n <= s.known).at(-1)?.[0] || 0;
@@ -53,6 +59,8 @@ export async function renderStats(v) {
         <span class="bv">${pct(b.knownPct)}${b.learningPct >= 0.5 ? `<small> +${pct(b.learningPct)}</small>` : ''}</span></div>`).join('')}
     </div>
 
+    ${train}
+
     <div class="section-title">Themes</div>
     <div class="list st-themes">${THEMES.map((t) => {
       const ws = themeWords(t.words, st);
@@ -69,6 +77,86 @@ export async function renderStats(v) {
     if (b) themeSheet(THEMES.find((t) => t.id === b.dataset.theme), () => renderStats(v));
   };
   initTrendHover(v);
+  initBarHover(v);
+}
+
+// ---------- Training ----------
+const CHART_DAYS = 14;
+async function trainingHTML(days) {
+  await loadSentences(); await syncPacks();
+  const packs = [readingPack(), ...ownPacks(), ...PACKS.filter((p) => isTrained(p.id)).map((p) => packMeta(p.id))].filter(Boolean);
+  const seen = new Set(), all = [];
+  for (const p of packs) for (const x of packSentences(p.id)) if (!seen.has(x.id)) { seen.add(x.id); all.push(x); }
+  const byDate = new Map(days.map((d) => [d.date, d]));
+  const last = Array.from({ length: CHART_DAYS }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (CHART_DAYS - 1 - i)); return { date: todayKey(d), t: +d, n: byDate.get(todayKey(d))?.drills || 0 }; });
+  const head = '<div class="section-title">Training</div>';
+  if (!all.some((x) => !isNew(x)) && !last.some((d) => d.n)) {
+    return `${head}<div class="card st-train"><p class="muted small">Your training stats start after your first session on the Training tab.</p></div>`;
+  }
+  const canSay = all.filter(learned).length, done = all.filter(mastered).length, started = all.filter((x) => !isNew(x)).length;
+  const month = new Set();
+  for (let i = 0; i < 30; i++) { const d = new Date(); d.setDate(d.getDate() - i); if (byDate.get(todayKey(d))?.trained) month.add(i); }
+  const streak = trainingStreak(days), week = last.slice(-7).reduce((n, d) => n + d.n, 0);
+  return `${head}<div class="card st-train">
+      <div class="st-hero"><b>${canSay.toLocaleString()}</b><span>sentence${canSay === 1 ? '' : 's'} you can say${done ? ` · ${done.toLocaleString()} mastered` : ''}</span></div>
+      <p class="muted small">Of ${all.length.toLocaleString()} in your packs, you've started ${started.toLocaleString()}. A sentence counts once you've said it right after a week; mastered ones have left the drills.</p>
+      <div class="st-cells">
+        <div><b>${streak ? `🔥 ${streak}` : '0'}</b><span>day${streak === 1 ? '' : 's'} in a row</span></div>
+        <div><b>${month.size}</b><span>of the last 30 days</span></div>
+        <div><b>${week.toLocaleString()}</b><span>cards this week</span></div>
+      </div>
+      ${barsHTML(last)}
+    </div>
+    <div class="card st-bands st-packs">${packs.map((p) => {
+      const list = packSentences(p.id), n = list.length, l = list.filter(learned).length, st = list.filter((x) => !isNew(x) && !learned(x)).length;
+      const lp = n ? (l / n) * 100 : 0, sp = n ? (st / n) * 100 : 0;
+      return `<div class="band" title="${esc(p.name)}: ${l} learned, ${st} started, of ${n}"><span class="bl">${p.emoji} ${esc(p.name)}</span>${bar(lp, sp)}<span class="bv">${l}/${n}</span></div>`;
+    }).join('')}
+      <div class="legend"><span><i class="k"></i>Learned</span><span><i class="l"></i>Started</span></div>
+    </div>`;
+}
+
+// Cards a day (ratings and shadowed sentences) over the last two weeks, one bar a day.
+function barsHTML(last) {
+  const W = 340, H = 120, L = 26, R = 6, T = 14, B = 20, slot = (W - L - R) / last.length, bw = Math.max(4, slot - 2);
+  const max = Math.max(4, ...last.map((d) => d.n)), top = Math.ceil(max / 4) * 4;
+  const y = (n) => T + (1 - n / top) * (H - T - B);
+  const fmt = (t) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const total = last.reduce((n, d) => n + d.n, 0), active = last.filter((d) => d.n).length;
+  const barPath = (x, n) => {
+    const h = (H - B) - y(n), r = Math.min(4, h, bw / 2);
+    if (h <= 0) return '';
+    return `M${x},${H - B}V${y(n) + r}q0,-${r} ${r},-${r}h${bw - 2 * r}q${r},0 ${r},${r}V${H - B}z`;
+  };
+  return `<div class="st-bars"><div class="tt-title">Cards a day</div>
+    <svg viewBox="0 0 ${W} ${H}" class="bars" role="img" aria-label="Training cards a day over the last ${last.length} days: ${total} in all, on ${active} days">
+      ${[0, top / 2, top].map((v) => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('')}
+      ${last.map((d, i) => `<path class="bar${d.n ? '' : ' zero'}" d="${barPath(L + i * slot + (slot - bw) / 2, d.n)}"/>`).join('')}
+      <text class="ax" x="${L}" y="${H - 4}">${fmt(last[0].t)}</text><text class="ax" x="${W - R}" y="${H - 4}" text-anchor="end">Today</text>
+      <rect class="hit" x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"
+        data-bars="${esc(JSON.stringify(last.map((d, i) => [L + i * slot + slot / 2, d.n, fmt(d.t)])))}"/>
+    </svg>
+    <div class="tip" hidden></div>
+    <table class="sr-only"><tr><th>Day</th><th>Cards</th></tr>${last.map((d) => `<tr><td>${fmt(d.t)}</td><td>${d.n}</td></tr>`).join('')}</table>
+  </div>`;
+}
+
+function initBarHover(v) {
+  const svg = $('.bars', v); if (!svg) return;
+  const hit = $('.hit', svg), tip = $('.st-bars .tip', v), bars = JSON.parse(hit.dataset.bars);
+  const paths = [...svg.querySelectorAll('.bar')];
+  const move = (e) => {
+    const r = svg.getBoundingClientRect(), sx = ((e.clientX - r.left) / r.width) * svg.viewBox.baseVal.width;
+    let i = 0; bars.forEach((b, k) => { if (Math.abs(b[0] - sx) < Math.abs(bars[i][0] - sx)) i = k; });
+    paths.forEach((p, k) => p.classList.toggle('on', k === i));
+    tip.hidden = false;
+    tip.innerHTML = `${bars[i][2]} · <b>${bars[i][1]} card${bars[i][1] === 1 ? '' : 's'}</b>`;
+    const box = tip.parentElement.getBoundingClientRect(), at = r.left - box.left + (bars[i][0] / svg.viewBox.baseVal.width) * r.width;
+    tip.style.left = `${Math.max(tip.offsetWidth / 2 + 4, Math.min(box.width - tip.offsetWidth / 2 - 4, at))}px`;
+  };
+  hit.addEventListener('pointermove', move);
+  hit.addEventListener('pointerdown', move);
+  hit.addEventListener('pointerleave', () => { paths.forEach((p) => p.classList.remove('on')); tip.hidden = true; });
 }
 
 // Coverage over time from the daily snapshots, with a forecast of when you'd reach 95%.

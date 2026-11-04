@@ -10,6 +10,20 @@ export const PACKS = [
     blurb: 'The little things you say at home: how was your day, what’s for dinner, I miss you.' },
   { id: 'partner-plans', name: 'Partner: plans & errands', emoji: '🗓️', colors: ['#4b2e5c', '#9a6ab0'], rev: 1, common: true,
     blurb: 'Making plans and sharing the chores: what time are you home, how shall we get there, did you buy the milk.' },
+  { id: 'cafe', name: 'Café & restaurant', emoji: '☕', colors: ['#5a3418', '#b07a45'], rev: 1,
+    blurb: 'Ordering at the bar and at the table, asking what’s in a dish, and paying the bill.' },
+  { id: 'directions', name: 'Directions', emoji: '🗺️', colors: ['#1f3b57', '#3a6b8c'], rev: 1,
+    blurb: 'Asking the way, understanding the answer, and finding the right bus.' },
+  { id: 'shopping', name: 'Shopping', emoji: '🛍️', colors: ['#7a2e2e', '#b5523b'], rev: 1,
+    blurb: 'In shops and at the market: sizes, prices, a bag, and a hundred grams of ham.' },
+  { id: 'small-talk', name: 'Small talk', emoji: '☀️', colors: ['#8a5a14', '#d19a3a'], rev: 1,
+    blurb: 'The weather, where you’re from, what you do: chatting with neighbours and new friends.' },
+  { id: 'travel', name: 'Travel', emoji: '🚆', colors: ['#14505a', '#2f8f8a'], rev: 1,
+    blurb: 'Trains, hotels, taxis and the beach, and what to say when something goes wrong.' },
+  { id: 'feelings', name: 'Feelings', emoji: '❤️', colors: ['#6b1f3a', '#c2577e'], rev: 1,
+    blurb: 'Saying how you feel: happy, tired, worried, proud, fed up, in love.' },
+  { id: 'not-understand', name: 'When I don’t understand', emoji: '🤔', colors: ['#203040', '#506070'], rev: 1,
+    blurb: 'Slowing people down, asking what a word means, and finding a way round the word you don’t know.' },
 ];
 // Packs that start switched on for everyone.
 export const DEFAULT_PACKS = ['survival'];

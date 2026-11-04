@@ -4,6 +4,8 @@
 //   drillSheet({ extra: 10 })       "Train 10 more" once today's is done (counts as today's work)
 //   drillSheet({ only: packId })    one pack's due and new sentences; rated for real, but today's plan is untouched
 //   drillSheet({ practice: ids })   "Go over the ones I missed": Say it once more, with no rating
+//   drillSheet({ shadowAll: {pack, ids} })  a pack's Shadow button: hands-free shadowing, each sentence three
+//                                   times, then on to the next by itself; nothing is rated or counted
 import { settings } from './settings.js';
 import { openSheet, closeSheet, esc, icons, $, $$ } from './ui.js';
 import { speak, stopSpeaking, translate } from './services.js';
@@ -31,6 +33,7 @@ const ICON = {
 export const stepIcon = (k) => ICON[k];
 const GRADES = [[AGAIN, 'Again', 'again'], [HARD, 'Hard', 'hard'], [GOOD, 'Good', 'good'], [EASY, 'Easy', 'easy']];
 const REPS = 3;
+const SHADOW_ALL = { name: 'Shadow all', what: 'sentences, 3 times each', how: 'Hands-free: each sentence plays, then leaves a gap for you to say it. Then the next one starts by itself. Good for a walk.' };
 
 // The sentence with each word tappable and coloured by your vocabulary (blue New, yellow gem).
 function sentenceHTML(text) {
@@ -41,18 +44,22 @@ function sentenceHTML(text) {
   }).join('');
 }
 
-export function drillSheet({ only = null, extra = 0, practice = null, onClose } = {}) {
-  const counts = !only && !practice;
+export function drillSheet({ only = null, extra = 0, practice = null, shadowAll = null, onClose } = {}) {
+  const counts = !only && !practice && !shadowAll;
   let steps;
   if (practice) steps = [{ k: 'say', ids: practice, practice: true }];
+  else if (shadowAll) steps = [{ k: 'shadow', ids: shadowAll.ids, all: true }];
   else {
     const plan = todaysPlan({ extra, only });
     steps = STEPS.filter((s) => plan[s.k].length).map((s) => ({ k: s.k, ids: plan[s.k] }));
     if (counts && settings.trainWords && todaysCount()) steps.push({ k: 'words', ids: [] });
   }
-  const title = only ? packMeta(only)?.name || 'Pack' : practice ? 'Missed sentences' : extra ? 'Extra Training' : "Today's Training";
+  const title = only || shadowAll ? packMeta(only || shadowAll.pack)?.name || 'Pack' : practice ? 'Missed sentences' : extra ? 'Extra Training' : "Today's Training";
   const onKey = (e) => keydown(e);
-  const body = openSheet('', { full: true, onClose: () => { removeEventListener('keydown', onKey); stopShadow(); stopSpeaking(); saving.catch(() => {}).then(() => onClose?.()); } });
+  // Shadow all is meant for a walk, so it keeps the screen on while the sheet is open (where the browser allows it).
+  let wake = null;
+  if (shadowAll) navigator.wakeLock?.request('screen').then((l) => { wake = l; }, () => {});
+  const body = openSheet('', { full: true, onClose: () => { removeEventListener('keydown', onKey); stopShadow(); stopSpeaking(); wake?.release().catch(() => {}); saving.catch(() => {}).then(() => onClose?.()); } });
   body.classList.add('drill');
   addEventListener('keydown', onKey);
 
@@ -88,10 +95,10 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
         <button class="primary" data-words>Start Words</button><button class="link-btn" data-skip-step>Skip for today</button>`;
       return;
     }
-    const info = STEPS.find((x) => x.k === st.k);
+    const info = st.all ? SHADOW_ALL : STEPS.find((x) => x.k === st.k);
     body.innerHTML = `${head()}<div class="dr-intro"><div class="dr-ico">${ICON[st.k]}</div><h3>${info.name}</h3><p>${info.how}</p>
         <small>${st.ids.length} ${info.what}${steps.length > 1 ? ` · step ${si + 1} of ${steps.length}` : ''}</small></div>
-      <button class="primary" data-go>Start ${info.name}</button>${st.practice ? '' : '<button class="link-btn" data-skip-step>Skip this step today</button>'}`;
+      <button class="primary" data-go>Start ${info.name}</button>${st.practice || st.all ? '' : '<button class="link-btn" data-skip-step>Skip this step today</button>'}`;
   };
 
   const ctxChip = () => (cur.s.ctx ? `<span class="dr-ctx">${esc(cur.s.ctx)}</span>` : '');
@@ -173,21 +180,23 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
   let timer = null, run = 0;
   function stopShadow() { clearTimeout(timer); timer = null; run++; }
   const renderShadow = () => {
-    const { s, text } = cur;
-    body.innerHTML = `${head()}<div class="dr-step"><b>Shadow</b><span>${ii + 1} of ${cur.st.ids.length}</span></div>
+    const { s, text, st } = cur;
+    body.innerHTML = `${head()}<div class="dr-step"><b>${st.all ? SHADOW_ALL.name : 'Shadow'}</b><span>${ii + 1} of ${st.ids.length}</span></div>
       <div class="dr-shadow">
-        ${!s.cards?.say && !s.cards?.listen ? '<span class="dr-new">New today</span>' : ''}
+        ${!st.all && !s.cards?.say && !s.cards?.listen ? '<span class="dr-new">New today</span>' : ''}
         <div class="dr-ring"><svg viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="90"/><circle class="prog" cx="100" cy="100" r="90" pathLength="100"/></svg>
           <div class="mid"></div></div>
         <div class="dr-it">${sentenceHTML(text)}</div><div class="dr-en">${esc(s.en)}</div>
         <div class="dr-reps">${Array.from({ length: REPS }, () => '<i></i>').join('')}</div>
       </div>
-      <div class="rv-actions"><button class="primary" data-next>Next sentence</button><button class="link-btn" data-again>Once more</button></div>`;
+      <div class="rv-actions">${st.all ? '<button class="primary" data-pause>Pause</button><button class="link-btn" data-next>Skip to the next one</button>'
+        : '<button class="primary" data-next>Next sentence</button><button class="link-btn" data-again>Once more</button>'}</div>`;
     shadowRep(0);
   };
   const shadowRep = (rep) => {
     const mine = ++run, ring = $('.dr-ring', body);
     if (!ring) return;
+    cur.rep = rep;
     const prog = $('.prog', ring), mid = $('.mid', ring);
     const anim = (ms) => {
       prog.style.transition = 'none'; prog.style.strokeDashoffset = 100; prog.getBoundingClientRect();
@@ -196,6 +205,8 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     if (rep >= REPS) {
       ring.classList.remove('turn'); mid.innerHTML = `${icons.check}<b>Nice</b>`;
       prog.style.transition = 'none'; prog.style.strokeDashoffset = 0;
+      // Shadow all moves on by itself after a breath.
+      if (cur.st.all) timer = setTimeout(() => { if (mine === run) nextShadow({ auto: true }); }, 1200);
       return;
     }
     ring.classList.remove('turn'); mid.innerHTML = `${ICON.listen}<b>Listen…</b>`;
@@ -217,13 +228,23 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     speak(cur.text, { onend: () => setTimeout(yourTurn, 150) });
     timer = setTimeout(yourTurn, guess + 2500); // if the voice never says it's finished
   };
-  const nextShadow = () => {
+  const nextShadow = ({ auto = false } = {}) => {
     if (!cur) return;
-    haptic();
+    if (!auto) haptic();
     if (counts) countDone('shadow');
     tally.shadowed++; bump('drills');
     undo.push({ pos: { si, ii, tally: { ...tally, shadowed: tally.shadowed - 1 }, missed: [...missed] }, shadow: true });
     ii++; render();
+  };
+
+  // Shadow all's Pause stops where it is; Resume starts that repetition again from the listening.
+  const togglePause = () => {
+    if (!cur?.st.all) return;
+    const b = $('[data-pause]', body);
+    if (cur.paused) { cur.paused = false; b.textContent = 'Pause'; return shadowRep(cur.rep || 0); }
+    cur.paused = true; stopShadow(); stopSpeaking(); b.textContent = 'Resume';
+    const ring = $('.dr-ring', body);
+    if (ring) { ring.classList.remove('turn'); $('.mid', ring).innerHTML = `${ICON.play}<b>Paused</b>`; const prog = $('.prog', ring); prog.style.transition = 'none'; prog.style.strokeDashoffset = 100; }
   };
 
   // ---------- the end ----------
@@ -231,7 +252,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     cur = null;
     body.innerHTML = head();
     await saving.catch(() => {}); // what's left today counts the last card too
-    const daily = !only && !practice;
+    const daily = counts;
     const left = daily ? todaysPlan() : null;
     const allDone = daily && STEPS.every((s) => !left[s.k].length);
     const more = daily && allDone ? todaysPlan({ extra: 10 }) : null;
@@ -239,7 +260,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     const words = !settings.trainWords && todaysCount();
     body.innerHTML = `${head()}<div class="rv-done">
         <div class="dr-done-ico">${icons.check}</div>
-        <h3>${practice ? 'That’s all of them' : only ? 'Pack session done' : allDone ? 'Done for today' : 'Done for now'}</h3>
+        <h3>${practice ? 'That’s all of them' : shadowAll ? 'Shadowing done' : only ? 'Pack session done' : allDone ? 'Done for today' : 'Done for now'}</h3>
         <div class="rv-done-line">${tally.n ? `${tally.n} card${tally.n === 1 ? '' : 's'}${tally.shadowed ? ` · ${tally.shadowed} shadowed` : ''}${tally.again ? ` · ${tally.again} to go over` : ''}` : tally.shadowed ? `${tally.shadowed} shadowed` : 'Nothing was due.'}</div>
         ${only ? '<div class="rv-done-sub">Ratings saved. Today’s plan is unchanged.</div>' : daily && !allDone ? '<div class="rv-done-sub">The rest of today’s training is waiting on the Training tab.</div>' : ''}
       </div>
@@ -295,7 +316,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     const k = e.key;
     if (k === 'z' || k === 'Z') { e.preventDefault(); return undoLast(); }
     if (!cur) { if (k === ' ' || k === 'Enter') { e.preventDefault(); $('[data-go], [data-done]', body)?.click(); } return; }
-    if (cur.st.k === 'shadow') { if (k === ' ' || k === 'Enter') { e.preventDefault(); nextShadow(); } return; }
+    if (cur.st.k === 'shadow') { if (k === ' ' || k === 'Enter') { e.preventDefault(); if (cur.st.all && k === ' ') togglePause(); else nextShadow(); } return; }
     if (!cur.revealed) {
       if (k === ' ' || k === 'Enter') { e.preventDefault(); reveal(); }
       else if ((k === 'h' || k === 'H') && cur.st.k === 'say') { e.preventDefault(); moreHint(); }
@@ -321,7 +342,8 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
       if (b.dataset.flip != null) return reveal();
       if (b.dataset.hint != null) return moreHint();
       if (b.dataset.r != null) return grade(+b.dataset.r);
-      if (b.dataset.next != null) return nextShadow();
+      if (b.dataset.next != null) { if (cur?.paused) cur.paused = false; return nextShadow(); }
+      if (b.dataset.pause != null) return togglePause();
       if (b.dataset.again != null) { stopShadow(); $$('.dr-reps i', body).forEach((x) => x.classList.remove('on')); return shadowRep(0); }
       if (b.matches('.cg-add')) return addGem(b);
       if (b.dataset.extra != null) return drillSheet({ extra: 10, onClose });

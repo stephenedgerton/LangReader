@@ -176,7 +176,7 @@ async function renderPack(id) {
         <h3>${esc(p.name)}</h3>
         <div class="author">${on ? `${st.learned} learned${st.due ? ` · ${st.due} due` : ''}` : 'Not in your training yet'}</div>
         ${focusPack() === id ? '<div class="tr-hero-focus">★ Focus</div>' : ''}
-        <div class="tr-hero-btns">${on ? `${list.length ? '<button class="resume" data-act="train">Train</button>' : ''}<button class="resume soft" data-act="addsent">${icons.plus}Sentence</button>` : '<button class="resume" data-act="add">Add to my packs</button>'}</div>
+        <div class="tr-hero-btns">${on ? `${list.length ? `<button class="resume" data-act="train">Train</button><button class="resume soft" data-act="shadow">${stepIcon('shadow')}Shadow</button>` : ''}<button class="resume soft" data-act="addsent">${icons.plus}Sentence</button>` : '<button class="resume" data-act="add">Add to my packs</button>'}</div>
       </div></div>
     ${p.blurb ? `<p class="tr-blurb">${esc(p.blurb)}</p>` : ''}
     <div class="tr-list-head"><div class="section-title">Sentences</div>
@@ -196,6 +196,12 @@ async function renderPack(id) {
     if (a === 'en') { showEN = !showEN; stopPlayAll(); return renderPack(id); }
     if (a === 'playall') return playing ? stopPlayAll() : playAll(b);
     if (a === 'train') { stopPlayAll(); return askGender(packSentences(id), () => drillSheet({ only: id, onClose: () => renderPack(id) })); }
+    if (a === 'shadow') {
+      stopPlayAll();
+      const ids = packSentences(id).filter((s) => !s.paused).map((s) => s.id);
+      if (!ids.length) return toast('Every sentence in this pack is paused');
+      return askGender(packSentences(id), () => drillSheet({ shadowAll: { pack: id, ids }, onClose: () => renderPack(id) }));
+    }
     if (a === 'add') { haptic(); await setPackOn(id, true); return askGender(packSentences(id), () => renderPack(id), () => renderPack(id)); }
     if (a === 'packmenu') return packMenu(id);
     if (a === 'addsent') { stopPlayAll(); return newSentenceSheet({ pack: id }, { onDone: () => renderPack(id) }); }

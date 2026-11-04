@@ -1,0 +1,33 @@
+// Shopping. [key, Italian, English, context]
+// Keys are permanent: append, never renumber.
+const SH = 'in a shop', M = 'at the market';
+export const SENTENCES = [
+  [1, 'Sto solo guardando, grazie.', 'I’m just looking, thanks.', SH],
+  [2, 'Cerco un regalo per mia madre.', 'I’m looking for a present for my mother.', SH],
+  [3, 'Avete questa in un’altra taglia?', 'Do you have this in another size?', SH],
+  [4, 'Posso provarla?', 'Can I try it on?', SH],
+  [5, 'È troppo grande.', 'It’s too big.', SH],
+  [6, 'Ce l’avete in nero?', 'Do you have it in black?', SH],
+  [7, 'Mi piace, la prendo.', 'I like it, I’ll take it.', SH],
+  [8, 'Quanto viene?', 'How much does that come to?', SH],
+  [9, 'È in offerta?', 'Is it on offer?', SH],
+  [10, 'Costa un po’ troppo per me.', 'It’s a bit too expensive for me.', SH],
+  [11, 'Posso avere un sacchetto?', 'Can I have a bag?', SH],
+  [12, 'Posso cambiarlo, se non va bene?', 'Can I exchange it if it doesn’t fit?', SH],
+  [13, 'Me lo può incartare? È un regalo.', 'Could you wrap it? It’s a present.', SH],
+  [14, 'Dov’è la cassa?', 'Where’s the till?', SH],
+  [15, 'Accettate la carta di credito?', 'Do you take credit cards?', SH],
+  [16, 'Non ho spiccioli.', 'I don’t have any change.', SH],
+  [17, 'Ha da cambiare cinquanta euro?', 'Do you have change for fifty euros?', SH],
+  [18, 'A che ora chiudete?', 'What time do you close?', SH],
+  [19, 'Siete aperti la domenica?', 'Are you open on Sundays?', SH],
+  [20, 'Un etto di prosciutto, per favore.', 'A hundred grams of ham, please.', M],
+  [21, 'Mezzo chilo di pomodori.', 'Half a kilo of tomatoes.', M],
+  [22, 'Sono maturi?', 'Are they ripe?', M],
+  [23, 'Me ne dia due.', 'Give me two of them.', M],
+  [24, 'Posso assaggiare?', 'Can I taste it?', M],
+  [25, 'Di dove sono queste arance?', 'Where are these oranges from?', M],
+  [26, 'Basta così, grazie.', 'That’s enough, thanks.', M],
+  [27, 'Nient’altro, grazie.', 'Nothing else, thanks.', M],
+  [28, 'Quant’è in tutto?', 'How much is it altogether?', M],
+];

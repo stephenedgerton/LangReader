@@ -1,0 +1,33 @@
+// Feelings. [key, Italian, English, context]
+// `{o|a}` is a form that follows your gender (see js/sentences.js). Keys are permanent: append, never renumber.
+const F = 'to a friend';
+export const SENTENCES = [
+  [1, 'Sono molto felice.', 'I’m very happy.'],
+  [2, 'Sono stanc{o|a} mort{o|a}.', 'I’m dead tired.'],
+  [3, 'Oggi sono un po’ giù.', 'I’m a bit down today.'],
+  [4, 'Sono nervos{o|a} per domani.', 'I’m nervous about tomorrow.'],
+  [5, 'Mi sento sol{o|a}.', 'I feel lonely.'],
+  [6, 'Che bello!', 'How lovely!'],
+  [7, 'Che peccato!', 'What a shame!'],
+  [8, 'Non vedo l’ora!', 'I can’t wait!'],
+  [9, 'Mi manca la mia famiglia.', 'I miss my family.'],
+  [10, 'Sono content{o|a} per te.', 'I’m happy for you.', F],
+  [11, 'Mi dispiace tanto.', 'I’m so sorry.'],
+  [12, 'Che paura!', 'How scary!'],
+  [13, 'Mi fa arrabbiare.', 'It makes me angry.'],
+  [14, 'Che bello vederti!', 'It’s so good to see you!', F],
+  [15, 'Sono preoccupat{o|a} per lui.', 'I’m worried about him.'],
+  [16, 'Mi annoio.', 'I’m bored.'],
+  [17, 'Sono fier{o|a} di te.', 'I’m proud of you.', F],
+  [18, 'Mi sono commoss{o|a}.', 'It moved me to tears.'],
+  [19, 'Ho avuto una giornata difficile.', 'I’ve had a hard day.'],
+  [20, 'Mi sento meglio, grazie.', 'I feel better, thanks.'],
+  [21, 'Non me la sento.', 'I don’t feel up to it.'],
+  [22, 'Sono stuf{o|a}.', 'I’m fed up.'],
+  [23, 'Che sollievo!', 'What a relief!'],
+  [24, 'Che sorpresa!', 'What a surprise!'],
+  [25, 'Mi hai fatto ridere.', 'You made me laugh.', F],
+  [26, 'Ho bisogno di un abbraccio.', 'I need a hug.'],
+  [27, 'Sono innamorat{o|a}.', 'I’m in love.'],
+  [28, 'Va tutto bene, davvero.', 'Everything’s fine, really.'],
+];

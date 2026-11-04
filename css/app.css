@@ -940,6 +940,24 @@ input[type=date] { background: transparent; border: 0; color: var(--tint); font:
 .st-trend .tip { position: absolute; top: 34px; transform: translateX(-50%); background: var(--bg-elev); box-shadow: var(--shadow); border-radius: 8px; padding: 4px 8px; font-size: 12px; white-space: nowrap; pointer-events: none; }
 .freq-line { font-size: 14px; color: var(--label-2); margin: 10px 0 2px; }
 .rank { font-size: 13px; font-variant-numeric: tabular-nums; }
+.st-train p { margin: 8px 0 0; }
+.st-cells { display: flex; gap: 8px; margin: 14px 0 4px; }
+.st-cells div { flex: 1; min-width: 0; background: var(--fill); border-radius: 12px; padding: 10px 12px; }
+.st-cells b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.st-cells span { display: block; font-size: 12px; line-height: 1.3; margin-top: 2px; color: var(--label-2); }
+.st-bars { position: relative; margin-top: 14px; }
+.bars { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
+.bars .grid { stroke: var(--sep); stroke-width: 1; }
+.bars .ax { fill: var(--label-2); stroke: none; font: 11px var(--sans); }
+.bars .bar { fill: var(--known); stroke: none; }
+.bars .bar.on { fill: var(--tint); }
+.bars .hit { stroke: none; }
+.st-bars .tip { position: absolute; top: 22px; transform: translateX(-50%); background: var(--bg-elev); box-shadow: var(--shadow); border-radius: 8px; padding: 4px 8px; font-size: 12px; white-space: nowrap; pointer-events: none; }
+.st-packs { margin-top: 10px; }
+.st-packs .band .bl { width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-packs .bv { width: 56px; }
+.st-packs .legend { margin: 8px 0 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ============ Training ============ */
 svg.solid { fill: currentColor; stroke: none; }

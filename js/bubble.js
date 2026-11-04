@@ -58,7 +58,8 @@ export function openBubble(opts) {
     <div class="wp-arrow"></div>`;
   container.appendChild(el);
   current = { el, onClose: opts.onClose, dismiss: () => {
-    if (cur.status === 0 && !entry(term)) save({ status: 1, ...(suggestion && { meaning: suggestion.text }) });
+    // A New word you looked up becomes a gem; a highlighted phrase is saved only when you pick a status for it.
+    if (!phrase && cur.status === 0 && !entry(term)) save({ status: 1, ...(suggestion && { meaning: suggestion.text }) });
   } };
 
   let shown = cur.meaning ? null : '';

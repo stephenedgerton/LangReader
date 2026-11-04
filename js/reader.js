@@ -666,7 +666,8 @@ function finishPhrase(el) {
   R.phraseStart = null;
   openPhrase(a, b, +el.dataset.i);
 }
-// A phrase's quick bubble, the same one words get. Closing it saves a new phrase as LingQ 1.
+// A phrase's quick bubble, the same one words get. Closing it saves nothing: a phrase becomes a gem only when
+// you give it a status (a word you look up does become one).
 function openPhrase(a, b, at = a) {
   const spans = R.spans.slice(a, b + 1);
   setSel(a, b);

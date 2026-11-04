@@ -37,9 +37,9 @@ export async function trainThisSentence({ it, en = '', term = '', from = '' }) {
 }
 
 // The button, for the bubble and the cards. In training already: a tick instead.
-export function trainButtonHTML(it, cls = '') {
+export function trainButtonHTML(it, cls = '', label = 'Train this sentence') {
   const have = findSentence(it);
-  return `<button class="train-btn ${cls}" data-train${have ? ' disabled' : ''}>${have ? `${icons.check}In training` : `${icons.plus}Train this sentence`}</button>`;
+  return `<button class="train-btn ${cls}" data-train${have ? ' disabled' : ''}>${have ? `${icons.check}In training` : `${icons.plus}${label}`}</button>`;
 }
 export async function onTrainButton(btn, opts) {
   if (btn.disabled) return null;

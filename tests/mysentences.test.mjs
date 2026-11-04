@@ -3,7 +3,7 @@
 // adding to a ready-made pack; and the focus pack.
 import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer, openApp, openBook, closeReader, closeBrowser, tapWord, sleep } from './helpers.mjs';
+import { startServer, openApp, openBook, closeReader, closeBrowser, tapWord, holdWord, sleep } from './helpers.mjs';
 
 const tr = (page, fn, arg) => page.evaluate(async ({ fn, arg }) => {
   const m = await import('./js/training.js');
@@ -55,6 +55,24 @@ describe('your own sentences', () => {
     assert.equal(await page.textContent('.tr-row .txt'), FIRST);
     await page.click('.tr-row [data-sent]'); await sleep(300);
     assert.match(await page.textContent('.tr-sheet-from'), /From Un caffè a Bologna/);
+    assert.deepEqual(errors, []);
+  });
+
+  test('Train this phrase on a highlighted part of a sentence trains just that part, and saves no gem', async () => {
+    const { page, errors } = await openApp(t, srv.url, { mt: 'a small suitcase and a new notebook' });
+    await openBook(page);
+    await holdWord(page, 'valigia');
+    const b = await (await page.$('.w[data-w="nuovo"]')).boundingBox();
+    await page.mouse.move(b.x + 4, b.y + 5, { steps: 6 });
+    await page.mouse.up(); await sleep(500);
+    await page.click('.wpop .wp-more'); await sleep(400);
+    assert.match(await page.textContent('.wcard .ctx-train'), /Train this phrase/);
+    await page.click('.wcard .ctx-train'); await sleep(400);
+    assert.match(await page.textContent('.wcard .ctx-train'), /Added to From reading/);
+    const [s] = await mine(page);
+    assert.deepEqual([s.it, s.en, s.packs], ['valigia piccola e un quaderno nuovo', 'a small suitcase and a new notebook', ['reading']], 'only the highlighted part');
+    await page.click('.wcard .x'); await sleep(300);
+    assert.equal(await page.evaluate(() => import('./js/vocab.js').then((v) => v.entry('valigia piccola e un quaderno nuovo') || null)), null, 'not a gem');
     assert.deepEqual(errors, []);
   });
 

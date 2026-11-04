@@ -264,6 +264,58 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .picker button.on { box-shadow: 0 0 0 2px var(--tint-fill); }
 .picker .sw { width: 30px; height: 30px; border-radius: 50%; }
 
+
+/* ---------- Apple Books pass: covers, hero, open lists ---------- */
+.head-btns { display: flex; gap: 10px; }
+.section-title .see, .see { color: var(--tint); font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
+.see svg { width: 14px; height: 14px; fill: currentColor; stroke: none; }
+.goal-like { padding: 18px 16px 16px; }
+.goal-like .rings { margin: 2px 0 16px; }
+.today-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: .5px solid var(--sep); padding-top: 14px; }
+.today-foot .big { font: 700 22px/1.1 var(--sans); }
+.today-foot .sm { font-size: 14px; margin-top: 3px; }
+.done-state h4 { margin: 0; font-size: 20px; }
+.pill { background: var(--tint-fill); color: var(--on-tint); font-weight: 600; font-size: 15px; padding: 8px 20px; border-radius: 99px; display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.pill.soft { background: var(--fill); color: var(--tint); }
+.pill svg { width: 15px; height: 15px; }
+.shelf { display: flex; gap: 14px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 8px; scrollbar-width: none; }
+.shelf::-webkit-scrollbar { display: none; }
+.book { width: 116px; flex: none; text-align: left; display: block; }
+.book.off { opacity: .5; }
+.cover { aspect-ratio: 2 / 3; width: 100%; max-width: 100%; border-radius: 3px 6px 6px 3px; overflow: hidden; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,.15), 0 6px 16px rgba(0,0,0,.18); display: flex; flex-direction: column; justify-content: space-between; padding: 14% 10%; color: #fff; }
+.cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.18) 0, rgba(255,255,255,.18) 2.5%, rgba(0,0,0,.05) 5%, transparent 9%); pointer-events: none; }
+.cover .ce { font-size: 20px; line-height: 1; margin-bottom: 8px; }
+.cover .ct { font: 600 15px/1.15 var(--serif-ui); text-wrap: balance; }
+.cover .ca { font: 500 9.5px/1.2 var(--sans); opacity: .85; letter-spacing: .4px; text-transform: uppercase; }
+.cover.big { width: 120px; flex: none; height: 180px; padding: 17px 12px; }
+.cover .ca { margin-top: auto; }
+.cover.big .ct { font-size: 17px; }
+.bmeta { font-size: 12px; color: var(--label-2); margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.tag { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+.tag.focus { background: rgba(var(--gem), .25); color: var(--gem-ink); }
+.hair { height: 3px; border-radius: 99px; background: var(--fill-2); margin-top: 6px; overflow: hidden; }
+.hair span { display: block; height: 100%; background: var(--tint-fill); }
+.hero-book { display: flex; gap: 16px; align-items: flex-end; padding: 4px 0 6px; }
+.hero-meta { min-width: 0; padding-bottom: 4px; }
+.hero-meta .kicker { font-size: 12px; font-weight: 600; color: var(--label-2); text-transform: uppercase; letter-spacing: .3px; }
+.hero-meta h3 { font: 600 22px/1.2 var(--serif-ui); margin: 4px 0 2px; }
+.hero-meta .author { color: var(--label-2); font-size: 14px; }
+.hero-btns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.lh-btns { display: flex; gap: 14px; }
+.plain { border-top: .5px solid var(--sep); }
+.plain .srow { padding: 12px 0; gap: 12px; }
+.plain .srow::before { display: none; }
+.plain .srow { border-bottom: .5px solid var(--sep); }
+.plain .srow .txt { text-align: left; }
+.plain .more { justify-content: center; color: var(--label-3); font-size: 14px; }
+.plain .add-row { border-bottom: 0; }
+.say-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--fill); color: var(--tint); display: grid; place-items: center; flex: none; transition: transform .15s, background .15s; }
+.say-btn svg { width: 17px; height: 17px; }
+.say-btn.playing { background: var(--tint-fill); color: var(--on-tint); animation: pulse 1s ease-in-out infinite; }
+.srow.now .it { color: var(--tint); }
+@keyframes pulse { 50% { transform: scale(1.08); } }
+
 /* prototype bar: deliberately unlike the app */
 #proto { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 66px); display: flex; align-items: center; gap: 4px; background: var(--proto-bg); color: var(--proto-fg); border-radius: 99px; padding: 5px 8px; box-shadow: 0 6px 24px rgba(0,0,0,.35); font: 600 13px var(--sans); white-space: nowrap; max-width: calc(100% - 24px); }
 #proto button { padding: 6px 10px; border-radius: 99px; }
@@ -306,6 +358,7 @@ const I = {
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
   undo: '<path d="M9 7L4.5 11.5 9 16"/><path d="M5 11.5h9.5a5 5 0 0 1 0 10H12"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
   book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H10a3 3 0 0 1 2 .8A3 3 0 0 1 14 3h4.5A1.5 1.5 0 0 1 20 4.5v13a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 0 0-2 2 2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 17.5z"/>',
 };
 const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg>`;
@@ -327,13 +380,13 @@ const PACKS = [
   { id: 'reading', name: 'From reading', emoji: '📖', col: '#5b6b7a', own: true, auto: true },
   { id: 'home', name: 'At home', emoji: '🏠', col: '#e5484d', own: true },
   { id: 'rome', name: 'Weekend in Rome', emoji: '✈️', col: '#2585ea', own: true },
-  { id: 'survival', name: 'Survival', emoji: 'S', col: '#1aa57a', on: true },
-  { id: 'partner', name: 'Partner: everyday', emoji: 'P', col: '#c2577e', on: true },
-  { id: 'partner2', name: 'Partner: plans & errands', emoji: 'P', col: '#a3477a', on: false },
-  { id: 'cafe', name: 'Café & restaurant', emoji: 'C', col: '#b8740f', on: true },
-  { id: 'directions', name: 'Directions', emoji: 'D', col: '#3a7bd5', on: false },
-  { id: 'shopping', name: 'Shopping', emoji: 'S', col: '#7e5fe0', on: false },
-  { id: 'smalltalk', name: 'Small talk', emoji: 'S', col: '#0f8f8a', on: false },
+  { id: 'survival', name: 'Survival', emoji: '🧭', col: '#1aa57a', on: true },
+  { id: 'partner', name: 'Partner: everyday', emoji: '💬', col: '#c2577e', on: true },
+  { id: 'partner2', name: 'Partner: plans & errands', emoji: '🗓️', col: '#a3477a', on: false },
+  { id: 'cafe', name: 'Café & restaurant', emoji: '☕', col: '#b8740f', on: true },
+  { id: 'directions', name: 'Directions', emoji: '🗺️', col: '#3a7bd5', on: false },
+  { id: 'shopping', name: 'Shopping', emoji: '🛍️', col: '#7e5fe0', on: false },
+  { id: 'smalltalk', name: 'Small talk', emoji: '👋', col: '#0f8f8a', on: false },
 ];
 S_('Il primo della giornata è sempre il migliore.', 'The first one of the day is always the best.', ['reading'], 1, { src: 'Un caffè a Bologna · Ch. 1' });
 S_('Non aveva fretta.', 'She wasn’t in a hurry.', ['reading'], 0, { src: 'Un caffè a Bologna · Ch. 1' });
@@ -379,64 +432,72 @@ const lvlDots = s => s.lvl === 0 ? '<span class="lvl new">NEW</span>' : `<span c
 const emb = (p, size) => `<span class="emb" style="background:${p.col}">${esc(p.emoji)}</span>`;
 
 /* ---------- Training tab ---------- */
-function bonusRow(where) {
+function bonusRow() {
   return `<button class="bonus" data-act="bonus"><span class="ico">${svg('words')}</span><span class="t"><div>Bonus: ${WORDS.n} words</div><small>Your gems, if you’ve got a couple more minutes</small></span><span class="chev">${svg('chev')}</span></button>`;
 }
 function todayCard() {
   const d = stepsDone(), fp = PACKS.find(p => p.id === S.focus);
-  if (d === 3) return `<div class="card today done-state">
-      <div class="big-check">${svg('check')}</div><h3>Done for today</h3>
+  if (d === 3) return `<div class="card goal-like done-state">
+      <div class="big-check">${svg('check')}</div><h4>Done for today</h4>
       <p>13 days in a row. Come back tomorrow for a fresh set.</p>
-      <div class="extras"><button class="ghost" data-act="start">Train 10 more</button><button class="ghost" data-act="start">Go over the ones I missed</button></div>
+      <div class="extras"><button class="pill soft" data-act="start">Train 10 more</button><button class="pill soft" data-act="start">Go over the ones I missed</button></div>
       ${bonusRow()}
     </div>`;
-  return `<div class="card today">
-      <div class="row"><div style="flex:1"><h3>Today’s training</h3><div class="when">${d ? `${3 - d} steps left · ≈ ${minsLeft()} min` : `3 steps · ≈ ${minsLeft()} min`}</div></div><span class="muted" style="font-size:13px">🔥 12 days</span></div>
-      ${fp ? `<div class="focus-line"><span class="star">★</span> New sentences from <b>${esc(fp.name)}</b></div>` : ''}
+  return `<div class="card goal-like">
       <div class="rings">${PLAN.map((p, i) => `
         <div class="ringcell"><div class="ring ${i < d ? 'done' : ''}">${ringSVG(i < d ? 1 : 0)}${i < d ? '<div class="disc"></div>' : ''}<div class="mid">${i < d ? svg('check') : svg(p.k)}</div></div><div><b>${p.name}</b><br>${p.n}</div></div>`).join('')}</div>
-      <button class="primary" data-act="start">${svg('play')} ${d ? 'Continue' : 'Start'}</button>
+      <div class="today-foot">
+        <div><div class="big">≈ ${minsLeft()} min</div><div class="muted sm">${d ? `${3 - d} steps left` : '3 steps'} · 🔥 12 days</div>
+          ${fp ? `<div class="focus-line"><span class="star">★</span> New from <b>${esc(fp.name)}</b></div>` : ''}</div>
+        <button class="pill" data-act="start">${d ? 'Continue' : 'Start'}</button>
+      </div>
     </div>`;
 }
-function tile(p) {
+/* A pack is drawn like a book cover: the app's gradient, spine sheen and serif title. */
+function packCover(p, big) {
+  const kicker = p.auto ? 'From books' : p.own ? 'Your pack' : 'Ready-made';
+  return `<div class="cover pcov ${big ? 'big' : ''}" style="background:linear-gradient(160deg, ${p.col}, color-mix(in srgb, ${p.col} 52%, #000))">
+      <div><div class="ce">${esc(p.emoji)}</div><div class="ct">${esc(p.name)}</div></div><div class="ca">${kicker}</div></div>`;
+}
+function shelfItem(p) {
   const on = packOn(p), total = packTotal(p), learned = packLearned(p);
-  return `<button class="pack ${on ? '' : 'off'}" data-open="${p.id}">
-      <div class="top">${emb(p)}${S.focus === p.id ? '<span class="star" aria-label="Focus pack">★</span>' : on ? '' : `<span class="plus">${svg('plus')}</span>`}</div>
-      <h4>${esc(p.name)}</h4>
-      <div class="meta">${on ? `${learned} / ${total} learned` : `${total} sentences`}</div>
-      ${on ? `<div class="bar"><span style="width:${total ? learned / total * 100 : 0}%"></span></div>` : ''}
-    </button>`;
+  return `<button class="book ${on ? '' : 'off'}" data-open="${p.id}">${packCover(p)}
+      <div class="bmeta">${S.focus === p.id ? '<span class="tag focus">★ Focus</span>' : ''}${on ? `${learned} of ${total} learned` : `${total} sentences`}</div>
+      ${on ? `<div class="hair"><span style="width:${total ? learned / total * 100 : 0}%"></span></div>` : ''}</button>`;
 }
 function viewTraining() {
   const own = PACKS.filter(p => p.own), on = PACKS.filter(p => !p.own && p.on), off = PACKS.filter(p => !p.own && !p.on);
-  return `<div class="view-head"><h1 class="large-title">Training</h1><button class="circle-btn" data-act="plus" aria-label="New sentence or pack">${svg('plus')}</button></div>
+  return `<div class="view-head"><h1 class="large-title">Training</h1><div class="head-btns"><button class="circle-btn" data-act="settings" aria-label="Training settings">${svg('gear')}</button><button class="circle-btn" data-act="plus" aria-label="New sentence or pack">${svg('plus')}</button></div></div>
+    <h2 class="section-title">Today’s Training</h2>
     ${todayCard()}
-    <h2 class="section-title">Packs</h2>
-    <div class="section-title sm">Yours</div>
-    <div class="packs">${own.map(tile).join('')}<button class="pack new-pack" data-act="newpack">${svg('plus')} New pack</button></div>
-    <div class="section-title sm">Ready-made · on</div>
-    <div class="packs">${on.map(tile).join('')}</div>
-    <div class="section-title sm">More to add</div>
-    <div class="packs">${off.map(tile).join('')}</div>`;
+    <h2 class="section-title">Your Packs <small><button class="see" data-act="newpack">New pack</button></small></h2>
+    <div class="shelf">${own.map(shelfItem).join('')}</div>
+    <h2 class="section-title">Ready-made</h2>
+    <div class="shelf">${on.map(shelfItem).join('')}</div>
+    <h2 class="section-title">More to Add</h2>
+    <div class="shelf">${off.map(shelfItem).join('')}</div>`;
 }
 
 /* ---------- pack page ---------- */
 function viewPack(id) {
   const p = PACKS.find(x => x.id === id), list = packSents(id), on = packOn(p), total = packTotal(p), learned = packLearned(p);
   const due = list.filter(s => s.lvl > 0 && s.lvl < 4 && !s.paused).length;
-  const rows = list.map(s => `<button class="srow ${s.paused ? 'paused' : ''}" data-sent="${s.id}">
-      <span class="txt"><div class="it">${esc(gender(s.it))}</div>${S.showEN ? `<div class="en">${esc(s.en)}</div>` : ''}${s.paused ? '<div class="tags">Paused</div>' : s.packs.length > 1 ? `<div class="tags">Also in ${s.packs.filter(x => x !== id).map(x => esc(PACKS.find(q => q.id === x).name)).join(', ')}</div>` : s.src && S.showEN ? `<div class="tags">${esc(s.src)}</div>` : ''}</span>${lvlDots(s)}</button>`).join('');
-  const more = !p.own && TOTALS[id] > list.length ? `<div class="srow" style="justify-content:center;color:var(--label-3);font-size:14px">+ ${TOTALS[id] - list.length} more in the real pack</div>` : '';
+  const rows = list.map(s => `<div class="srow ${s.paused ? 'paused' : ''}">
+      <button class="say-btn" data-play="${s.id}" aria-label="Play">${svg('speaker')}</button>
+      <button class="txt" data-sent="${s.id}"><div class="it">${esc(gender(s.it))}</div>${S.showEN ? `<div class="en">${esc(s.en)}</div>` : ''}${s.paused ? '<div class="tags">Paused</div>' : s.packs.length > 1 ? `<div class="tags">Also in ${s.packs.filter(x => x !== id).map(x => esc(PACKS.find(q => q.id === x).name)).join(', ')}</div>` : ''}</button>
+      ${lvlDots(s)}</div>`).join('');
+  const more = !p.own && TOTALS[id] > list.length ? `<div class="srow more">+ ${TOTALS[id] - list.length} more in the real pack</div>` : '';
   return `<div class="nav"><button class="back" data-act="home">${svg('back')} Training</button>
-      <div class="btns"><button class="circle-btn ${S.showEN ? 'on' : ''}" data-act="eye" aria-label="${S.showEN ? 'Hide' : 'Show'} English">${svg('eye')}</button><button class="circle-btn" data-act="packmenu" aria-label="Pack options">${svg('more')}</button></div></div>
-    <div class="phead">${emb(p)}<div><h1>${esc(p.name)}</h1><div class="meta">${p.auto ? 'Filled from the reader' : p.own ? 'Your pack' : 'Ready-made'}${S.focus === id ? ' · <span style="color:var(--gem-ink)">★ Focus</span>' : ''}</div></div></div>
-    ${on ? `<div class="pstats"><div><b>${learned}</b><span>learned</span></div><div><b>${total - learned}</b><span>to go</span></div><div><b>${due}</b><span>due soon</span></div></div>
-      <div class="bar" style="margin:6px 2px 0"><span style="width:${total ? learned / total * 100 : 0}%"></span></div>
-      <div class="pactions"><button class="primary" data-act="trainpack">${svg('play')} Train this pack</button><button class="ghost" data-act="shadowall">${svg('shadow')} Shadow all</button></div>`
-      : `<div class="pactions" style="grid-template-columns:1fr"><button class="primary" data-act="enable">${svg('plus')} Add to my packs</button></div>`}
-    <h2 class="section-title">Sentences <small>${list.length}</small></h2>
-    <div class="list">${rows}${more}<button class="srow add-row" data-act="addhere">${svg('plus')} Add a sentence</button></div>
-    <p class="tip">${S.showEN ? 'English shown while you edit. Tap 👁 to hide it again.' : 'English is hidden so the list doesn’t give answers away. Tap a sentence to see it, or 👁 to show all.'}</p>`;
+      <button class="circle-btn" data-act="packmenu" aria-label="Pack options">${svg('more')}</button></div>
+    <div class="hero-book">${packCover(p, true)}
+      <div class="hero-meta"><div class="kicker">${p.auto ? 'From books' : p.own ? 'Your pack' : 'Ready-made'} · ${total} sentences</div>
+        <h3>${esc(p.name)}</h3>
+        <div class="author">${on ? `${learned} learned · ${due} due soon` : 'Not in your training yet'}${S.focus === id ? ' · <span style="color:var(--gem-ink)">★ Focus</span>' : ''}</div>
+        <div class="hero-btns">${on ? `<button class="pill" data-act="trainpack">Train</button><button class="pill soft" data-act="shadowall">${svg('shadow')} Shadow</button>` : `<button class="pill" data-act="enable">Add to my packs</button>`}</div>
+      </div></div>
+    <div class="list-head"><h2 class="section-title">Sentences</h2>
+      <div class="lh-btns"><button class="see" data-act="playall">${svg('play')} Play all</button><button class="see" data-act="eye">${S.showEN ? 'Hide English' : 'Show English'}</button></div></div>
+    <div class="plain">${rows}${more}<button class="srow add-row" data-act="addhere">${svg('plus')} Add a sentence</button></div>`;
 }
 
 /* ---------- shell ---------- */
@@ -466,6 +527,9 @@ document.getElementById('view').addEventListener('click', e => {
   const a = t.dataset.act;
   if (t.dataset.open) return go(t.dataset.open);
   if (t.dataset.sent) return sentSheet(t.dataset.sent);
+  if (t.dataset.play) { const x = SENT[t.dataset.play]; return speak(gender(x.it), 1, t); }
+  if (a === 'playall') return playAll(S.page, t);
+  if (a === 'settings') return settingsSheet();
   if (a === 'start') return startSession(null);
   if (a === 'bonus') return startSession(null, true);
   if (a === 'plus') return plusSheet();
@@ -567,6 +631,25 @@ function newPackSheet() {
     <div class="actions"><button data-mkpack="1">${svg('check')} Create pack</button></div>`);
 }
 
+let playing = null;
+function playAll(id, btn) {
+  if (playing) { clearTimeout(playing); playing = null; try { speechSynthesis.cancel(); } catch (_) {} document.querySelectorAll('.srow.now').forEach(r => r.classList.remove('now')); btn.innerHTML = svg('play') + ' Play all'; return; }
+  const list = packSents(id).filter(s => !s.paused); let i = 0;
+  btn.innerHTML = svg('pause') + ' Stop';
+  const step = () => {
+    document.querySelectorAll('.srow.now').forEach(r => r.classList.remove('now'));
+    if (i >= list.length) { playing = null; btn.innerHTML = svg('play') + ' Play all'; return; }
+    const b = document.querySelector(`[data-play="${list[i].id}"]`); b?.closest('.srow').classList.add('now');
+    const ms = speak(gender(list[i].it), 1, b); i++; playing = setTimeout(step, ms + 900);
+  };
+  step();
+}
+function settingsSheet() {
+  const row = (l, v) => `<div class="srow" style="padding-inline:0"><span class="txt">${l}</span><span class="muted">${v}</span></div>`;
+  openSheet(`<h3 class="sans">Training settings</h3><div class="plain" style="margin-top:8px">
+    ${row('Listen', '4 a day')}${row('Shadow', '4 a day')}${row('Say it', '8 a day')}${row('New sentences', '5 a day')}${row('Include Words in the plan', 'Off')}${row('I am', 'Male')}${row('My partner is', 'Female')}${row('Retention', 'Normal (85%)')}</div>
+    <p class="tip">Mock-up only. These move out of the main settings.</p>`);
+}
 /* ---------- speech (device voice stands in for Piper) ---------- */
 function speak(text, rate = 1, el) {
   const ms = Math.max(900, text.length * 75 / rate);

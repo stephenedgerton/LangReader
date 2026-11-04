@@ -41,6 +41,10 @@ const defaults = {
   trainPartner: '',        // m | f: the same, about your partner
   trainFocus: '',          // the pack new sentences come from first ('' for none)
   trainLastPack: '',       // the pack New Sentence last added to
+  // Focus mode (js/focus.js): the mode a pack page last used, and each mode's own settings ({} = the defaults,
+  // FOCUS_DEFAULTS there). Replace the whole object to change it; the Proxy only saves top-level writes.
+  focusMode: 'shadow',     // shadow | recall
+  focus: {},               // {shadow: {...}, recall: {...}}
 };
 
 let stored = {};

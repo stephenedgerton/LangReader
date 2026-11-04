@@ -1,7 +1,8 @@
 // The Training tab: today's plan, the packs as covers on shelves (Your Packs with From reading, Ready-made,
-// More to Add), and each pack's own page (back arrow, not a sheet) with its sentences in Italian only, each one
-// playable. Plus a sentence's sheet, a pack's ⋯ menu and Training's settings. Adding and editing your own
-// sentences and packs is in mysentences.js.
+// More to Add), and each pack's own page (back arrow, not a sheet): a Shadowing | Recall switch with ▶ (plays
+// the pack on the page) and a pinned "Start Focus" (the Focus screen, focus.js), then its sentences in Italian
+// only, each one playable, its English a tap away. Plus a sentence's sheet, a pack's ⋯ menu (with Train) and
+// Training's settings. Adding and editing your own sentences and packs is in mysentences.js.
 import { settings } from './settings.js';
 import { esc, icons, openSheet, closeSheet, toast, $, $$ } from './ui.js';
 import { speak, stopSpeaking } from './services.js';
@@ -12,11 +13,13 @@ import { STEPS, loadSentences, syncPacks, packOn, setPackOn, packSentences, toda
   packMeta, ownPacks, readingPack, isTrained, focusPack, setFocus, deletePack, deleteSentence } from './training.js';
 import { packCoverHTML, newSentenceSheet, packEditSheet, sentencePacksSheet, editSentenceSheet } from './mysentences.js';
 import { drillSheet, stepIcon } from './drill.js';
+import { focusSheet, focusSettingsSheet, createPlayer, MODES } from './focus.js';
 import { reviewSheet, todaysCount, reviewedToday } from './review.js';
 import { PACKS, packInfo, loadPack } from '../samples/packs/index.js';
 
 let page = null;        // the pack whose page is open, or null for the tab itself
 let showEN = false;
+const shownEN = new Set(); // rows whose English you've tapped open
 let view = null;
 const counts = new Map(); // pack id -> number of sentences (for packs that aren't on yet)
 
@@ -107,14 +110,14 @@ export async function renderTraining(v = view) {
     ${more.length ? `<div class="section-title">More to Add</div><div class="shelf">${more.map(shelfItem).join('')}</div>` : ''}`;
   v.onclick = (e) => {
     const b = e.target.closest('[data-act],[data-pack]'); if (!b) return;
-    if (b.dataset.pack) { page = b.dataset.pack; showEN = false; window.scrollTo?.(0, 0); v.scrollTop = 0; return renderPack(page); }
+    if (b.dataset.pack) { page = b.dataset.pack; showEN = false; shownEN.clear(); window.scrollTo?.(0, 0); v.scrollTop = 0; return renderPack(page); }
     const a = b.dataset.act;
     if (a === 'start') return startToday();
     if (a === 'more') return moreSheet();
     if (a === 'words') return reviewSheet({ onClose: () => renderTraining() });
     if (a === 'settings') return trainingSettings();
     if (a === 'new') return newSentenceSheet({}, { onDone: () => renderTraining() });
-    if (a === 'newpack') return packEditSheet(null, { onDone: (p) => { page = p.id; showEN = false; renderPack(p.id); } });
+    if (a === 'newpack') return packEditSheet(null, { onDone: (p) => { page = p.id; showEN = false; shownEN.clear(); renderPack(p.id); } });
   };
 }
 
@@ -142,23 +145,27 @@ function moreSheet() {
 }
 
 // ---------- a pack's page ----------
+// ▶ plays the pack right here, in the mode the switch is on, with that mode's settings (the same loop as the
+// Focus screen), highlighting the sentence that's playing.
 let playing = null;
 function stopPlayAll() {
   if (!playing) return;
-  playing.stop = true; playing = null;
-  stopSpeaking();
-  if (view) { $$('.tr-row.now', view).forEach((r) => r.classList.remove('now')); const b = $('[data-act=playall]', view); if (b) b.innerHTML = `${play} Play all`; }
+  playing.stop(); playing = null;
+  if (view) { $$('.tr-row.now', view).forEach((r) => r.classList.remove('now')); const b = $('[data-act=play]', view); if (b) { b.innerHTML = play; b.setAttribute('aria-label', 'Play'); b.classList.remove('on'); } }
 }
 
 const KICKER = { bundled: 'Ready-made', own: 'Your pack', reading: 'From your reading' };
+const mode = () => (MODES[settings.focusMode] ? settings.focusMode : 'shadow');
+const star = '<svg viewBox="0 0 24 24" class="solid"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg>';
 
 async function renderPack(id) {
   const v = view, p = packMeta(id);
   if (!p) { page = null; return renderTraining(); }
+  stopPlayAll();
   const on = isTrained(id);
   // A pack that isn't on yet shows its sentences straight from the pack file.
   const list = on ? packSentences(id) : (await loadPack(id)).map((x) => ({ id: `${id}:${x.k}`, it: x.it, en: x.en, ctx: x.ctx, cards: {}, preview: true }));
-  const st = packStats(id);
+  const st = packStats(id), live = list.filter((s) => !s.paused), m = mode();
   const text = (s) => genderize(s.it, settings.trainMe || 'm', settings.trainPartner || 'm');
   const lv = (s) => {
     if (s.preview) return '';
@@ -166,7 +173,7 @@ async function renderPack(id) {
     const n = level(s);
     if (!n) return '<span class="tr-tag new">New</span>';
     if (n === 5) return `<span class="tr-tag done">${icons.check}</span>`;
-    return `<span class="lvl" aria-label="Level ${n} of 4">${[1, 2, 3, 4].map((k) => `<i class="${k <= n ? 'on' : ''}"></i>`).join('')}</span>`;
+    return `<span class="stars" aria-label="Level ${n} of 4">${[1, 2, 3, 4].map((k) => `<i class="${k <= n ? 'on' : ''}">${star}</i>`).join('')}</span>`;
   };
   v.innerHTML = `
     <div class="tr-nav"><button class="tr-back" data-act="back">${back}Training</button>
@@ -176,55 +183,60 @@ async function renderPack(id) {
         <h3>${esc(p.name)}</h3>
         <div class="author">${on ? `${st.learned} learned${st.due ? ` · ${st.due} due` : ''}` : 'Not in your training yet'}</div>
         ${focusPack() === id ? '<div class="tr-hero-focus">★ Focus</div>' : ''}
-        <div class="tr-hero-btns">${on ? `${list.length ? `<button class="resume" data-act="train">Train</button><button class="resume soft" data-act="shadow">${stepIcon('shadow')}Shadow</button>` : ''}<button class="resume soft" data-act="addsent">${icons.plus}Sentence</button>` : '<button class="resume" data-act="add">Add to my packs</button>'}</div>
+        <div class="tr-hero-btns">${on ? `<button class="resume soft" data-act="addsent">${icons.plus}Sentence</button>` : '<button class="resume" data-act="add">Add to my packs</button>'}</div>
       </div></div>
     ${p.blurb ? `<p class="tr-blurb">${esc(p.blurb)}</p>` : ''}
+    ${live.length ? `<div class="fc-modebar">
+      <div class="seg fc-mode" role="tablist">${Object.entries(MODES).map(([k, x]) => `<button data-mode="${k}" role="tab" aria-selected="${k === m}" class="${k === m ? 'on' : ''}">${x.name}</button>`).join('')}</div>
+      <button class="circle-btn" data-act="fsettings" aria-label="${MODES[m].name} settings">${icons.gear}</button>
+      <button class="fc-bigplay" data-act="play" aria-label="Play">${play}</button></div>
+      <p class="muted fc-modehelp">${m === 'shadow' ? 'Hear each sentence, then say it straight after.' : 'See or hear the English, say it in Italian, then hear it.'}</p>` : ''}
     <div class="tr-list-head"><div class="section-title">Sentences</div>
-      <div><button data-act="playall">${play} Play all</button><button data-act="en">${showEN ? 'Hide English' : 'Show English'}</button></div></div>
+      <div><button data-act="en">${showEN ? 'Hide English' : 'Show English'}</button></div></div>
     ${list.length ? '' : `<p class="muted tr-empty">No sentences yet. Add one with + Sentence${p.kind === 'reading' ? ', or with “Train this sentence” on a word while you read' : ''}.</p>`}
     <div class="tr-list">${list.map((s) => `<div class="tr-row${s.paused ? ' paused' : ''}" data-id="${esc(s.id)}">
         <button class="rv-say" data-play aria-label="Play">${icons.speaker}</button>
-        <button class="txt" data-sent><div class="it">${esc(text(s))}</div>${showEN ? `<div class="en">${esc(s.en)}</div>` : ''}</button>${lv(s)}</div>`).join('')}</div>
-    <p class="muted tr-tip">${showEN ? 'Tap Hide English to test yourself again.' : 'The English is hidden so the list doesn’t give the answers away. Tap a sentence to see it.'}</p>`;
-  const rowText = (row) => text(list.find((s) => s.id === row.dataset.id));
+        <button class="txt" data-reveal aria-expanded="${showEN || shownEN.has(s.id)}"><div class="it">${esc(text(s))}</div>${showEN || shownEN.has(s.id) ? `<div class="en">${esc(s.en)}</div>` : ''}</button>${lv(s)}
+        <button class="tr-row-more" data-sent aria-label="Sentence options">${icons.more}</button></div>`).join('')}</div>
+    <p class="muted tr-tip">${showEN ? 'Tap Hide English to test yourself again.' : 'The English is hidden so the list doesn’t give the answers away. Tap a sentence to see it.'}</p>
+    ${on && live.length ? `<div class="fc-start-space"></div><div class="fc-start"><button class="primary" data-act="focus">Start Focus · ${live.length}</button></div>` : ''}`;
+  const find = (row) => list.find((s) => s.id === row.dataset.id);
+  const items = () => live.map((s) => ({ id: s.id, text: text(s), en: s.en }));
+  const startFocus = () => { stopPlayAll(); return askGender(packSentences(id), () => focusSheet({ pack: id, mode: mode(), ids: live.map((s) => s.id), onClose: () => renderPack(id) })); };
   v.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     const row = b.closest('.tr-row'), a = b.dataset.act;
-    if (b.dataset.play != null) { stopPlayAll(); return sayRow(b, rowText(row)); }
-    if (b.dataset.sent != null) return sentenceSheet(list.find((s) => s.id === row.dataset.id));
-    if (a === 'back') { stopPlayAll(); page = null; return renderTraining(); }
-    if (a === 'en') { showEN = !showEN; stopPlayAll(); return renderPack(id); }
-    if (a === 'playall') return playing ? stopPlayAll() : playAll(b);
-    if (a === 'train') { stopPlayAll(); return askGender(packSentences(id), () => drillSheet({ only: id, onClose: () => renderPack(id) })); }
-    if (a === 'shadow') {
-      stopPlayAll();
-      const ids = packSentences(id).filter((s) => !s.paused).map((s) => s.id);
-      if (!ids.length) return toast('Every sentence in this pack is paused');
-      return askGender(packSentences(id), () => drillSheet({ shadowAll: { pack: id, ids }, onClose: () => renderPack(id) }));
+    if (b.dataset.play != null) { stopPlayAll(); return sayRow(b, text(find(row))); }
+    if (b.dataset.reveal != null) {
+      const s = find(row);
+      if (showEN) return;
+      if (shownEN.has(s.id)) shownEN.delete(s.id); else shownEN.add(s.id);
+      const open = shownEN.has(s.id);
+      b.setAttribute('aria-expanded', open);
+      if (open) b.insertAdjacentHTML('beforeend', `<div class="en">${esc(s.en)}</div>`); else $('.en', b)?.remove();
+      return;
     }
+    if (b.dataset.sent != null) return sentenceSheet(find(row));
+    if (b.dataset.mode) { haptic(); settings.focusMode = b.dataset.mode; return renderPack(id); }
+    if (a === 'back') { stopPlayAll(); page = null; return renderTraining(); }
+    if (a === 'en') { showEN = !showEN; shownEN.clear(); return renderPack(id); }
+    if (a === 'play') return playing ? stopPlayAll() : playHere(b);
+    if (a === 'focus') return startFocus();
+    if (a === 'fsettings') { stopPlayAll(); return focusSettingsSheet(mode(), { count: on ? live.length : 0, onStart: on ? startFocus : null }); }
     if (a === 'add') { haptic(); await setPackOn(id, true); return askGender(packSentences(id), () => renderPack(id), () => renderPack(id)); }
     if (a === 'packmenu') return packMenu(id);
     if (a === 'addsent') { stopPlayAll(); return newSentenceSheet({ pack: id }, { onDone: () => renderPack(id) }); }
   };
-  // Play all: each sentence in turn, with a short pause between, highlighting the one that's playing.
-  function playAll(btn) {
+  function playHere(btn) {
     const rows = $$('.tr-row:not(.paused)', v);
-    const me = playing = { stop: false };
-    btn.innerHTML = `${stop} Stop`;
-    let i = 0;
-    const next = () => {
-      if (me.stop) return;
+    btn.innerHTML = stop; btn.setAttribute('aria-label', 'Stop'); btn.classList.add('on');
+    const show = (i) => {
       $$('.tr-row.now', v).forEach((r) => r.classList.remove('now'));
-      if (i >= rows.length || !rows[i].isConnected) { if (playing === me) stopPlayAll(); return; }
-      const row = rows[i++];
-      row.classList.add('now');
-      row.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-      let went = false;
-      const go = () => { if (!went) { went = true; setTimeout(next, 900); } };
-      speak(rowText(row), { onend: go });
-      setTimeout(go, Math.max(2500, rowText(row).length * 110)); // if the voice never says it's done
+      rows[i]?.classList.add('now'); rows[i]?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
     };
-    next();
+    const me = playing = createPlayer({ items: items(), mode: mode(), on: { show, end: () => { if (playing === me) stopPlayAll(); } } });
+    show(0);
+    me.play();
   }
 }
 
@@ -278,7 +290,8 @@ function packMenu(id) {
   const n = packSentences(id).length, only = packSentences(id).filter((s) => s.packs.length === 1).length;
   const body = openSheet(`<h2>${esc(p.name)}<button class="x">${icons.close}</button></h2>
     <div class="action-list">
-      ${on ? `<button data-a="focus"><span>${focused ? 'Stop focusing on this pack' : 'Focus on this pack'}</span><b class="pk-menu-star">★</b></button>
+      ${on ? `<button data-a="train"${n ? '' : ' disabled'}><span>Train this pack<small class="muted">Rated; today’s plan stays as it is</small></span></button>
+        <button data-a="focus"><span>${focused ? 'Stop focusing on this pack' : 'Focus on this pack'}</span><b class="pk-menu-star">★</b></button>
         <button data-a="addsent"><span>Add a sentence</span></button>` : ''}
       ${p.kind === 'own' ? '<button data-a="edit"><span>Edit pack…</span></button>' : ''}
       ${p.kind !== 'bundled' ? '<button data-a="delete" class="danger"><span>Delete pack</span></button>' : ''}
@@ -291,6 +304,7 @@ function packMenu(id) {
     const a = b.dataset.a;
     if (!a) return closeSheet();
     if (a === 'addsent') return newSentenceSheet({ pack: id }, { onDone: () => renderPack(id) });
+    if (a === 'train') return askGender(packSentences(id), () => drillSheet({ only: id, onClose: () => renderPack(id) }));
     if (a === 'edit') return packEditSheet(p, { onDone: () => renderPack(id) });
     if (a === 'focus') { haptic(); setFocus(focused ? '' : id); closeSheet(); toast(focused ? 'No focus pack' : `Focusing on ${p.name}`); return renderPack(id); }
     if (a === 'delete') {

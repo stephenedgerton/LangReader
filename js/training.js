@@ -187,12 +187,13 @@ export function todaysPlan({ extra = 0, only = null } = {}) {
 }
 export const minutes = (plan) => Math.max(1, Math.round(STEPS.reduce((n, s) => n + plan[s.k].length * SECONDS[s.k], 0) / 60));
 
-// Rates one card. Returns what Undo needs to put it back.
-export async function rateCard(id, dir, g, { count = true } = {}) {
+// Rates one card. Returns what Undo needs to put it back. `drill: false` leaves days[].drills alone (Focus mode
+// has already counted the sentence when it played it through).
+export async function rateCard(id, dir, g, { count = true, drill = true } = {}) {
   const s = cache.get(id), wasNew = isNew(s);
   const card = schedule(s.cards?.[dir], g, Date.now(), retention(), Math.random());
   await putSentence({ ...s, cards: { ...s.cards, [dir]: card } });
-  const snap = { prev: s, counted: [], missed: false };
+  const snap = { prev: s, dir, counted: [], missed: false, drill };
   if (count) {
     countDone(dir); snap.counted.push(dir);
     if (wasNew) { countDone('fresh'); snap.counted.push('fresh'); }
@@ -201,14 +202,28 @@ export async function rateCard(id, dir, g, { count = true } = {}) {
     const d = doneToday();
     if (!d.missed.includes(id)) { d.missed.push(id); saveDay(d); snap.missed = true; }
   }
-  bump('drills');
+  if (drill) bump('drills');
   return snap;
+}
+// Changes a rating (Focus mode, while the sentence is on screen): the card is scheduled again from where it was
+// before the first rating, so it's one review, not two. Today's counts and drills stay as the first rating left
+// them. Returns the snapshot to change it again.
+export async function rerateCard(snap, g) {
+  const { prev, dir } = snap, s = cache.get(prev.id);
+  if (!s) return snap;
+  const card = schedule(prev.cards?.[dir], g, Date.now(), retention(), Math.random());
+  await putSentence({ ...s, cards: { ...s.cards, [dir]: card } });
+  const d = doneToday(), next = { ...snap };
+  if (g === AGAIN && !d.missed.includes(prev.id)) { d.missed.push(prev.id); next.missed = true; }
+  if (g !== AGAIN && snap.missed) { d.missed = d.missed.filter((x) => x !== prev.id); next.missed = false; }
+  saveDay(d);
+  return next;
 }
 export async function undoRate(snap) {
   await putSentence(snap.prev);
   for (const f of snap.counted) countDone(f, -1);
   if (snap.missed) { const d = doneToday(); d.missed = d.missed.filter((x) => x !== snap.prev.id); saveDay(d); }
-  bump('drills', -1);
+  if (snap.drill !== false) bump('drills', -1);
 }
 // A finished step (not skipped) makes today a training day, for the streak.
 export const stepFinished = () => record({ trained: 1 });

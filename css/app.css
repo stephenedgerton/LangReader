@@ -1123,3 +1123,76 @@ svg.solid { fill: currentColor; stroke: none; }
 .pk-colors { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
 .pk-colors button { aspect-ratio: 1; border-radius: 50%; }
 .pk-colors button.on { box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 4px var(--tint-fill); }
+
+/* ============ Focus mode (focus.js) and the pack page's player ============ */
+.fc-modebar { display: flex; align-items: center; gap: 10px; margin: 20px 0 0; }
+.fc-mode { flex: 1; margin: 0; }
+.fc-mode button { font-size: 15px; padding: 8px 0; }
+.fc-mode button.on { color: var(--tint); }
+.fc-bigplay { width: 54px; height: 54px; border-radius: 50%; background: var(--tint-fill); color: var(--on-tint); display: grid; place-items: center; flex: none; }
+.fc-bigplay svg { width: 24px; height: 24px; }
+.fc-bigplay svg path { transform: translateX(1.5px); }
+.fc-modehelp { font-size: 13px; margin: 8px 2px 0; }
+.tr-row-more { flex: none; width: 28px; height: 28px; display: grid; place-items: center; color: var(--label-3); margin-left: -4px; }
+.tr-row-more svg { width: 18px; height: 18px; fill: currentColor; stroke: none; }
+.stars { flex: none; display: flex; gap: 1px; }
+.stars i { display: grid; color: var(--fill-2); }
+.stars i.on { color: var(--tint); }
+.stars svg { width: 11px; height: 11px; }
+/* The document scrolls, not the view, so the pinned button is fixed above the tab bar, with room left under the list. */
+.fc-start { position: fixed; z-index: 15; left: 50%; transform: translateX(-50%); width: min(calc(100% - 32px), 608px); bottom: calc(var(--safe-bottom) + 66px); }
+.fc-start-space { height: 64px; }
+.fc-start .primary { box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+.action-list button > span small { display: block; font-size: 13px; margin-top: 1px; }
+.action-list button:disabled { opacity: .45; }
+
+.focus { display: flex; flex-direction: column; min-height: calc(100dvh - var(--safe-bottom) - 18px); }
+.focus .progress-line { margin-bottom: 8px; }
+.fc-count { display: flex; justify-content: space-between; font-size: 13px; color: var(--label-2); margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+.fc-count b { color: var(--tint); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+.fc-togs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.fc-tog { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 44px; padding: 6px 2px; border-radius: 10px; background: var(--fill); color: var(--label-2); font-size: 12px; font-weight: 600; line-height: 1.15; }
+.fc-tog b { font-size: 13px; color: var(--label); }
+.fc-tog.on { background: var(--tint-fill); color: var(--on-tint); }
+.fc-tog.on b { color: var(--on-tint); }
+.fc-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 18px; padding: 22px 0; }
+.fc-text { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+.fc-text .dr-ctx { position: static; margin-bottom: 10px; }
+.fc-text .dr-en { margin-top: 6px; }
+.focus .fc-text > .dr-en:first-child, .focus .fc-text > .dr-ctx + .dr-en { font: 600 22px/1.3 var(--sans); color: var(--label); margin: 0 0 12px; } /* Recall's English is the prompt */
+.fc-hidden { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding: 16px 12px; border: 1.5px dashed var(--sep); border-radius: 14px; color: var(--label-2); font: 600 17px var(--sans); }
+.fc-hidden small { font-size: 12px; font-weight: 500; color: var(--label-3); }
+.fc-hidden.en { margin-top: 10px; padding: 10px 12px; font-size: 14px; }
+.fc-phase { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 64px; }
+.fc-ph { display: inline-flex; align-items: center; gap: 6px; color: var(--tint); font-weight: 600; font-size: 15px; min-height: 22px; }
+.fc-ph svg { width: 20px; height: 20px; }
+.fc-ph span { color: var(--label); }
+.fc-phase.turn .fc-ph { color: var(--blue); }
+.fc-bar { width: 160px; height: 4px; border-radius: 2px; background: var(--fill); overflow: hidden; }
+.fc-bar i { display: block; height: 100%; width: 0; background: var(--tint-fill); }
+.fc-phase.turn .fc-bar i { background: var(--blue); }
+.fc-reps { display: flex; gap: 8px; }
+.fc-reps i { width: 9px; height: 9px; border-radius: 50%; background: var(--fill-2); }
+.fc-reps i.on { background: var(--tint-fill); }
+.fc-tools { margin-top: 0; }
+.fc-tools button.on, .fc-tools button.playing { background: var(--tint-fill); color: var(--on-tint); }
+.fc-bottom { position: sticky; bottom: 0; z-index: 4; background: var(--bg-elev); padding: 8px 0 4px; }
+.fc-rate-label { text-align: center; font-size: 12px; color: var(--label-3); margin-bottom: 6px; }
+.fc-rate button { font-size: 13px; padding: 11px 2px; line-height: 1.15; }
+.fc-rate button.on { box-shadow: inset 0 0 0 2px currentColor; background: var(--fill-2); }
+.fc-ctrl { display: flex; align-items: center; justify-content: center; gap: 40px; margin-top: 14px; }
+.fc-ctrl button { width: 52px; height: 52px; display: grid; place-items: center; color: var(--label); border-radius: 50%; }
+.fc-ctrl button svg { width: 30px; height: 30px; }
+.fc-ctrl .fc-play { width: 70px; height: 70px; background: var(--tint-fill); color: var(--on-tint); }
+.fc-ctrl .fc-play svg { width: 32px; height: 32px; }
+.fc-end { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+.fc-end h3 { font-size: 24px; margin: 0; }
+.fc-end p { margin: 0 0 14px; }
+.fc-gear svg { width: 18px; height: 18px; }
+.sheet .fc-gear { width: 30px; height: 30px; border-radius: 50%; background: var(--fill); color: var(--label-2); display: grid; place-items: center; }
+.fc-done-set { color: var(--tint); font: 600 17px var(--sans); padding: 4px 2px; }
+.fc-set-title { font-size: 17px; margin: 18px 0 8px; }
+.fc-settings .fc-set-title:first-child { margin-top: 2px; }
+.fc-settings .ts-item select { max-width: 55%; }
+.fc-set-note { font-size: 13px; margin: 0 4px; }
+.fc-pin { position: sticky; bottom: 0; padding: 12px 0 2px; background: linear-gradient(transparent, var(--bg-elev) 30%); }

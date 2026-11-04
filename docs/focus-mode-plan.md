@@ -1,6 +1,6 @@
 # Focus mode for Training (PR 4)
 
-Status: designed, not started. The rest of Training's decisions are in `docs/training-plan.md`. Comes from comparing Training with HyperLingua (an iOS app with Shadowing and
+Status: built in PR 4 (`js/focus.js`); see "How it was built" at the end for the choices made while building it. The rest of Training's decisions are in `docs/training-plan.md`. Comes from comparing Training with HyperLingua (an iOS app with Shadowing and
 Active Recall over sentence lists; screenshots of its home, list, Focus screen and settings were reviewed in
 the session that wrote this). The main lesson: they treat practice as a **player** (one list, a mode switch, ▶,
 back/play/forward with autoplay, rating optional and non-blocking); ours is a **quiz** (step intros, flip cards,
@@ -65,3 +65,22 @@ rate to advance). Focus mode brings the player to pack pages first; the daily se
   with ▶.
 - Later: Missed Say it cards come back a few cards later in the same session; recording yourself to compare
   (MediaRecorder, no recognition); lock-screen audio (above); grammar-pattern packs and per-book packs.
+
+## How it was built
+Choices made where the decisions above left room:
+- **▶ on the pack page plays the pack right there** (the row playing is highlighted), in the mode the switch is
+  on, with that mode's settings. "Start Focus · N" opens the Focus screen. Both use `createPlayer()`.
+- **Rows:** tapping a sentence shows or hides its English; a ⋯ on each row opens the sentence's sheet (Edit,
+  Packs…, Pause, Delete), which used to open on the tap. Level stars are 1–4; New and mastered keep their tags.
+- **The toggle row** writes the same per-mode settings as the sheet: Translation is English shown ↔ tap to
+  reveal, Dual audio is English first, Repeat goes round 1–5, Speed round 0.75–1.1×.
+- **Settings inside a session** open in the same full-screen sheet (the app has one shared sheet), with Done to
+  go back; playback carries on behind them.
+- **Recall:** the Italian stays hidden (tap to show it) until it plays. Without Dual audio the English is always
+  shown, as it's the prompt. The gap before the Italian uses how long that sentence took earlier in the session,
+  else a length-based guess. Speak along in Recall waits only the gap setting.
+- **Tapping a word** pauses playback and opens the bubble.
+- A rating can be changed for as long as the session is open, not only while the sentence is on screen (going
+  back with ‹‹ still re-rates from the first snapshot, so it's never two reviews).
+- Rating Again puts the sentence in today's missed list, as elsewhere; changing it to another grade takes it out.
+- At the end of the list (Loop off) the screen says so, with "Play again from the start" and Done.

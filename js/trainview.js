@@ -7,9 +7,9 @@ import { settings } from './settings.js';
 import { esc, icons, openSheet, closeSheet, toast, $, $$ } from './ui.js';
 import { speak, stopSpeaking } from './services.js';
 import { haptic } from './haptics.js';
-import { getDays } from './stats.js';
+import { getDays, todayKey } from './stats.js';
 import { level, learned, isNew, genderize } from './sentences.js';
-import { STEPS, loadSentences, syncPacks, packOn, setPackOn, packSentences, todaysPlan, minutes, doneToday, sizes, textOf, trainingStreak, setPaused, sentence,
+import { STEPS, repsOf, loadSentences, syncPacks, packOn, setPackOn, packSentences, todaysPlan, minutes, doneToday, sizes, textOf, trainingStreak, setPaused, sentence,
   packMeta, ownPacks, readingPack, isTrained, focusPack, setFocus, deletePack, deleteSentence } from './training.js';
 import { packCoverHTML, newSentenceSheet, packEditSheet, sentencePacksSheet, editSentenceSheet } from './mysentences.js';
 import { drillSheet, stepIcon } from './drill.js';
@@ -18,8 +18,8 @@ import { reviewSheet, todaysCount, reviewedToday } from './review.js';
 import { PACKS, packInfo, loadPack } from '../samples/packs/index.js';
 
 let page = null;        // the pack whose page is open, or null for the tab itself
-let showEN = false;
-const shownEN = new Set(); // rows whose English you've tapped open
+let showAll = false;       // every row's translation shown (Show English / Show Italian)
+const shownEN = new Set(); // rows whose translation you've tapped open
 let view = null;
 const counts = new Map(); // pack id -> number of sentences (for packs that aren't on yet)
 
@@ -35,8 +35,9 @@ export async function trainingToday() {
     const left = plan[s.k].length, did = Math.min(done[s.k] || 0, sz[s.k]);
     return { ...s, left, did, frac: left ? did / (did + left) : 1, done: !left };
   }).filter((s) => sz[s.k] > 0);
-  const allDone = steps.every((s) => s.done);
-  return { plan, steps, allDone, started: steps.some((s) => s.did), mins: minutes(plan), streak: trainingStreak(await getDays()) };
+  const allDone = steps.every((s) => s.done), days = await getDays(), today = todayKey();
+  const reps = { today: days.find((d) => d.date === today)?.reps || 0, all: days.reduce((n, d) => n + (d.reps || 0), 0) };
+  return { plan, steps, allDone, started: steps.some((s) => s.did), mins: minutes(plan), streak: trainingStreak(days), reps };
 }
 
 // Home's card: one line about today, opening the tab.
@@ -60,6 +61,10 @@ function packStats(id) {
   };
 }
 
+// Repetitions (once through hearing a sentence and saying it), today and in all.
+const plural = (n, w) => `${n.toLocaleString()} ${w}${n === 1 ? '' : 's'}`;
+const repsLine = ({ reps }) => reps.all ? `<div class="tr-reps"><b>${plural(reps.today, 'repetition')}</b> today<span>${reps.all.toLocaleString()} in all</span></div>` : '';
+
 // The focus pack, as a line at the bottom of the Today card.
 const focusLine = () => { const f = focusPack() && packMeta(focusPack()); return f ? `<button class="tr-focus" data-pack="${esc(f.id)}"><b>★</b> New sentences come from <b>${esc(f.name)}</b> first</button>` : ''; };
 
@@ -72,11 +77,11 @@ function todayHTML(t) {
   if (t.allDone) {
     return `<div class="card tr-today all-done">${rings}<div class="tr-foot"><div><div class="big">Done for today</div>
       <p>${t.streak ? `🔥 ${t.streak} day${t.streak === 1 ? '' : 's'} in a row · ` : ''}Come back tomorrow for a fresh set.</p></div>
-      <button class="resume soft" data-act="more">More</button></div>${focusLine()}</div>`;
+      <button class="resume soft" data-act="more">More</button></div>${repsLine(t)}${focusLine()}</div>`;
   }
   return `<div class="card tr-today">${rings}<div class="tr-foot"><div><div class="big">About ${t.mins} min</div>
     <p>${t.steps.filter((s) => !s.done).length} step${t.steps.filter((s) => !s.done).length === 1 ? '' : 's'} ${t.started ? 'left' : 'today'}${t.streak ? ` · 🔥 ${t.streak}` : ''}</p></div>
-    <button class="resume" data-act="start">${t.started ? 'Continue' : 'Start'}</button></div>${focusLine()}</div>`;
+    <button class="resume" data-act="start">${t.started ? 'Continue' : 'Start'}</button></div>${repsLine(t)}${focusLine()}</div>`;
 }
 
 function shelfItem(p) {
@@ -110,14 +115,14 @@ export async function renderTraining(v = view) {
     ${more.length ? `<div class="section-title">More to Add</div><div class="shelf">${more.map(shelfItem).join('')}</div>` : ''}`;
   v.onclick = (e) => {
     const b = e.target.closest('[data-act],[data-pack]'); if (!b) return;
-    if (b.dataset.pack) { page = b.dataset.pack; showEN = false; shownEN.clear(); window.scrollTo?.(0, 0); v.scrollTop = 0; return renderPack(page); }
+    if (b.dataset.pack) { page = b.dataset.pack; showAll = false; shownEN.clear(); window.scrollTo?.(0, 0); v.scrollTop = 0; return renderPack(page); }
     const a = b.dataset.act;
     if (a === 'start') return startToday();
     if (a === 'more') return moreSheet();
     if (a === 'words') return reviewSheet({ onClose: () => renderTraining() });
     if (a === 'settings') return trainingSettings();
     if (a === 'new') return newSentenceSheet({}, { onDone: () => renderTraining() });
-    if (a === 'newpack') return packEditSheet(null, { onDone: (p) => { page = p.id; showEN = false; shownEN.clear(); renderPack(p.id); } });
+    if (a === 'newpack') return packEditSheet(null, { onDone: (p) => { page = p.id; showAll = false; shownEN.clear(); renderPack(p.id); } });
   };
 }
 
@@ -167,6 +172,12 @@ async function renderPack(id) {
   const list = on ? packSentences(id) : (await loadPack(id)).map((x) => ({ id: `${id}:${x.k}`, it: x.it, en: x.en, ctx: x.ctx, cards: {}, preview: true }));
   const st = packStats(id), live = list.filter((s) => !s.paused), m = mode();
   const text = (s) => genderize(s.it, settings.trainMe || 'm', settings.trainPartner || 'm');
+  // Shadowing lists the Italian, Recall the English (so the list doesn't give the answer away); the other
+  // language is behind a tap on each row.
+  const recall = m === 'recall', other = recall ? 'Italian' : 'English';
+  const main = (s) => (recall ? s.en : text(s)), hidden = (s) => (recall ? text(s) : s.en);
+  const under = (s) => (showAll || shownEN.has(s.id) ? `<div class="tr-rev">${esc(hidden(s))}</div>` : `<div class="tr-tap">Tap to show the ${other}</div>`);
+  const reps = on ? repsOf(list) : 0;
   const lv = (s) => {
     if (s.preview) return '';
     if (s.paused) return '<span class="tr-tag">Paused</span>';
@@ -182,6 +193,7 @@ async function renderPack(id) {
       <div class="hero-meta"><div class="kicker">${KICKER[p.kind]} · ${list.length} sentence${list.length === 1 ? '' : 's'}</div>
         <h3>${esc(p.name)}</h3>
         <div class="author">${on ? `${st.learned} learned${st.due ? ` · ${st.due} due` : ''}` : 'Not in your training yet'}</div>
+        ${reps ? `<div class="tr-hero-reps">${plural(reps, 'repetition')}</div>` : ''}
         ${focusPack() === id ? '<div class="tr-hero-focus">★ Focus</div>' : ''}
         <div class="tr-hero-btns">${on ? `<button class="resume soft" data-act="addsent">${icons.plus}Sentence</button>` : '<button class="resume" data-act="add">Add to my packs</button>'}</div>
       </div></div>
@@ -192,13 +204,13 @@ async function renderPack(id) {
       <button class="fc-bigplay" data-act="play" aria-label="Play">${play}</button></div>
       <p class="muted fc-modehelp">${m === 'shadow' ? 'Hear each sentence, then say it straight after.' : 'See or hear the English, say it in Italian, then hear it.'}</p>` : ''}
     <div class="tr-list-head"><div class="section-title">Sentences</div>
-      <div><button data-act="en">${showEN ? 'Hide English' : 'Show English'}</button></div></div>
+      <div><button data-act="en">${showAll ? 'Hide' : 'Show'} ${other}</button></div></div>
     ${list.length ? '' : `<p class="muted tr-empty">No sentences yet. Add one with + Sentence${p.kind === 'reading' ? ', or with “Train this sentence” on a word while you read' : ''}.</p>`}
     <div class="tr-list">${list.map((s) => `<div class="tr-row${s.paused ? ' paused' : ''}" data-id="${esc(s.id)}">
         <button class="rv-say" data-play aria-label="Play">${icons.speaker}</button>
-        <button class="txt" data-reveal aria-expanded="${showEN || shownEN.has(s.id)}"><div class="it">${esc(text(s))}</div>${showEN || shownEN.has(s.id) ? `<div class="en">${esc(s.en)}</div>` : ''}</button>${lv(s)}
+        <button class="txt" data-reveal aria-expanded="${showAll || shownEN.has(s.id)}"><div class="it">${esc(main(s))}</div>${under(s)}</button>${lv(s)}
         <button class="tr-row-more" data-sent aria-label="Sentence options">${icons.more}</button></div>`).join('')}</div>
-    <p class="muted tr-tip">${showEN ? 'Tap Hide English to test yourself again.' : 'The English is hidden so the list doesn’t give the answers away. Tap a sentence to see it.'}</p>
+    <p class="muted tr-tip">${showAll ? `Tap Hide ${other} to test yourself again.` : `The ${other} is hidden so the list doesn’t give the answers away. Tap a sentence to see it, and again to hide it.`}</p>
     ${on && live.length ? `<div class="fc-start-space"></div><div class="fc-start"><button class="primary" data-act="focus">Start Focus · ${live.length}</button></div>` : ''}`;
   const find = (row) => list.find((s) => s.id === row.dataset.id);
   const items = () => live.map((s) => ({ id: s.id, text: text(s), en: s.en }));
@@ -209,17 +221,16 @@ async function renderPack(id) {
     if (b.dataset.play != null) { stopPlayAll(); return sayRow(b, text(find(row))); }
     if (b.dataset.reveal != null) {
       const s = find(row);
-      if (showEN) return;
+      if (showAll) return;
       if (shownEN.has(s.id)) shownEN.delete(s.id); else shownEN.add(s.id);
-      const open = shownEN.has(s.id);
-      b.setAttribute('aria-expanded', open);
-      if (open) b.insertAdjacentHTML('beforeend', `<div class="en">${esc(s.en)}</div>`); else $('.en', b)?.remove();
+      b.setAttribute('aria-expanded', shownEN.has(s.id));
+      b.lastElementChild.outerHTML = under(s);
       return;
     }
     if (b.dataset.sent != null) return sentenceSheet(find(row));
-    if (b.dataset.mode) { haptic(); settings.focusMode = b.dataset.mode; return renderPack(id); }
+    if (b.dataset.mode) { haptic(); settings.focusMode = b.dataset.mode; showAll = false; shownEN.clear(); return renderPack(id); }
     if (a === 'back') { stopPlayAll(); page = null; return renderTraining(); }
-    if (a === 'en') { showEN = !showEN; shownEN.clear(); return renderPack(id); }
+    if (a === 'en') { showAll = !showAll; shownEN.clear(); return renderPack(id); }
     if (a === 'play') return playing ? stopPlayAll() : playHere(b);
     if (a === 'focus') return startFocus();
     if (a === 'fsettings') { stopPlayAll(); return focusSettingsSheet(mode(), { count: on ? live.length : 0, onStart: on ? startFocus : null }); }
@@ -259,6 +270,7 @@ function sentenceSheet(s) {
     <button class="tr-show-en" data-a="en">Show English</button>
     ${s.ctx ? `<div class="tr-sheet-ctx">${esc(s.ctx)}</div>` : ''}
     ${s.from ? `<div class="tr-sheet-from">From <i>${esc(s.from)}</i></div>` : ''}
+    ${s.reps ? `<div class="tr-sheet-from">Repeated ${s.reps === 1 ? 'once' : `${s.reps.toLocaleString()} times`}</div>` : ''}
     <div class="rv-tools tr-sheet-tools"><button data-a="play">${icons.speaker}Play</button><button data-a="slow">${stepIcon('slow')}Slow</button></div>
     ${live ? `<div class="action-list" style="margin-top:18px">
         <button data-a="edit"><span>Edit</span></button>

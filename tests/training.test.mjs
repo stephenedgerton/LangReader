@@ -157,18 +157,18 @@ describe('training', () => {
     await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push(u.text); setTimeout(() => u.onend?.(), 10); }; });
     await page.click('[data-pack=partner]'); await sleep(300);
     assert.match(await page.textContent('.tr-hero'), /Ready-made · 30 sentences\s*Partner: everyday\s*Not in your training yet/);
-    const rows = await page.$$eval('.tr-row .txt', (r) => r.map((x) => x.textContent));
+    const rows = await page.$$eval('.tr-row .it', (r) => r.map((x) => x.textContent));
     assert.equal(rows[0], 'Buongiorno, amore.', 'Italian only');
-    assert.equal(await page.$('.tr-row .en'), null);
+    assert.equal(await page.$('.tr-row .tr-rev'), null);
     await page.click('.tr-row:nth-child(4) [data-play]');
     assert.deepEqual(await page.evaluate(() => window.__said), ['Com’è andata la giornata?']);
     await page.click('[data-act=en]'); await sleep(200);
-    assert.equal(await page.textContent('.tr-row:nth-child(4) .en'), 'How was your day?');
+    assert.equal(await page.textContent('.tr-row:nth-child(4) .tr-rev'), 'How was your day?');
     // Adding it asks who's speaking and to whom, then it's yours.
     await page.click('[data-act=add]'); await sleep(300);
     await page.click('[data-name=trainMe] [data-v=m]'); await page.click('[data-name=trainPartner] [data-v=f]');
     await page.click('[data-a=go]'); await sleep(400);
-    assert.match(await page.textContent('.tr-row:nth-child(6) .txt'), /^Sei stanca\?/, 'your partner’s forms');
+    assert.match(await page.textContent('.tr-row:nth-child(6) .it'), /^Sei stanca\?/, 'your partner’s forms');
     assert.match(await page.textContent('.tr-hero'), /0 learned/);
     // Training just this pack (in its ⋯) rates for real but leaves today's plan alone.
     await page.click('[data-act=packmenu]'); await sleep(300);
@@ -227,12 +227,21 @@ describe('training', () => {
     await page.click('[data-mode=recall]'); await sleep(200);
     assert.equal(await page.textContent('.fc-mode .on'), 'Recall');
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focusMode), 'recall');
-    // Each row's English is a tap away.
+    // Recall lists the English, so the Italian isn't given away; each row's Italian is a tap away.
+    assert.equal(await page.textContent('.tr-row:nth-child(1) .it'), 'Good morning!');
+    assert.equal(await page.textContent('.tr-row:nth-child(1) .tr-tap'), 'Tap to show the Italian');
+    assert.equal(await page.textContent('[data-act=en]'), 'Show Italian');
     await page.click('.tr-row:nth-child(1) [data-reveal]');
-    assert.equal(await page.textContent('.tr-row:nth-child(1) .en'), 'Good morning!');
-    assert.equal(await page.$('.tr-row:nth-child(3) .en'), null, 'only that row');
+    assert.equal(await page.textContent('.tr-row:nth-child(1) .tr-rev'), 'Buongiorno!');
+    assert.equal(await page.$('.tr-row:nth-child(3) .tr-rev'), null, 'only that row');
     await page.click('.tr-row:nth-child(1) [data-reveal]');
-    assert.equal(await page.$('.tr-row:nth-child(1) .en'), null, 'a second tap hides it');
+    assert.equal(await page.$('.tr-row:nth-child(1) .tr-rev'), null, 'a second tap hides it');
+    assert.ok(await page.$('.tr-row:nth-child(1) .tr-tap'));
+    await page.click('[data-mode=shadow]'); await sleep(200);
+    assert.equal(await page.textContent('.tr-row:nth-child(1) .it'), 'Buongiorno!', 'Shadowing lists the Italian');
+    assert.equal(await page.textContent('.tr-row:nth-child(1) .tr-tap'), 'Tap to show the English');
+    await page.click('.tr-row:nth-child(1) [data-reveal]');
+    assert.equal(await page.textContent('.tr-row:nth-child(1) .tr-rev'), 'Good morning!');
     const lvl = await tr(page, async (m) => (await import('./js/sentences.js')).level(m.sentence('survival:2')));
     assert.equal(await page.$$eval('.tr-row:nth-child(2) .stars i.on', (s) => s.length), lvl, 'the level as stars');
     assert.equal(await page.$$eval('.tr-row:nth-child(2) .stars i', (s) => s.length), 4);
@@ -271,6 +280,26 @@ describe('training', () => {
     const d = await tr(page, (m) => [m.doneToday(), m.sentence('survival:1').cards]);
     assert.deepEqual([d[0].listen, d[0].shadow, d[0].fresh], [0, 0, 0], 'today’s plan is untouched');
     assert.deepEqual(d[1], {}, 'nothing is rated');
+    assert.deepEqual(errors, []);
+  });
+
+  test('repetitions are counted per sentence and per day, and shown on the Training tab and the pack page', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { ...GENDER, focus: { shadow: { repeats: 2, loop: false } } } });
+    await page.evaluate(() => { speechSynthesis.speak = (u) => setTimeout(() => u.onend?.(), 10); });
+    assert.equal(await page.$('.tr-reps'), null, 'nothing to show before any training');
+    await page.click('[data-pack=survival]'); await sleep(300);
+    await page.click('[data-act=focus]');
+    for (let i = 0; i < 80 && (await tr(page, (m) => m.sentence('survival:1').reps || 0)) < 2; i++) await sleep(100);
+    await page.click('[data-toggle]'); // pause, before the second sentence's first repeat ends
+    await page.click('.x'); await sleep(400);
+    const n = await tr(page, (m) => m.sentence('survival:1').reps);
+    assert.equal(n, 2, 'both repeats of the first sentence');
+    assert.match(await page.textContent('.tr-hero-reps'), /^\d+ repetitions?$/);
+    await page.click('.tr-row:nth-child(1) [data-sent]'); await sleep(300);
+    assert.match(await page.textContent('#sheet'), /Repeated 2 times/);
+    await page.click('#sheet .x'); await sleep(300);
+    await page.click('[data-act=back]'); await sleep(300);
+    assert.match(await page.textContent('.tr-reps'), /\d+ repetitions? today\s*\d+ in all/);
     assert.deepEqual(errors, []);
   });
 

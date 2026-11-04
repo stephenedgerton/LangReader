@@ -52,7 +52,7 @@ describe('your own sentences', () => {
     assert.match(shelves[0], /^\s*📖\s*From reading\s*Your reading\s*0 of 1 learned\s*New Pack/);
     await page.click('[data-pack=reading]'); await sleep(300);
     assert.match(await page.textContent('.tr-hero'), /From your reading · 1 sentence\b/);
-    assert.equal(await page.textContent('.tr-row .txt'), FIRST);
+    assert.equal(await page.textContent('.tr-row .it'), FIRST);
     await page.click('.tr-row [data-sent]'); await sleep(300);
     assert.match(await page.textContent('.tr-sheet-from'), /From Un caffè a Bologna/);
     assert.deepEqual(errors, []);
@@ -166,7 +166,7 @@ describe('your own sentences', () => {
     await page.click('.ns-suggest'); await sleep(300);
     assert.equal(await page.inputValue('[name=en]'), 'I like the sea.');
     await page.click('[data-a=add]'); await sleep(400);
-    const rows = await page.$$eval('.tr-row .txt', (r) => r.map((x) => x.textContent));
+    const rows = await page.$$eval('.tr-row .it', (r) => r.map((x) => x.textContent));
     assert.equal(rows.length, 31); assert.equal(rows[30], 'Mi piace molto il mare.', 'added at the end of the ready-made pack');
     assert.equal(await tr(page, (m) => m.todaysPlan().say[0]), (await mine(page))[0].id, 'but it’s the first new one you train');
     assert.deepEqual(errors, []);
@@ -184,7 +184,7 @@ describe('your own sentences', () => {
     assert.equal(await page.inputValue('[name=it]'), 'Buongiorno!');
     await page.fill('[name=it]', 'Buongiorno a tutti!'); await page.fill('[name=en]', 'Good morning, everyone!');
     await page.click('[data-a=save]'); await sleep(400);
-    assert.equal(await page.textContent('.tr-row:nth-child(1) .txt'), 'Buongiorno a tutti!');
+    assert.equal(await page.textContent('.tr-row:nth-child(1) .it'), 'Buongiorno a tutti!');
     // A pack update never puts the old text back.
     const after = await tr(page, async (m) => { localStorage.removeItem('langreader.packRevs'); await m.syncPacks(); return m.sentence('survival:1'); });
     assert.deepEqual([after.it, after.en, after.edited], ['Buongiorno a tutti!', 'Good morning, everyone!', true]);
@@ -198,11 +198,11 @@ describe('your own sentences', () => {
     assert.ok(await page.isVisible('[data-note]'), 'one pack at least');
     assert.deepEqual(await tr(page, (m) => m.sentence('survival:1').packs), [pid]);
     await page.click('.sheet .x'); await sleep(400);
-    assert.notEqual(await page.textContent('.tr-row:nth-child(1) .txt'), 'Buongiorno a tutti!', 'it left Survival');
+    assert.notEqual(await page.textContent('.tr-row:nth-child(1) .it'), 'Buongiorno a tutti!', 'it left Survival');
     // Deleting a ready-made sentence hides it; deleting yours removes it.
     await page.click('[data-act=back]'); await sleep(300);
     await page.click(`[data-pack="${pid}"]`); await sleep(300);
-    assert.deepEqual(await page.$$eval('.tr-row .txt', (r) => r.map((x) => x.textContent)), ['Buongiorno a tutti!', 'Un biglietto, per favore.']);
+    assert.deepEqual(await page.$$eval('.tr-row .it', (r) => r.map((x) => x.textContent)), ['Buongiorno a tutti!', 'Un biglietto, per favore.']);
     await page.click('.tr-row:nth-child(1) [data-sent]'); await sleep(300);
     await page.click('[data-a=delete]'); await sleep(400);
     await page.click('.tr-row:nth-child(1) [data-sent]'); await sleep(300);

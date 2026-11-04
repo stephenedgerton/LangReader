@@ -19,7 +19,7 @@ import { haptic } from './haptics.js';
 import { openCardBubble, closeBubble, bubbleOpen } from './bubble.js';
 import { bump } from './stats.js';
 import { AGAIN, HARD, GOOD, EASY } from './srs.js';
-import { sentence, textOf, rateCard, rerateCard, packMeta } from './training.js';
+import { sentence, textOf, rateCard, rerateCard, packMeta, countRep } from './training.js';
 import { sentenceHTML, stepIcon } from './drill.js';
 
 export const MODES = {
@@ -70,7 +70,7 @@ const ICON = {
 // ---------- the playback loop ----------
 // items: [{id, text, en}]. Calls on.show(i) when it moves to a sentence, on.phase(name, {rep, ms}) as each part
 // starts ('en', 'it', 'turn', 'rep' when a repetition ends, 'done' after the last), on.sentenceDone(item) when a
-// sentence has played all its repeats, on.state() when it starts or stops playing, on.end() at the end of the list.
+// sentence has played all its repeats (each repetition is counted with countRep()), on.state() when it starts or stops playing, on.end() at the end of the list.
 // The mode's settings are read at the start of each sentence, so changes apply from the next one; `config` can
 // adjust them (the daily session's Shadow plays one sentence at a time, so it turns Loop off).
 export function createPlayer({ items, mode, at = 0, slow = () => false, config = () => focusCfg(mode), on = {} }) {
@@ -98,7 +98,7 @@ export function createPlayer({ items, mode, at = 0, slow = () => false, config =
       return wait(900, advance);
     }
     const r = (cfg.speed || 1) * (slow() ? 0.7 : 1), key = `${item.text}|${r}`;
-    const next = () => { p.rep++; emit('rep'); rep(); };
+    const next = () => { p.rep++; countRep(item.id); emit('rep'); rep(); };
     const italian = (then) => { emit('it'); say(item.text, { rate: r }, (ms) => { lens.set(key, ms); then(ms); }); };
     const turn = (ms, then) => {
       if (!cfg.turn) return wait(mode === 'recall' ? cfg.gap * 1000 : 300, then); // Speak along

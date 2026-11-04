@@ -19,7 +19,7 @@ import { entry } from './vocab.js';
 import { bump } from './stats.js';
 import { AGAIN, HARD, GOOD } from './srs.js';
 import { hint } from './sentences.js';
-import { STEPS, todaysPlan, sentence, textOf, rateCard, undoRate, countDone, stepFinished, packMeta } from './training.js';
+import { STEPS, todaysPlan, sentence, textOf, rateCard, undoRate, countDone, stepFinished, packMeta, countRep } from './training.js';
 import { todaysCount, reviewSheet } from './review.js';
 import { createPlayer, focusCfg, toggleRowHTML, flipToggle, GRADES } from './focus.js';
 
@@ -184,6 +184,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     const pos = { si, ii, tally: { ...tally }, missed: [...missed] };
     tally.n++;
     if (g === AGAIN) { tally.again++; if (!missed.includes(s.id)) missed.push(s.id); }
+    countRep(s.id);
     if (st.practice) { undo.push({ pos }); ii++; return render(); }
     busy = true;
     // The next card renders straight away, in this tap (so Listen can play on iOS); the save follows.

@@ -220,11 +220,22 @@ export async function rerateCard(snap, g) {
   return next;
 }
 export async function undoRate(snap) {
-  await putSentence(snap.prev);
+  await putSentence({ ...snap.prev, reps: cache.get(snap.prev.id)?.reps || snap.prev.reps });
   for (const f of snap.counted) countDone(f, -1);
   if (snap.missed) { const d = doneToday(); d.missed = d.missed.filter((x) => x !== snap.prev.id); saveDay(d); }
   if (snap.drill !== false) bump('drills', -1);
 }
+// One repetition of a sentence: once through hearing it and saying it (each repeat in Shadowing, Recall or the
+// daily Shadow, a rated or practised card in Listen and Say). Kept on the sentence as `reps` (all time) and in
+// days[].reps (the day's count). Undoing a rating doesn't take it back: you still said it.
+export function countRep(id) {
+  const s = cache?.get(id);
+  if (!s) return; // a pack you haven't added yet, played from its page
+  bump('reps');
+  putSentence({ ...s, reps: (s.reps || 0) + 1 }).catch(() => {});
+}
+export const repsOf = (list) => list.reduce((n, s) => n + (s.reps || 0), 0);
+
 // A finished step (not skipped) makes today a training day, for the streak.
 export const stepFinished = () => record({ trained: 1 });
 

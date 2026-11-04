@@ -943,6 +943,7 @@ input[type=date] { background: transparent; border: 0; color: var(--tint); font:
 .st-train p { margin: 8px 0 0; }
 .st-cells { display: flex; gap: 8px; margin: 14px 0 4px; }
 .st-cells div { flex: 1; min-width: 0; background: var(--fill); border-radius: 12px; padding: 10px 12px; }
+.st-cells.st-reps { margin-top: 0; }
 .st-cells b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
 .st-cells span { display: block; font-size: 12px; line-height: 1.3; margin-top: 2px; color: var(--label-2); }
 .st-bars { position: relative; margin-top: 14px; }

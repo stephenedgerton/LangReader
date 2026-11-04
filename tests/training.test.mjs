@@ -369,7 +369,7 @@ describe('training', () => {
     assert.deepEqual(errors, []);
   });
 
-  test('the Stats tab shows Training: sentences you can say, the streak, cards a day and each pack', async () => {
+  test('the Stats tab shows Training: sentences you can say, the streak, repetitions, cards a day and each pack', async () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'stats' });
     assert.match(await page.textContent('.st-train'), /start after your first session/);
     await tr(page, async (m) => {
@@ -378,6 +378,7 @@ describe('training', () => {
       const s = m.sentence('survival:1');
       await m.putSentence({ ...s, cards: { ...s.cards, say: { ...s.cards.say, s: 20 } } });
       m.stepFinished();
+      for (let i = 0; i < 4; i++) m.countRep('survival:1');
     });
     await page.click('#tabbar [data-tab="training"]'); await sleep(300);
     await page.click('#tabbar [data-tab="stats"]'); await sleep(600);
@@ -385,6 +386,7 @@ describe('training', () => {
     assert.match(card, /1 ?sentence you can say/);
     assert.match(card, /Of 30 in your packs, you've started 3\./);
     assert.match(card, /🔥 1 ?day in a row 1 ?of the last 30 days 3 ?cards this week/);
+    assert.match(card, /4 ?repetitions today 4 ?this week 4 ?in all/);
     assert.equal(await page.$$eval('.bars .bar', (b) => b.length), 14);
     assert.equal(await page.$$eval('.bars .bar:not(.zero)', (b) => b.length), 1, 'only today has cards');
     assert.match(await page.getAttribute('.st-packs .band', 'title'), /^Survival: 1 learned, 2 started, of 30$/);

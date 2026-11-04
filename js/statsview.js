@@ -90,7 +90,10 @@ async function trainingHTML(days) {
   const byDate = new Map(days.map((d) => [d.date, d]));
   const last = Array.from({ length: CHART_DAYS }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (CHART_DAYS - 1 - i)); return { date: todayKey(d), t: +d, n: byDate.get(todayKey(d))?.drills || 0 }; });
   const head = '<div class="section-title">Training</div>';
-  if (!all.some((x) => !isNew(x)) && !last.some((d) => d.n)) {
+  // Repetitions (once through hearing a sentence and saying it): today, the last 7 days and in all.
+  const repsOn = (i) => { const d = new Date(); d.setDate(d.getDate() - i); return byDate.get(todayKey(d))?.reps || 0; };
+  const reps = { today: repsOn(0), week: [0, 1, 2, 3, 4, 5, 6].reduce((n, i) => n + repsOn(i), 0), all: days.reduce((n, d) => n + (d.reps || 0), 0) };
+  if (!all.some((x) => !isNew(x)) && !last.some((d) => d.n) && !reps.all) {
     return `${head}<div class="card st-train"><p class="muted small">Your training stats start after your first session on the Training tab.</p></div>`;
   }
   const canSay = all.filter(learned).length, done = all.filter(mastered).length, started = all.filter((x) => !isNew(x)).length;
@@ -105,6 +108,11 @@ async function trainingHTML(days) {
         <div><b>${month.size}</b><span>of the last 30 days</span></div>
         <div><b>${week.toLocaleString()}</b><span>cards this week</span></div>
       </div>
+      ${reps.all ? `<div class="st-cells st-reps">
+        <div><b>${reps.today.toLocaleString()}</b><span>repetition${reps.today === 1 ? '' : 's'} today</span></div>
+        <div><b>${reps.week.toLocaleString()}</b><span>this week</span></div>
+        <div><b>${reps.all.toLocaleString()}</b><span>in all</span></div>
+      </div>` : ''}
       ${barsHTML(last)}
     </div>
     <div class="card st-bands st-packs">${packs.map((p) => {

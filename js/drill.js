@@ -8,13 +8,12 @@
 //                                   times, then on to the next by itself; nothing is rated or counted
 import { settings } from './settings.js';
 import { openSheet, closeSheet, esc, icons, $, $$ } from './ui.js';
-import { speak, stopSpeaking, translate } from './services.js';
+import { speak, stopSpeaking } from './services.js';
 import { haptic } from './haptics.js';
 import { tokenize, normalize } from './text.js';
-import { entry, setWord } from './vocab.js';
+import { openCardBubble, closeBubble, bubbleOpen } from './bubble.js';
+import { entry } from './vocab.js';
 import { bump } from './stats.js';
-import { lookup } from './dictionary.js';
-import { dictionaryHints } from './wordcard.js';
 import { preview, ivlLabel, AGAIN, HARD, GOOD, EASY } from './srs.js';
 import { hint } from './sentences.js';
 import { STEPS, todaysPlan, sentence, textOf, rateCard, undoRate, countDone, stepFinished, packMeta } from './training.js';
@@ -59,11 +58,11 @@ export function drillSheet({ only = null, extra = 0, practice = null, shadowAll 
   // Shadow all is meant for a walk, so it keeps the screen on while the sheet is open (where the browser allows it).
   let wake = null;
   if (shadowAll) navigator.wakeLock?.request('screen').then((l) => { wake = l; }, () => {});
-  const body = openSheet('', { full: true, onClose: () => { removeEventListener('keydown', onKey); stopShadow(); stopSpeaking(); wake?.release().catch(() => {}); saving.catch(() => {}).then(() => onClose?.()); } });
+  const body = openSheet('', { full: true, onClose: () => { removeEventListener('keydown', onKey); closeBubble(); stopShadow(); stopSpeaking(); wake?.release().catch(() => {}); saving.catch(() => {}).then(() => onClose?.()); } });
   body.classList.add('drill');
   addEventListener('keydown', onKey);
 
-  let si = 0, ii = -1, cur = null, busy = false, glossSeq = 0, saving = Promise.resolve();
+  let si = 0, ii = -1, cur = null, busy = false, saving = Promise.resolve();
   const undo = [], tally = { n: 0, again: 0, shadowed: 0 }, missed = [];
   const total = steps.reduce((n, s) => n + s.ids.length, 0);
   const doneItems = () => steps.slice(0, si).reduce((n, s) => n + s.ids.length, 0) + Math.max(0, ii);
@@ -73,6 +72,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, shadowAll 
   const say = (text, slow = false, label = slow ? 'Slow' : 'Play') => `<button class="dr-say" data-say="${esc(text)}"${slow ? ' data-slow' : ''}>${slow ? ICON.slow : icons.speaker}${label}</button>`;
 
   const render = () => {
+    closeBubble();
     stopShadow();
     if (si >= steps.length) return renderEnd();
     const st = steps[si];
@@ -271,36 +271,8 @@ export function drillSheet({ only = null, extra = 0, practice = null, shadowAll 
         ${missed.length && !practice ? `<button class="secondary" data-missed>Go over the ${missed.length === 1 ? 'one' : missed.length} I missed</button>` : ''}</div>` : ''}`;
   };
 
-  // ---------- looking up a word on the card ----------
-  const showGloss = async (span) => {
-    const text = span.dataset.w, term = normalize(text), face = span.closest('.face, .dr-shadow');
-    speak(text); // in the tap, for iOS
-    $$('.cw.on', body).forEach((x) => x.classList.remove('on'));
-    span.classList.add('on');
-    let bar = $('.cgloss', face);
-    if (!bar) { bar = document.createElement('div'); bar.className = 'cgloss'; $('.dr-it', face).after(bar); }
-    const paint = (m, loading = false) => {
-      const st = entry(term)?.status ?? 0;
-      bar.innerHTML = `<b>${esc(text)}</b><span class="cg-m">${loading ? 'Looking up…' : esc(m || 'No translation found')}</span>`
-        + (!loading && m && st === 0 ? `<button class="cg-add" data-t="${esc(term)}" data-m="${esc(m)}">+ Gem</button>` : st >= 1 && st <= 4 ? '<small>Gem</small>' : '');
-    };
-    const saved = entry(term)?.meaning;
-    if (saved) return paint(saved);
-    paint('', true);
-    const seq = ++glossSeq;
-    let m = '';
-    if (settings.target === 'en') { try { const r = await lookup(text); m = (r && dictionaryHints(r)[0]?.text) || ''; } catch {} }
-    if (!m) { try { m = (await translate(text, { word: true })).main || ''; } catch {} }
-    if (seq === glossSeq && bar.isConnected) paint(m);
-  };
-  const addGem = async (b) => {
-    haptic();
-    const term = b.dataset.t, s = cur?.s;
-    await setWord(term, { status: 1, meaning: b.dataset.m, ...(s && { example: cur.text, exampleTr: s.en }) });
-    bump('lingqs');
-    $$('.cw', body).forEach((x) => { if (normalize(x.dataset.w) === term) { x.classList.remove('s0'); x.classList.add('s1'); } });
-    b.outerHTML = '<small>Saved as a gem</small>';
-  };
+  // ---------- looking up a word on the card: the reader's bubble ----------
+  const showWord = (span) => openCardBubble(span, { root: body, context: cur?.text || '' });
 
   const playBtn = (b) => {
     $$('.playing', body).forEach((x) => x.classList.remove('playing'));
@@ -314,6 +286,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, shadowAll 
   function keydown(e) {
     if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select')) return;
     const k = e.key;
+    if (k === 'Escape' && bubbleOpen()) { e.preventDefault(); return closeBubble(); }
     if (k === 'z' || k === 'Z') { e.preventDefault(); return undoLast(); }
     if (!cur) { if (k === ' ' || k === 'Enter') { e.preventDefault(); $('[data-go], [data-done]', body)?.click(); } return; }
     if (cur.st.k === 'shadow') { if (k === ' ' || k === 'Enter') { e.preventDefault(); if (cur.st.all && k === ' ') togglePause(); else nextShadow(); } return; }
@@ -331,6 +304,8 @@ export function drillSheet({ only = null, extra = 0, practice = null, shadowAll 
   render();
   body.onclick = (e) => {
     const b = e.target.closest('button');
+    // With a word's bubble open, a tap elsewhere only closes it (as in the reader), except on ✕.
+    if (bubbleOpen()) { closeBubble(); if (!b?.matches('.x')) return; }
     if (b) {
       if (b.matches('.x') || b.dataset.done != null) return closeSheet();
       if (b.matches('.rv-undo')) return undoLast();
@@ -345,13 +320,12 @@ export function drillSheet({ only = null, extra = 0, practice = null, shadowAll 
       if (b.dataset.next != null) { if (cur?.paused) cur.paused = false; return nextShadow(); }
       if (b.dataset.pause != null) return togglePause();
       if (b.dataset.again != null) { stopShadow(); $$('.dr-reps i', body).forEach((x) => x.classList.remove('on')); return shadowRep(0); }
-      if (b.matches('.cg-add')) return addGem(b);
       if (b.dataset.extra != null) return drillSheet({ extra: 10, onClose });
       if (b.dataset.missed != null) return drillSheet({ practice: [...missed], onClose });
       return;
     }
     const cw = e.target.closest('.cw');
-    if (cw && (cur?.revealed || cur?.st.k === 'shadow')) return showGloss(cw);
+    if (cw && (cur?.revealed || cur?.st.k === 'shadow')) return showWord(cw);
     if (e.target.closest('.flash') && cur && !cur.revealed && cur.st.k === 'listen') return; // the disc plays; the button reveals
   };
 }

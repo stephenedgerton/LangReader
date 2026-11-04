@@ -254,6 +254,9 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   max-width: 640px; margin: 0 auto;
 }
 .sheet.closing { animation: down .2s ease-in forwards; }
+/* A word's bubble on a Training or review card sits in the sheet body, over the card, in the app's colours. */
+#sheet-body { position: relative; }
+.sheet .wpop { --r-bg: var(--bg-elev); --r-fg: var(--label); }
 /* Full-screen sheet (the reviews): only its own buttons close it. */
 .sheet.full { top: 0; max-height: none; border-radius: 0; background: var(--bg-elev); padding-top: 0; }
 .sheet.full .grabber { display: none; }
@@ -648,10 +651,6 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .face .cw.s0 { text-decoration: underline solid color-mix(in srgb, var(--blue) 65%, transparent) 1.5px; text-underline-offset: 3px; }
 .face .cw.s1, .face .cw.s2, .face .cw.s3, .face .cw.s4 { text-decoration: underline solid rgba(var(--gem), .9) 1.5px; text-underline-offset: 3px; }
 .face .cw.on { background: color-mix(in srgb, var(--tint) 22%, transparent); color: var(--label); }
-.cgloss { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 4px 8px; margin-top: 10px; padding: 8px 12px; border-radius: 12px; background: var(--fill); font-size: 15px; max-width: 100%; animation: bubble-in .18s ease-out; cursor: default; }
-.cgloss b { font: 600 16px var(--serif-ui); }
-.cgloss .cg-m { color: var(--label); }
-.cgloss small { font-size: 12px; color: var(--label-2); }
 .cg-add { font-size: 13px; font-weight: 700; color: #000; background: rgba(var(--gem), .9); border-radius: 99px; padding: 3px 10px; }
 .rv-more { margin-top: 22px; padding-top: 16px; border-top: .5px solid var(--sep); display: grid; gap: 8px; }
 .rv-more-title { font-size: 15px; font-weight: 600; text-align: center; margin-bottom: 2px; }
@@ -736,6 +735,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .wp-mean .plus { color: var(--tint); font-size: 21px; line-height: 1; flex: none; }
 .wp-loading { opacity: .6; }
 .wp-status { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.wp-status:not(:has(.wp-more)) { grid-template-columns: repeat(5, 1fr); }
 .wp-status button { height: 36px; border-radius: 9px; background: rgba(128, 128, 128, .14); font-weight: 700; font-size: 15px; display: grid; place-items: center; }
 .wp-status svg { width: 18px; height: 18px; stroke-width: 2.4; }
 .wp-status .wp-more svg { fill: currentColor; stroke: none; }

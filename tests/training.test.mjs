@@ -212,4 +212,26 @@ describe('training', () => {
     assert.match(await page.textContent('.st-bars .tip'), /3 cards/);
     assert.deepEqual(errors, []);
   });
+
+  test('tapping a word on a card opens the reader’s bubble, and its status colours the card', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
+    await page.click('[data-act=start]'); await sleep(300);
+    await page.click('[data-go]'); await sleep(200);
+    await page.click('[data-flip]'); await sleep(200);
+    await page.click('.face.back .cw[data-w="Buongiorno"]'); await sleep(400);
+    assert.match(await page.textContent('#sheet .wpop .wp-term'), /Buongiorno/);
+    assert.match(await page.textContent('#sheet .wpop .wp-mean'), /mock translation/);
+    assert.equal(await page.$('#sheet .wpop .wp-more'), null, 'no ⋯: the full card would replace the session');
+    await page.click('#sheet .wpop [data-s="3"]'); await sleep(300);
+    assert.ok(await page.$('.face.back .cw.s3[data-w="Buongiorno"]'), 'recoloured while the bubble is open');
+    const w = await page.evaluate(() => import('./js/vocab.js').then((v) => v.entry('buongiorno')));
+    assert.deepEqual([w.status, w.meaning, w.example], [3, 'mock translation', 'Buongiorno!']);
+    // A tap elsewhere closes the bubble and does nothing else.
+    await page.click('[data-r="3"]'); await sleep(200);
+    assert.equal(await page.$('#sheet .wpop'), null);
+    assert.match(await page.textContent('.dr-step'), /1 of 4/, 'not rated');
+    await page.click('[data-r="3"]'); await sleep(200);
+    assert.match(await page.textContent('.dr-step'), /2 of 4/);
+    assert.deepEqual(errors, []);
+  });
 });

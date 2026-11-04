@@ -17,6 +17,7 @@ import { tokenize, normalize } from './text.js';
 import { lookup } from './dictionary.js';
 import { haptic } from './haptics.js';
 import { speak, translate, dictionaryLinks } from './services.js';
+import { trainButtonHTML, onTrainButton } from './mysentences.js';
 
 const DAY_KEY = 'langreader.srsDay';
 export const RETENTION = { relaxed: 0.8, normal: 0.85, intense: 0.9 };
@@ -219,7 +220,7 @@ export async function reviewSheet({ onClose } = {}) {
       <div class="fm">${esc(w.meaning || '—')}</div>
       ${ex ? `<div class="fc">${sent}${say('sentence')}</div>` : ''}
       ${w.exampleTr ? `<div class="ft">${esc(w.exampleTr)}</div>` : ''}
-      <div class="rv-tools">${ex && !w.exampleTr ? `<button class="rv-tr">${ICON.globe}Translate sentence</button>` : ''}<button class="rv-edit">${ICON.edit}Edit meaning</button><button class="rv-dict-btn">${ICON.book}Dictionary</button></div>`;
+      <div class="rv-tools">${ex && !w.exampleTr ? `<button class="rv-tr">${ICON.globe}Translate sentence</button>` : ''}<button class="rv-edit">${ICON.edit}Edit meaning</button><button class="rv-dict-btn">${ICON.book}Dictionary</button>${ex ? trainButtonHTML(ex, 'rv-train') : ''}</div>`;
     return `<div class="card3d"><div class="face front">${front}</div><div class="face back">${back}</div></div>
       <i class="stamp know">Know</i><i class="stamp again">Still learning</i>`;
   };
@@ -549,6 +550,15 @@ export async function reviewSheet({ onClose } = {}) {
         return render();
       }
       if (b.matches('.rv-tr')) return translateSentence(b);
+      if (b.dataset.train != null) {
+        const w = cur.w;
+        return onTrainButton(b, { it: w.example, en: w.exampleTr, term: w.term }).then((r) => {
+          if (!r?.en || w.exampleTr || cur?.w.term !== w.term) return;
+          cur.w = entry(w.term) || w; // it now has the sentence's translation
+          $('.face.back .fc', body)?.insertAdjacentHTML('afterend', `<div class="ft">${esc(r.en)}</div>`);
+          $('.rv-tr', body)?.remove();
+        });
+      }
       if (b.matches('.cg-add')) return addLingq(b);
       if (b.dataset.term) return sayBtn(b, b.dataset.term);
       if (b.dataset.say) return sayBtn(b, b.dataset.say === 'word' ? shown() : cur.w.example);

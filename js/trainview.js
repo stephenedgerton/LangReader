@@ -1,12 +1,16 @@
-// The Training tab: today's plan, your packs as covers on shelves, and each pack's own page (back arrow,
-// not a sheet) with its sentences in Italian only, each one playable. Plus Training's settings.
+// The Training tab: today's plan, the packs as covers on shelves (Your Packs with From reading, Ready-made,
+// More to Add), and each pack's own page (back arrow, not a sheet) with its sentences in Italian only, each one
+// playable. Plus a sentence's sheet, a pack's ⋯ menu and Training's settings. Adding and editing your own
+// sentences and packs is in mysentences.js.
 import { settings } from './settings.js';
-import { esc, icons, openSheet, closeSheet, $, $$ } from './ui.js';
+import { esc, icons, openSheet, closeSheet, toast, $, $$ } from './ui.js';
 import { speak, stopSpeaking } from './services.js';
 import { haptic } from './haptics.js';
 import { getDays } from './stats.js';
 import { level, learned, isNew, genderize } from './sentences.js';
-import { STEPS, loadSentences, syncPacks, packOn, setPackOn, packSentences, todaysPlan, minutes, doneToday, sizes, textOf, trainingStreak, setPaused, sentence } from './training.js';
+import { STEPS, loadSentences, syncPacks, packOn, setPackOn, packSentences, todaysPlan, minutes, doneToday, sizes, textOf, trainingStreak, setPaused, sentence,
+  packMeta, ownPacks, readingPack, isTrained, focusPack, setFocus, deletePack, deleteSentence } from './training.js';
+import { packCoverHTML, newSentenceSheet, packEditSheet, sentencePacksSheet, editSentenceSheet } from './mysentences.js';
 import { drillSheet, stepIcon } from './drill.js';
 import { reviewSheet, todaysCount, reviewedToday } from './review.js';
 import { PACKS, packInfo, loadPack } from '../samples/packs/index.js';
@@ -41,8 +45,7 @@ export async function trainingCardHTML() {
     <div><h4>Today's Training</h4><p>${line.replace('  ', ' ')}</p></div><span class="chev">›</span></button>`;
 }
 
-const cover = (p, big = false) => `<div class="cover pack-cover${big ? ' big' : ''}" style="background:linear-gradient(160deg, ${p.colors[1]}, ${p.colors[0]})">
-  <div><div class="ce">${p.emoji}</div><div class="ct">${esc(p.name)}</div></div><div class="ca">Ready-made</div></div>`;
+const cover = (p, big = false) => packCoverHTML(p, { big, star: focusPack() === p.id });
 
 function packStats(id) {
   const list = packSentences(id), now = Date.now(), end = new Date(); end.setHours(23, 59, 59, 999);
@@ -54,6 +57,9 @@ function packStats(id) {
   };
 }
 
+// The focus pack, as a line at the bottom of the Today card.
+const focusLine = () => { const f = focusPack() && packMeta(focusPack()); return f ? `<button class="tr-focus" data-pack="${esc(f.id)}"><b>★</b> New sentences come from <b>${esc(f.name)}</b> first</button>` : ''; };
+
 function todayHTML(t) {
   const C = 2 * Math.PI * 28;
   if (!t.steps.length) return `<div class="card tr-today"><p class="muted">Every step is set to 0. Change that in Training settings (⚙︎).</p></div>`;
@@ -63,15 +69,15 @@ function todayHTML(t) {
   if (t.allDone) {
     return `<div class="card tr-today all-done">${rings}<div class="tr-foot"><div><div class="big">Done for today</div>
       <p>${t.streak ? `🔥 ${t.streak} day${t.streak === 1 ? '' : 's'} in a row · ` : ''}Come back tomorrow for a fresh set.</p></div>
-      <button class="resume soft" data-act="more">More</button></div></div>`;
+      <button class="resume soft" data-act="more">More</button></div>${focusLine()}</div>`;
   }
   return `<div class="card tr-today">${rings}<div class="tr-foot"><div><div class="big">About ${t.mins} min</div>
     <p>${t.steps.filter((s) => !s.done).length} step${t.steps.filter((s) => !s.done).length === 1 ? '' : 's'} ${t.started ? 'left' : 'today'}${t.streak ? ` · 🔥 ${t.streak}` : ''}</p></div>
-    <button class="resume" data-act="start">${t.started ? 'Continue' : 'Start'}</button></div></div>`;
+    <button class="resume" data-act="start">${t.started ? 'Continue' : 'Start'}</button></div>${focusLine()}</div>`;
 }
 
 function shelfItem(p) {
-  const on = packOn(p.id), st = packStats(p.id);
+  const on = isTrained(p.id), st = packStats(p.id);
   return `<button class="book pack${on ? '' : ' off'}" data-pack="${p.id}">${cover(p)}
     <div class="pack-meta">${on ? `${st.learned} of ${st.n} learned` : `${st.n} sentences`}</div>
     ${on ? `<div class="hair"><i style="width:${st.n ? (st.learned / st.n) * 100 : 0}%"></i></div>` : ''}</button>`;
@@ -83,16 +89,21 @@ export async function renderTraining(v = view) {
   const t = await trainingToday();
   await Promise.all(PACKS.filter((p) => !packOn(p.id) && !counts.has(p.id)).map(async (p) => counts.set(p.id, (await loadPack(p.id)).length)));
   const words = todaysCount(), wordsDone = reviewedToday();
-  const mine = PACKS.filter((p) => packOn(p.id)), more = PACKS.filter((p) => !packOn(p.id));
+  const yours = [readingPack(), ...ownPacks()].filter(Boolean);
+  const ready = PACKS.filter((p) => packOn(p.id)).map((p) => packMeta(p.id)), more = PACKS.filter((p) => !packOn(p.id)).map((p) => packMeta(p.id));
   v.innerHTML = `
     <div class="view-head"><h1 class="large-title">Training</h1>
-      <button class="circle-btn" data-act="settings" aria-label="Training settings">${icons.gear}</button></div>
+      <div class="head-btns"><button class="circle-btn" data-act="new" aria-label="New sentence">${icons.plus}</button>
+      <button class="circle-btn" data-act="settings" aria-label="Training settings">${icons.gear}</button></div></div>
     <div class="section-title">Today's Training</div>
     ${todayHTML(t)}
     ${!settings.trainWords && (words || wordsDone) ? `<button class="card review-card tr-words" data-act="words"><div class="rv-ico">${words ? icons.cards : '✓'}</div>
       <div><h4>${words ? `Bonus: ${words} word${words === 1 ? '' : 's'}` : 'Words done for today'}</h4><p>${words ? 'Your gems, if you’ve got a couple more minutes' : `${wordsDone} reviewed. Practise more if you like.`}</p></div><span class="chev">›</span></button>` : ''}
     <div class="section-title">Your Packs</div>
-    ${mine.length ? `<div class="shelf">${mine.map(shelfItem).join('')}</div>` : '<p class="muted tr-empty">Add a pack below to start training.</p>'}
+    <div class="shelf">${yours.map(shelfItem).join('')}<button class="book pack pk-new" data-act="newpack"><div class="cover pack-cover">${icons.plus}<div class="ct">New Pack</div></div>
+      <div class="pack-meta">${yours.length ? '' : 'Your own sentences'}</div></button></div>
+    <div class="section-title">Ready-made</div>
+    ${ready.length ? `<div class="shelf">${ready.map(shelfItem).join('')}</div>` : '<p class="muted tr-empty">Add a pack below to train it.</p>'}
     ${more.length ? `<div class="section-title">More to Add</div><div class="shelf">${more.map(shelfItem).join('')}</div>` : ''}`;
   v.onclick = (e) => {
     const b = e.target.closest('[data-act],[data-pack]'); if (!b) return;
@@ -102,6 +113,8 @@ export async function renderTraining(v = view) {
     if (a === 'more') return moreSheet();
     if (a === 'words') return reviewSheet({ onClose: () => renderTraining() });
     if (a === 'settings') return trainingSettings();
+    if (a === 'new') return newSentenceSheet({}, { onDone: () => renderTraining() });
+    if (a === 'newpack') return packEditSheet(null, { onDone: (p) => { page = p.id; showEN = false; renderPack(p.id); } });
   };
 }
 
@@ -137,10 +150,12 @@ function stopPlayAll() {
   if (view) { $$('.tr-row.now', view).forEach((r) => r.classList.remove('now')); const b = $('[data-act=playall]', view); if (b) b.innerHTML = `${play} Play all`; }
 }
 
+const KICKER = { bundled: 'Ready-made', own: 'Your pack', reading: 'From your reading' };
+
 async function renderPack(id) {
-  const v = view, p = packInfo(id);
+  const v = view, p = packMeta(id);
   if (!p) { page = null; return renderTraining(); }
-  const on = packOn(id);
+  const on = isTrained(id);
   // A pack that isn't on yet shows its sentences straight from the pack file.
   const list = on ? packSentences(id) : (await loadPack(id)).map((x) => ({ id: `${id}:${x.k}`, it: x.it, en: x.en, ctx: x.ctx, cards: {}, preview: true }));
   const st = packStats(id);
@@ -157,14 +172,16 @@ async function renderPack(id) {
     <div class="tr-nav"><button class="tr-back" data-act="back">${back}Training</button>
       <button class="circle-btn" data-act="packmenu" aria-label="Pack options">${icons.more}</button></div>
     <div class="hero-book tr-hero">${cover(p, true)}
-      <div class="hero-meta"><div class="kicker">Ready-made · ${list.length} sentences</div>
+      <div class="hero-meta"><div class="kicker">${KICKER[p.kind]} · ${list.length} sentence${list.length === 1 ? '' : 's'}</div>
         <h3>${esc(p.name)}</h3>
         <div class="author">${on ? `${st.learned} learned${st.due ? ` · ${st.due} due` : ''}` : 'Not in your training yet'}</div>
-        <div class="tr-hero-btns">${on ? '<button class="resume" data-act="train">Train</button>' : '<button class="resume" data-act="add">Add to my packs</button>'}</div>
+        ${focusPack() === id ? '<div class="tr-hero-focus">★ Focus</div>' : ''}
+        <div class="tr-hero-btns">${on ? `${list.length ? '<button class="resume" data-act="train">Train</button>' : ''}<button class="resume soft" data-act="addsent">${icons.plus}Sentence</button>` : '<button class="resume" data-act="add">Add to my packs</button>'}</div>
       </div></div>
-    <p class="tr-blurb">${esc(p.blurb)}</p>
+    ${p.blurb ? `<p class="tr-blurb">${esc(p.blurb)}</p>` : ''}
     <div class="tr-list-head"><div class="section-title">Sentences</div>
       <div><button data-act="playall">${play} Play all</button><button data-act="en">${showEN ? 'Hide English' : 'Show English'}</button></div></div>
+    ${list.length ? '' : `<p class="muted tr-empty">No sentences yet. Add one with + Sentence${p.kind === 'reading' ? ', or with “Train this sentence” on a word while you read' : ''}.</p>`}
     <div class="tr-list">${list.map((s) => `<div class="tr-row${s.paused ? ' paused' : ''}" data-id="${esc(s.id)}">
         <button class="rv-say" data-play aria-label="Play">${icons.speaker}</button>
         <button class="txt" data-sent><div class="it">${esc(text(s))}</div>${showEN ? `<div class="en">${esc(s.en)}</div>` : ''}</button>${lv(s)}</div>`).join('')}</div>
@@ -181,6 +198,7 @@ async function renderPack(id) {
     if (a === 'train') { stopPlayAll(); return askGender(packSentences(id), () => drillSheet({ only: id, onClose: () => renderPack(id) })); }
     if (a === 'add') { haptic(); await setPackOn(id, true); return askGender(packSentences(id), () => renderPack(id), () => renderPack(id)); }
     if (a === 'packmenu') return packMenu(id);
+    if (a === 'addsent') { stopPlayAll(); return newSentenceSheet({ pack: id }, { onDone: () => renderPack(id) }); }
   };
   // Play all: each sentence in turn, with a short pause between, highlighting the one that's playing.
   function playAll(btn) {
@@ -212,36 +230,72 @@ function sayRow(b, text) {
   setTimeout(off, 6000);
 }
 
+// A sentence's sheet: the English behind a button, play, and (once it's yours to train) edit, its packs,
+// pause and delete.
 function sentenceSheet(s) {
   const text = textOf(s), live = !s.preview;
+  const names = live ? s.packs.map((id) => packMeta(id)?.name).filter(Boolean).join(', ') : '';
   const body = openSheet(`<h2><span></span><button class="x">${icons.close}</button></h2>
     <div class="tr-sheet-it">${esc(text)}</div>
     <div class="tr-sheet-en" hidden>${esc(s.en)}</div>
     <button class="tr-show-en" data-a="en">Show English</button>
     ${s.ctx ? `<div class="tr-sheet-ctx">${esc(s.ctx)}</div>` : ''}
+    ${s.from ? `<div class="tr-sheet-from">From <i>${esc(s.from)}</i></div>` : ''}
     <div class="rv-tools tr-sheet-tools"><button data-a="play">${icons.speaker}Play</button><button data-a="slow">${stepIcon('slow')}Slow</button></div>
-    ${live ? `<div class="action-list" style="margin-top:18px"><button data-a="pause"><span>${s.paused ? 'Resume training this' : 'Pause training this'}</span></button></div>
+    ${live ? `<div class="action-list" style="margin-top:18px">
+        <button data-a="edit"><span>Edit</span></button>
+        <button data-a="packs"><span>Packs…</span><small class="muted">${esc(names)}</small></button>
+        <button data-a="pause"><span>${s.paused ? 'Resume training this' : 'Pause training this'}</span></button>
+        <button data-a="delete" class="danger"><span>Delete sentence</span></button></div>
       <p class="muted" style="font-size:13px;margin:8px 4px 0">${s.paused ? 'Paused: it stays in the pack but is left out of training.' : 'Pausing keeps it in the pack but leaves it out of training.'}</p>` : ''}`);
+  const back = () => renderPack(page);
   body.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.matches('.x')) return closeSheet();
-    if (b.dataset.a === 'en') { $('.tr-sheet-en', body).hidden = false; b.remove(); return; }
-    if (b.dataset.a === 'play') return speak(text);
-    if (b.dataset.a === 'slow') return speak(text, { slow: true });
-    if (b.dataset.a === 'pause') { await setPaused(s.id, !s.paused); closeSheet(); return renderPack(page); }
+    const a = b.dataset.a;
+    if (a === 'en') { $('.tr-sheet-en', body).hidden = false; b.remove(); return; }
+    if (a === 'play') return speak(text);
+    if (a === 'slow') return speak(text, { slow: true });
+    if (a === 'pause') { await setPaused(s.id, !s.paused); closeSheet(); return back(); }
+    if (a === 'edit') return editSentenceSheet(s, { onDone: back });
+    if (a === 'packs') return sentencePacksSheet(s, { onDone: back });
+    if (a === 'delete') {
+      if (!confirm(`Delete “${text}”?${s.packs.length > 1 ? ' It’s taken out of every pack it’s in.' : ''}`)) return;
+      await deleteSentence(s.id); closeSheet(); toast('Sentence deleted'); return back();
+    }
   };
 }
 
+// A pack's ⋯: focus on it, add a sentence, edit or delete your own, add or remove a ready-made one.
 function packMenu(id) {
-  const p = packInfo(id), on = packOn(id);
+  const p = packMeta(id), on = isTrained(id), focused = focusPack() === id;
+  const n = packSentences(id).length, only = packSentences(id).filter((s) => s.packs.length === 1).length;
   const body = openSheet(`<h2>${esc(p.name)}<button class="x">${icons.close}</button></h2>
-    <div class="action-list">${on ? `<button data-a="off" class="danger"><span>Remove from my packs</span></button>` : '<button data-a="on"><span>Add to my packs</span></button>'}</div>
-    ${on ? '<p class="muted" style="font-size:13px;margin:8px 4px 0">Your progress is kept if you add it again later.</p>' : ''}`);
+    <div class="action-list">
+      ${on ? `<button data-a="focus"><span>${focused ? 'Stop focusing on this pack' : 'Focus on this pack'}</span><b class="pk-menu-star">★</b></button>
+        <button data-a="addsent"><span>Add a sentence</span></button>` : ''}
+      ${p.kind === 'own' ? '<button data-a="edit"><span>Edit pack…</span></button>' : ''}
+      ${p.kind !== 'bundled' ? '<button data-a="delete" class="danger"><span>Delete pack</span></button>' : ''}
+      ${p.kind === 'bundled' ? (on ? `<button data-a="off" class="danger"><span>Remove from my packs</span></button>` : '<button data-a="on"><span>Add to my packs</span></button>') : ''}
+    </div>
+    <p class="muted" style="font-size:13px;margin:8px 4px 0">${on ? (focused ? 'New sentences come from this pack first.' : 'Focus on a pack and its new sentences come first, one pack at a time.') : ''}
+      ${p.kind === 'bundled' && on ? ' Your progress is kept if you remove it and add it again later.' : ''}</p>`);
   body.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.a) await setPackOn(id, b.dataset.a === 'on');
+    const a = b.dataset.a;
+    if (!a) return closeSheet();
+    if (a === 'addsent') return newSentenceSheet({ pack: id }, { onDone: () => renderPack(id) });
+    if (a === 'edit') return packEditSheet(p, { onDone: () => renderPack(id) });
+    if (a === 'focus') { haptic(); setFocus(focused ? '' : id); closeSheet(); toast(focused ? 'No focus pack' : `Focusing on ${p.name}`); return renderPack(id); }
+    if (a === 'delete') {
+      const kept = n - only;
+      if (!confirm(`Delete the pack “${p.name}”?${only ? ` Its ${only === 1 ? 'sentence goes' : `${only} sentences go`} too.` : ''}${kept ? ` ${kept === 1 ? 'One sentence is' : `${kept} sentences are`} in another pack too, so ${kept === 1 ? 'it stays' : 'they stay'} there.` : ''}`)) return;
+      await deletePack(id); closeSheet(); page = null; toast('Pack deleted'); return renderTraining();
+    }
+    if (a === 'on' || a === 'off') await setPackOn(id, a === 'on');
+    if (a === 'off' && focused) setFocus('');
     closeSheet();
-    if (b.dataset.a === 'off') page = null;
+    if (a === 'off') page = null;
     renderTraining();
   };
 }

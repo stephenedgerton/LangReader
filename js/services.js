@@ -6,8 +6,9 @@ import { VOICES, piperSupported, warmUp, unlockAudio, speakPiper, stopPiper } fr
 // ---------- Translation (MyMemory: free, CORS-enabled, no key needed) ----------
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
 
-export async function translate(text, { word = false } = {}) {
-  const src = settings.lang, tgt = settings.target;
+// `reverse` translates the other way, into the language you're learning (New Sentence's suggestion).
+export async function translate(text, { word = false, reverse = false } = {}) {
+  const [src, tgt] = reverse ? [settings.target, settings.lang] : [settings.lang, settings.target];
   const key = `${src}|${tgt}|${text}`;
   const cached = await db.get('tcache', key).catch(() => null);
   if (cached) return cached.value;
@@ -21,7 +22,8 @@ export async function translate(text, { word = false } = {}) {
   const data = await res.json();
   if (data.responseStatus && +data.responseStatus !== 200) throw new Error(data.responseDetails || 'Translation failed');
 
-  const main = clean(data.responseData?.translatedText || '');
+  // A sentence that ends with a full stop keeps it in translation; a word's gloss never has one.
+  const main = clean(data.responseData?.translatedText || '', !word && /[.;:]\s*$/.test(text));
   const seen = new Set();
   const options = [];
   const add = (t, src) => {
@@ -44,7 +46,7 @@ export async function translate(text, { word = false } = {}) {
   return value;
 }
 
-const clean = (s) => String(s || '').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim().replace(/^[.,;:!?]+|[.,;:]+$/g, '');
+const clean = (s, keepEnd = false) => String(s || '').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim().replace(keepEnd ? /^[.,;:!?]+/ : /^[.,;:!?]+|[.,;:]+$/g, '');
 const normalizeCmp = (s) => String(s || '').toLowerCase().replace(/[^\p{L}\s']/gu, '').trim();
 
 // Google Translate web page (opens the Google Translate app on iPhone when it's installed).

@@ -1069,3 +1069,39 @@ svg.solid { fill: currentColor; stroke: none; }
 .dr-bonus { margin: 0 0 14px; }
 .drill > .primary { margin-top: 4px; }
 @media (prefers-reduced-motion: reduce) { .dr-disc::before, .dr-disc::after { animation: none !important; } }
+
+/* ============ Your own sentences and packs ============ */
+#app-toast { position: fixed; z-index: 70; bottom: calc(var(--safe-bottom) + 96px); }
+.train-btn { display: inline-flex; align-items: center; gap: 5px; color: var(--tint); font: 600 13px var(--sans); }
+.train-btn svg { width: 14px; height: 14px; stroke-width: 2.4; flex: none; }
+.train-btn:disabled { color: var(--label-2); }
+.wp-train { margin-top: 9px; color: var(--r-fg); opacity: .8; }
+.wp-train:not(:disabled) { color: var(--tint); opacity: 1; }
+.wcard .ctx-train { margin-top: 8px; }
+.rv-tools .rv-train:disabled { color: var(--label-2); }
+.pk-star { position: absolute; top: 6px; right: 7px; z-index: 1; font-size: 15px; color: #ffe27a; text-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.pk-new .cover { background: var(--fill); color: var(--tint); box-shadow: none; border: 1.5px dashed var(--sep); justify-content: center; align-items: center; gap: 6px; text-align: center; }
+.pk-new .cover::after { content: none; }
+.pk-new .cover svg { width: 26px; height: 26px; stroke-width: 2.2; }
+.pk-new .cover .ct { font: 600 14px/1.2 var(--sans); }
+.tr-focus { display: block; width: 100%; text-align: left; margin-top: 12px; padding-top: 10px; border-top: .5px solid var(--sep); font-size: 14px; color: var(--label-2); }
+.tr-focus b { color: var(--label); font-weight: 600; }
+.tr-focus b:first-child { color: var(--gem-ink, var(--tint)); }
+.tr-hero-focus { font-size: 13px; font-weight: 600; color: var(--tint); margin-top: 4px; }
+.tr-hero-btns .resume { display: inline-flex; align-items: center; gap: 4px; }
+.tr-hero-btns .resume svg { width: 15px; height: 15px; stroke-width: 2.4; }
+.pk-menu-star { color: var(--tint); }
+.tr-sheet-from { font-size: 13px; color: var(--label-2); margin-top: 8px; }
+.field.ns textarea { min-height: 0; height: auto; font-size: 17px; }
+.ns-help { font-size: 13px; margin: -6px 4px 12px; }
+.ns-suggest { margin: -2px 0 10px; }
+.ns-note { font-size: 13px; color: var(--label-2); background: var(--fill); border-radius: 10px; padding: 9px 12px; margin: 0 0 12px; }
+.field .chips { margin-bottom: 0; }
+.pk-preview { display: flex; justify-content: center; margin: 0 0 16px; }
+.pk-preview .cover { width: 108px; padding: 15px 11px; } /* the cover pads by % of its parent, here the whole sheet */
+.pk-emoji { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.pk-emoji button { font-size: 22px; aspect-ratio: 1; border-radius: 10px; display: grid; place-items: center; }
+.pk-emoji button.on { background: var(--fill-2); box-shadow: inset 0 0 0 2px var(--tint-fill); }
+.pk-colors { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+.pk-colors button { aspect-ratio: 1; border-radius: 50%; }
+.pk-colors button.on { box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 4px var(--tint-fill); }

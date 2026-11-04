@@ -8,6 +8,7 @@ import { settings } from './settings.js';
 import { bump } from './stats.js';
 import { haptic } from './haptics.js';
 import { freqLoaded, loadFreq, freqTagHTML, lookupFreq } from './freq.js';
+import { trainButtonHTML, onTrainButton } from './mysentences.js';
 
 let current = null;
 let closedAt = -Infinity;
@@ -27,7 +28,8 @@ export function closeBubble({ expand = false } = {}) {
   c.onClose?.();
 }
 
-// opts: {anchor (element, or a function returning it), container, term, display, context, phrase, onExpand, onClose}
+// opts: {anchor (element, or a function returning it), container, term, display, context, phrase, onExpand, onClose,
+//   train: {it, term, from} for "Train this sentence"}
 export function openBubble(opts) {
   closeBubble();
   const { container, term, display, context, phrase = false } = opts;
@@ -50,6 +52,7 @@ export function openBubble(opts) {
       <button class="s5" data-s="5" aria-label="Known">${icons.check}</button>
       <button class="wp-more" data-more aria-label="More">${icons.more}</button>
     </div>
+    ${opts.train ? trainButtonHTML(opts.train.it, 'wp-train') : ''}
     <div class="wp-arrow"></div>`;
   container.appendChild(el);
   current = { el, onClose: opts.onClose, dismiss: () => {
@@ -114,6 +117,7 @@ export function openBubble(opts) {
     if (!b) return;
     e.stopPropagation();
     if (b.dataset.speak != null) return speak(display);
+    if (b.dataset.train != null) return onTrainButton(b, opts.train).then(() => { if (current?.el === el && anchor()?.isConnected) position(el, anchor(), container); });
     if (b.dataset.more != null) { closeBubble({ expand: true }); return opts.onExpand(); }
     if (b.dataset.mean != null) {
       if (cur.meaning || !suggestion) { closeBubble({ expand: true }); return opts.onExpand(); }

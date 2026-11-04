@@ -9,10 +9,11 @@ import { normalize, tokenize } from './text.js';
 import { haptic } from './haptics.js';
 import { freqSentence } from './freq.js';
 import { parseForm, inflect, formLabel } from './english.js';
+import { trainButtonHTML, onTrainButton } from './mysentences.js';
 
 // Like LingQ, every LingQ keeps the sentence it was saved from (`example`), plus that sentence's
 // translation (`exampleTr`) once you've translated it. Phrases also keep `display`, the text as printed.
-// opts: {term, display, phrase, context, inPhrase, onClose, onOpenPhrase, onSaveSentence}
+// opts: {term, display, phrase, context, inPhrase, from (the book, for "Train this sentence"), onClose, onOpenPhrase, onSaveSentence}
 export function openWordCard(opts) {
   const { term, phrase = false, inPhrase = null } = opts;
   const e = entry(term) || { term, status: 0, meaning: '' };
@@ -24,7 +25,7 @@ export function openWordCard(opts) {
   let sentTr = e.example === context.slice(0, 600) ? e.exampleTr || '' : '';
 
   const ctxHTML = context
-    ? `<div class="ctx${isSentence ? ' bare' : ''}">${isSentence ? '' : highlight(context, display)}<span class="tr"${sentTr ? '' : ' hidden'}>${esc(sentTr)}</span><div class="ctx-actions">${sentTr ? '' : `<button class="tr-btn">Translate sentence</button>`}<a class="gt-link" href="${googleTranslateURL(context)}" target="_blank" rel="noopener">Google Translate ↗</a>${opts.onSaveSentence && !isSentence ? '<button class="sent-btn">Save whole sentence</button>' : ''}</div></div>`
+    ? `<div class="ctx${isSentence ? ' bare' : ''}">${isSentence ? '' : highlight(context, display)}<span class="tr"${sentTr ? '' : ' hidden'}>${esc(sentTr)}</span><div class="ctx-actions">${sentTr ? '' : `<button class="tr-btn">Translate sentence</button>`}<a class="gt-link" href="${googleTranslateURL(context)}" target="_blank" rel="noopener">Google Translate ↗</a>${opts.onSaveSentence && !isSentence ? '<button class="sent-btn">Save whole sentence</button>' : ''}</div>${trainButtonHTML(context, 'ctx-train')}</div>`
     : '';
 
   const body = openSheet(`
@@ -138,6 +139,12 @@ export function openWordCard(opts) {
       return;
     }
     if (t.matches('.sent-btn')) return opts.onSaveSentence();
+    if (t.matches('[data-train]')) {
+      const r = await onTrainButton(t, { it: context, en: sentTr, term, from: opts.from });
+      // The translation it fetched is the sentence's, so show it like "Translate sentence" would.
+      if (r?.en && !sentTr) { sentTr = r.en; const tr = $('.ctx .tr', body); tr.textContent = sentTr; tr.hidden = false; $('.ctx .tr-btn', body)?.remove(); }
+      return;
+    }
     if (t.matches('.tr-btn')) {
       const tr = $('.ctx .tr', body);
       t.textContent = 'Translating…';

@@ -22,8 +22,9 @@ describe('training', () => {
     assert.match(card, /Listen\s*4/); assert.match(card, /Shadow\s*4/); assert.match(card, /Say it\s*5/, '5 new sentences a day, nothing due yet');
     assert.match(card, /About \d+ min/);
     const shelves = await page.$$eval('.shelf', (s) => s.map((x) => x.textContent.replace(/\s+/g, ' ')));
-    assert.match(shelves[0], /Survival\s*Ready-made\s*0 of 30 learned/);
-    assert.match(shelves[1], /Partner: everyday\s*Ready-made\s*30 sentences.*Partner: plans & errands\s*Ready-made\s*30 sentences/);
+    assert.match(shelves[0], /^\s*New Pack\s*Your own sentences\s*$/, 'Your Packs: nothing yet but New Pack');
+    assert.match(shelves[1], /Survival\s*Ready-made\s*0 of 30 learned/);
+    assert.match(shelves[2], /Partner: everyday\s*Ready-made\s*30 sentences.*Partner: plans & errands\s*Ready-made\s*30 sentences/);
     assert.equal(await tr(page, (m) => m.trainingList().length), 30);
     await page.click('#tabbar button[data-tab=home]'); await sleep(300);
     assert.match(await page.textContent('.training-card'), /Today's Training\s*3 steps · about \d+ min/);
@@ -127,7 +128,7 @@ describe('training', () => {
     assert.deepEqual((await page.evaluate(() => window.__said)).slice(0, 2), ['Buongiorno, amore.', 'Hai dormito bene?']);
     await page.click('[data-act=playall]');
     await page.click('[data-act=back]'); await sleep(300);
-    assert.match(await page.$$eval('.shelf', (s) => s[0].textContent), /Partner: everyday/, 'now in Your Packs');
+    assert.match(await page.$$eval('.shelf', (s) => s[1].textContent), /Partner: everyday/, 'now with the ready-made packs you train');
     assert.deepEqual(errors, []);
   });
 

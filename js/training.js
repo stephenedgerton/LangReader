@@ -5,11 +5,17 @@
 // join when a pack's `rev` goes up. One already in the store is never overwritten, so your edits, pauses and
 // progress stay. Today's counts live in localStorage langreader.trainDay = {date, listen, shadow, say, fresh,
 // missed: [ids rated Again]}; which pack revisions are in the store, in langreader.packRevs.
+//
+// Packs come in three kinds: ready-made (samples/packs/, on when you add them), your own (IndexedDB `packs`)
+// and From reading (id `reading`, made by "Train this sentence"; it has no record and exists while it has
+// sentences). Your own packs and From reading are always trained. A sentence is in every pack listed in
+// `packs`; one you made yourself has no `bundled`. Deleting a ready-made sentence hides it, so an app update
+// can't bring it back, and editing one sets `edited` (pack updates never overwrite a sentence that's there).
 import { db } from './db.js';
 import { settings } from './settings.js';
 import { todayKey, bump, record } from './stats.js';
 import { schedule, AGAIN } from './srs.js';
-import { buildPlan, isNew, genderize } from './sentences.js';
+import { buildPlan, isNew, genderize, newOrder, sameText } from './sentences.js';
 import { retention } from './review.js';
 import { PACKS, DEFAULT_PACKS, loadPack, packInfo } from '../samples/packs/index.js';
 
@@ -23,15 +29,98 @@ export const STEPS = [
 const SECONDS = { listen: 20, shadow: 40, say: 30 };
 
 let cache = null;   // id -> sentence
+let mine = null;    // id -> your own pack
 
 export async function loadSentences() {
-  if (!cache) cache = new Map((await db.all('sentences')).map((s) => [s.id, s]));
+  if (!cache) {
+    const [ss, ps] = await Promise.all([db.all('sentences'), db.all('packs')]);
+    cache = new Map(ss.map((s) => [s.id, s]));
+    mine = new Map(ps.map((p) => [p.id, p]));
+  }
   return cache;
 }
 export const sentence = (id) => cache?.get(id);
 export async function putSentence(s) { cache.set(s.id, s); await db.put('sentences', s); return s; }
 // After a backup is restored.
-export function forgetSentences() { cache = null; }
+export function forgetSentences() { cache = null; mine = null; }
+
+// ---------- packs ----------
+export const READING = 'reading';
+const READING_PACK = { id: READING, name: 'From reading', emoji: '📖', colors: ['#14505a', '#2f8f8a'], kind: 'reading',
+  blurb: 'Sentences you picked out while reading. Add one with “Train this sentence” on a word.' };
+// Colours and emoji for your own packs.
+export const PACK_COLORS = [['#0e5a43', '#2bb487'], ['#14505a', '#2f8f8a'], ['#1f3b57', '#3a6b8c'], ['#4b2e5c', '#9a6ab0'],
+  ['#6b1f3a', '#c2577e'], ['#7a2e2e', '#b5523b'], ['#8a5a14', '#d19a3a'], ['#203040', '#506070']];
+export const PACK_EMOJI = ['⭐', '💬', '❤️', '🏠', '🍝', '☕', '🛒', '✈️', '🚆', '💼', '🎉', '📚', '🎵', '⚽', '🌿', '🐶', '👶', '🗣️', '💡', '🍷', '🏖️', '📞', '🩺', '🧭'];
+
+// Any pack by id, as {id, name, emoji, colors, blurb, kind: 'bundled' | 'own' | 'reading'}.
+export function packMeta(id) {
+  if (id === READING) return READING_PACK;
+  const p = mine?.get(id);
+  if (p) return { blurb: '', ...p, kind: 'own' };
+  const b = packInfo(id);
+  return b && { ...b, kind: 'bundled' };
+}
+export const ownPacks = () => [...(mine?.values() || [])].sort((a, b) => a.created - b.created).map((p) => packMeta(p.id));
+export const readingPack = () => (packSentences(READING).length ? READING_PACK : null);
+// The packs you can put a sentence in: From reading (once it exists), your own, and the ready-made ones you train.
+export const pickablePacks = () => [readingPack(), ...ownPacks(), ...PACKS.filter((p) => packOn(p.id)).map((p) => packMeta(p.id))].filter(Boolean);
+// Whether a pack is trained: yours always are, ready-made ones once you add them.
+export const isTrained = (id) => id === READING || !!mine?.get(id) || packOn(id);
+
+const newId = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+export async function savePack(p) {
+  await loadSentences();
+  const pack = { id: p.id || newId('p'), name: p.name, emoji: p.emoji, colors: p.colors, created: p.created || Date.now() };
+  mine.set(pack.id, pack);
+  await db.put('packs', pack);
+  return packMeta(pack.id);
+}
+// Deletes one of your packs (or From reading). Its sentences go too, except those that are also in another pack.
+export async function deletePack(id) {
+  await loadSentences();
+  for (const s of [...cache.values()]) {
+    if (!s.packs.includes(id)) continue;
+    const rest = s.packs.filter((x) => x !== id);
+    if (rest.length) await putSentence({ ...s, packs: rest });
+    else await deleteSentence(s.id);
+  }
+  if (mine.has(id)) { mine.delete(id); await db.del('packs', id); }
+  if (settings.trainFocus === id) settings.trainFocus = '';
+}
+
+// The pack new sentences come from first, if it's one you train.
+export const focusPack = () => (settings.trainFocus && isTrained(settings.trainFocus) && packMeta(settings.trainFocus) ? settings.trainFocus : '');
+export const setFocus = (id) => { settings.trainFocus = id || ''; };
+
+// ---------- your own sentences ----------
+// The sentence with these words, if you have it (not one you deleted).
+export const findSentence = (it) => [...(cache?.values() || [])].find((s) => !s.hidden && sameText(textOf(s), it)) || null;
+
+export async function addSentence({ it, en, ctx = '', packs, from = '' }) {
+  await loadSentences();
+  const s = { id: newId('s'), it: it.trim(), en: en.trim(), ctx: ctx.trim(), packs, created: Date.now(), cards: {}, ...(from && { from }) };
+  return putSentence(s);
+}
+// Adds a sentence you're already training to another pack.
+export async function addToPack(id, pack) {
+  const s = cache.get(id);
+  return s.packs.includes(pack) ? s : putSentence({ ...s, packs: [...s.packs, pack] });
+}
+export async function editSentence(id, patch) {
+  const s = cache.get(id), next = { ...s, ...patch };
+  if (['it', 'en', 'ctx'].some((k) => (next[k] || '') !== (s[k] || ''))) next.edited = true;
+  return putSentence(next);
+}
+export const setSentencePacks = (id, packs) => putSentence({ ...cache.get(id), packs });
+// Yours are deleted; a ready-made one is hidden, so the pack never brings it back.
+export async function deleteSentence(id) {
+  const s = cache.get(id);
+  if (!s) return;
+  if (s.bundled) return putSentence({ ...s, hidden: true });
+  cache.delete(id);
+  await db.del('sentences', id);
+}
 
 // The sentence as you'd say it, with the gendered forms chosen by your settings.
 export const textOf = (s) => genderize(s.it, settings.trainMe || 'm', settings.trainPartner || 'm');
@@ -66,10 +155,11 @@ export async function syncPacks() {
 
 const byOrder = (a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.created - b.created;
 export const packSentences = (id) => [...(cache?.values() || [])].filter((s) => s.packs.includes(id) && !s.hidden).sort(byOrder);
-// The sentences you're training: in a pack that's on, not paused or hidden. New ones come in this order.
+// The sentences you're training: in a pack that's on, not paused or hidden, in the order new ones come in.
 export function trainingList(only = null) {
-  const on = new Set(only ? [only] : enabledPacks());
-  return [...(cache?.values() || [])].filter((s) => !s.hidden && !s.paused && s.packs.some((p) => on.has(p))).sort(byOrder);
+  const on = only ? new Set([only]) : null;
+  const list = [...(cache?.values() || [])].filter((s) => !s.hidden && !s.paused && s.packs.some((p) => (on ? on.has(p) : isTrained(p))));
+  return newOrder(list, only ? '' : focusPack());
 }
 
 // ---------- today ----------

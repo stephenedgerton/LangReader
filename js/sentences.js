@@ -3,7 +3,7 @@
 //
 // A sentence holds two FSRS cards, `cards: {listen, say}` (see srs.js): recognising a sentence by ear and
 // producing it are learned at different speeds. A sentence with neither card is new.
-import { tokenize } from './text.js';
+import { tokenize, normalize } from './text.js';
 import { retrievability, endOfDay, levelFor, RETIRE_DAYS } from './srs.js';
 
 const DAY = 86400000;
@@ -86,3 +86,14 @@ export function buildPlan(list, { now, sizes, maxNew, done = {}, missed = [], ra
   others.forEach(add);
   return { listen, shadow, say, fresh: fresh.map((s) => s.id) };
 }
+
+// The order new sentences come in: the focus pack's first, then the ones you added yourself (oldest first),
+// then the ready-made ones in pack order. Started sentences are scheduled, so their order doesn't matter.
+export function newOrder(list, focus = '') {
+  const rank = (s) => (focus && s.packs?.includes(focus) ? 0 : 2) + (s.bundled ? 1 : 0);
+  return list.slice().sort((a, b) => rank(a) - rank(b) || (a.order ?? Infinity) - (b.order ?? Infinity) || a.created - b.created);
+}
+
+// Two sentences are the same if their words are (case, punctuation and spacing aside).
+export const sameText = (a, b) => wordsOf(a) === wordsOf(b);
+const wordsOf = (t) => tokenize(String(t)).filter((x) => x.type === 'w').map((x) => normalize(x.text)).join(' ');

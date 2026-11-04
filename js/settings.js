@@ -28,7 +28,17 @@ const defaults = {
   retention: 'normal',     // relaxed | normal | intense: how much of your LingQs reviews aim to keep (80/85/90%)
   reviewsPerDay: 20,       // due cards offered a day; the rest wait, most valuable first
   newPerDay: 10,
-  reviewStyle: 'mixed',   // mixed (flashcards, pick the meaning, fill the gap) | flip (flashcards only)           // LingQs that start reviews each day (reading introduces others)
+  reviewStyle: 'mixed',    // mixed (flashcards, pick the meaning, fill the gap) | flip (flashcards only)
+  // Training (see js/training.js): today's share of each step, new sentences a day, and whether word reviews
+  // are part of the plan or a bonus after it.
+  trainListen: 4,
+  trainShadow: 4,
+  trainSay: 8,
+  trainNew: 5,
+  trainWords: false,
+  trainPacks: null,        // ids of the ready-made packs you train (null: DEFAULT_PACKS in samples/packs/index.js)
+  trainMe: '',             // m | f: picks gendered forms about you ('' until asked; masculine meanwhile)
+  trainPartner: '',        // m | f: the same, about your partner
 };
 
 let stored = {};

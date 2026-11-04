@@ -18,7 +18,8 @@ import { allCollections, STATES, filterBooks, SORTS, sortBooks, seriesOrder, boo
 import { checkBadges, achievementsCardHTML, achievementsSheet } from './achievements.js';
 import { loadFreq, recordSnapshot } from './freq.js';
 import { renderStats } from './statsview.js';
-import { reviewSheet, todaysCount, reviewedToday } from './review.js';
+import { renderTraining, trainingCardHTML, leaveTraining } from './trainview.js';
+import { forgetSentences } from './training.js';
 import { requestPersistence, isPersisted, backupDue, backupAge, markBackedUp, snoozeBackup, saveFile } from './storage.js';
 
 let tab = 'home';
@@ -103,12 +104,13 @@ const NAME_TERMS = new Set(NAMES.map(normalize));
 const savedCount = () => allEntries().filter((w) => !(w.status === -1 && NAME_TERMS.has(w.term))).length;
 
 function show(t) {
-  if (!['home', 'library', 'vocab', 'stats'].includes(t)) t = 'home';
+  if (!['home', 'library', 'training', 'vocab', 'stats'].includes(t)) t = 'home';
+  if (tab === 'training' && t !== 'training') leaveTraining();
   tab = t;
   history.replaceState(null, '', '#' + t);
   $$('#tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === t));
   $$('.view').forEach((v) => { v.hidden = v.dataset.tab !== t; });
-  ({ home: renderHome, library: renderLibrary, vocab: renderVocab, stats: () => renderStats($('#view-stats')) })[t]();
+  ({ home: renderHome, library: renderLibrary, training: () => renderTraining($('#view-training')), vocab: renderVocab, stats: () => renderStats($('#view-stats')) })[t]();
 }
 
 async function refreshBooks() { books = await db.all('books'); }
@@ -168,6 +170,7 @@ async function renderHome() {
   const st = streak(days, goal);
   const goalBooks = recent.concat(books.filter((b) => !b.lastOpened)).filter((b) => b.goal);
   const achievements = await achievementsCardHTML();
+  const training = await trainingCardHTML();
 
   v.innerHTML = `
     <div class="view-head"><h1 class="large-title">Home</h1>
@@ -197,7 +200,7 @@ async function renderHome() {
       <div><h4>Today's Reading</h4><div class="big">${mins}:${String(today.seconds % 60).padStart(2, '0')}</div>
         <p>of your ${settings.goalMinutes}-minute goal${st ? ` · 🔥 ${st}-day streak` : ''}</p></div>
     </button>
-    ${reviewCardHTML(c)}
+    ${training}
     ${goalBooks.map(goalCardHTML).join('')}
     ${!goalBooks.length && current ? `<button class="card bgoal-add" data-goal="${current.id}">🎯 <span>Set a pages-a-day goal for <b>${esc(current.title)}</b></span></button>` : ''}
     <div class="section-title">Bookmarks</div>
@@ -219,22 +222,12 @@ async function renderHome() {
     if (b.dataset.open) return open(books.find((x) => x.id === b.dataset.open), b);
     if (b.dataset.goal) return goalSheet(books.find((x) => x.id === b.dataset.goal), { onChange: renderHome });
     if (b.dataset.act === 'goal') return minutesSheet();
-    if (b.dataset.act === 'review') return reviewSheet({ onClose: renderHome });
+    if (b.dataset.act === 'training') return show('training');
     if (b.dataset.act === 'achievements') return achievementsSheet();
     if (b.dataset.act === 'settings') return settingsSheet();
     if (b.dataset.act === 'backup') return exportAll().then(renderHome);
     if (b.dataset.act === 'snooze') { snoozeBackup(); return renderHome(); }
   };
-}
-
-// Today's reviews: only today's share, never the backlog, and about 6 s a card.
-function reviewCardHTML(c) {
-  if (!c.lingqs) return '';
-  const n = todaysCount(), done = reviewedToday();
-  // Done for today, but still a button: the sheet offers extra practice for anyone who wants more.
-  if (!n) return done ? `<button class="card review-card done" data-act="review"><div class="rv-ico">✓</div><div><h4>Reviews done for today</h4><p>${done} card${done === 1 ? '' : 's'} reviewed. Practise more if you like.</p></div><span class="chev">›</span></button>` : '';
-  return `<button class="card review-card" data-act="review"><div class="rv-ico">${icons.cards}</div>
-    <div><h4>Today's Review</h4><p>${n} card${n === 1 ? '' : 's'} · about ${Math.max(1, Math.round(n / 10))} min</p></div><span class="chev">›</span></button>`;
 }
 
 function minutesSheet() {
@@ -252,12 +245,7 @@ function settingsSheet() {
   const body = openSheet(`<h2>Settings<button class="x">${icons.close}</button></h2>
     <label class="field"><span>Translate into</span><select name="target">${Object.entries(TARGETS).map(([k, n]) => `<option value="${k}" ${settings.target === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <label class="field"><span>Email for MyMemory (optional, raises the free daily quota)</span><input name="email" type="email" value="${esc(settings.email)}" placeholder="you@example.com"></label>
-    <div class="section-title" style="font-size:17px;margin-top:18px">Reviews</div>
-    <label class="field"><span>Memory target</span><select name="retention">${[['relaxed', 'Relaxed · keep about 80%, fewest reviews'], ['normal', 'Normal · keep about 85%'], ['intense', 'Intense · keep about 90%, most reviews']].map(([k, n]) => `<option value="${k}" ${settings.retention === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-    <label class="field"><span>Reviews a day (the rest wait, most useful first)</span><select name="reviewsPerDay" data-num>${[10, 20, 30, 50, 100].map((n) => `<option ${+settings.reviewsPerDay === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-    <label class="field"><span>New cards a day</span><select name="newPerDay" data-num>${[0, 5, 10, 20].map((n) => `<option ${+settings.newPerDay === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-    <label class="field"><span>Card style</span><select name="reviewStyle">${[['mixed', 'Mixed · flashcards, pick the meaning, fill the gap'], ['flip', 'Flashcards only']].map(([k, n]) => `<option value="${k}" ${settings.reviewStyle === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-    <p class="muted" style="font-size:13px;margin:-4px 0 0">Reading counts as review: gems you read past without tapping move forward, ones you look up come back sooner.</p>
+    <p class="muted" style="font-size:13px;margin:4px 0 0">Reviews and training have their own settings: ⚙︎ on the Training tab.</p>
     <div class="section-title" style="font-size:17px;margin-top:18px">Backup</div>
     <p class="muted storage-status" style="font-size:13px;margin:-4px 0 10px">Last backup: ${backupAge()}.</p>
     <div class="action-list">
@@ -302,6 +290,7 @@ function settingsSheet() {
       if (data.chapters) await db.putMany('chapters', data.chapters);
       for (const d of data.days || []) await db.put('days', d);
       for (const c of data.collections || []) await db.put('collections', c);
+      if (data.sentences) { await db.putMany('sentences', data.sentences); forgetSentences(); }
       alert('Backup restored.');
       closeSheet(); await refreshBooks(); show(tab);
     } catch (err) { alert('Could not read backup: ' + err.message); }
@@ -309,7 +298,7 @@ function settingsSheet() {
 }
 
 async function exportAll() {
-  const data = { app: 'LangReader', version: 1, exported: new Date().toISOString(), words: allEntries(), books: await db.all('books'), chapters: await db.all('chapters'), days: await db.all('days'), collections: await db.all('collections') };
+  const data = { app: 'LangReader', version: 1, exported: new Date().toISOString(), words: allEntries(), books: await db.all('books'), chapters: await db.all('chapters'), days: await db.all('days'), collections: await db.all('collections'), sentences: await db.all('sentences') };
   if (await saveFile(`langreader-backup-${todayKey()}.json`, JSON.stringify(data), 'application/json')) markBackedUp();
 }
 function exportCSV() {
@@ -463,7 +452,6 @@ function renderVocab() {
   const list = all.filter(filters[vFilter]).filter((w) => !q || w.term.includes(q) || (w.meaning || '').toLowerCase().includes(q) || (w.example || '').toLowerCase().includes(q))
     .sort((a, b) => b.updated - a.updated);
   const n = (k) => all.filter(filters[k]).length;
-  const due = todaysCount();
   const pill = (s) => s === 5 ? '<span class="pill s5">Known</span>' : s === -1 ? '<span class="pill si">Ignored</span>' : `<span class="pill s${s}">${s}</span>`;
   const shown = list.slice(0, 300);
 
@@ -471,7 +459,6 @@ function renderVocab() {
   v.innerHTML = `
     <div class="view-head"><h1 class="large-title">Vocabulary</h1></div>
     <div class="vocab-actions">
-      <button data-act="review" ${due ? '' : 'disabled style="opacity:.5"'}>${icons.cards} Review ${due ? `(${due})` : ''}</button>
       <button data-act="csv">${icons.download} Export</button>
     </div>
     <label class="search">${icons.search}<input name="q" type="search" placeholder="Search" value="${esc(vQuery)}" autocomplete="off"></label>
@@ -493,7 +480,6 @@ function renderVocab() {
       const w = entry(b.dataset.t);
       return openWordCard({ term: w.term, display: w.display, phrase: !!w.phrase, context: w.example || '', onClose: () => renderVocab() });
     }
-    if (b.dataset.act === 'review') return reviewSheet({ onClose: () => renderVocab() });
     if (b.dataset.act === 'csv') return exportCSV();
   };
   $('input[name=q]', v).oninput = (e) => { vQuery = e.target.value; renderVocab(); };

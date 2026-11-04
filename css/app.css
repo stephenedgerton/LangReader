@@ -124,7 +124,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   backdrop-filter: saturate(180%) blur(20px);
   border-top: .5px solid var(--sep);
 }
-#tabbar button { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; font-weight: 500; color: #999; min-width: 72px; }
+#tabbar button { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; font-weight: 500; color: #999; min-width: 62px; }
 #tabbar button svg { width: 27px; height: 27px; fill: currentColor; stroke: none; }
 #tabbar button.active { color: var(--tint); }
 
@@ -940,3 +940,132 @@ input[type=date] { background: transparent; border: 0; color: var(--tint); font:
 .st-trend .tip { position: absolute; top: 34px; transform: translateX(-50%); background: var(--bg-elev); box-shadow: var(--shadow); border-radius: 8px; padding: 4px 8px; font-size: 12px; white-space: nowrap; pointer-events: none; }
 .freq-line { font-size: 14px; color: var(--label-2); margin: 10px 0 2px; }
 .rank { font-size: 13px; font-variant-numeric: tabular-nums; }
+
+/* ============ Training ============ */
+svg.solid { fill: currentColor; stroke: none; }
+.resume { background: var(--tint-fill); color: var(--on-tint); font-weight: 600; font-size: 15px; padding: 8px 20px; border-radius: 99px; flex: none; }
+.resume.soft { background: var(--fill); color: var(--tint); }
+.training-card .rv-ico svg { width: 22px; height: 22px; }
+.training-card.done .rv-ico { color: var(--green); }
+
+/* Today's Training: like Reading Goals, three small rings and a pill to start. */
+.tr-today { padding: 18px 16px 14px; }
+.tr-rings { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; }
+.tr-ring { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 13px; color: var(--label-2); text-align: center; }
+.tr-ring b { color: var(--label); font-weight: 600; margin-top: 6px; }
+.tr-ring .ring { width: 64px; height: 64px; }
+.tr-ring .ring svg { width: 64px; height: 64px; }
+.tr-ring .ring circle { stroke-width: 6; }
+.tr-ring .ring-n { color: var(--tint); }
+.tr-ring .ring-n svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; }
+.tr-ring.done .ring-n svg { width: 26px; height: 26px; stroke: var(--green); stroke-width: 2.6; }
+.tr-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: .5px solid var(--sep); padding-top: 12px; }
+.tr-foot .big { font: 700 20px/1.15 var(--sans); }
+.tr-foot p { margin: 3px 0 0; font-size: 14px; color: var(--label-2); }
+.tr-words { margin-top: 10px; }
+.tr-empty { font-size: 15px; margin: 0; }
+
+/* Packs are drawn like books: the same cover, spine and serif title. */
+.shelf .book.pack { width: 112px; }
+.book.pack.off .cover { filter: saturate(.55); opacity: .7; }
+.pack-cover .ce { font-size: 20px; line-height: 1; margin-bottom: 8px; }
+.pack-cover .ct { font-size: 15px; }
+.pack-cover.big { width: 120px; height: 180px; flex: none; padding: 17px 12px; }
+.pack-cover.big .ct { font-size: 17px; }
+.pack-cover .ca { margin-top: auto; }
+.pack-meta { font-size: 12px; color: var(--label-2); margin-top: 8px; }
+.hair { height: 3px; border-radius: 99px; background: var(--fill-2); margin-top: 6px; overflow: hidden; }
+.hair i { display: block; height: 100%; background: var(--tint-fill); }
+
+/* A pack's page. */
+.tr-nav { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 14px; }
+.tr-back { display: flex; align-items: center; gap: 2px; color: var(--tint); font-size: 17px; margin-left: -6px; }
+.tr-back svg { width: 24px; height: 24px; stroke-width: 2.4; }
+.tr-nav .circle-btn svg { fill: currentColor; stroke: none; }
+.tr-hero .hero-meta h3 { font-size: 22px; }
+.tr-hero-btns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.tr-blurb { color: var(--label-2); font-size: 15px; margin: 14px 0 0; }
+.tr-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.tr-list-head > div:last-child { display: flex; gap: 14px; }
+.tr-list-head button { color: var(--tint); font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.tr-list-head button svg { width: 13px; height: 13px; }
+.tr-list { border-top: .5px solid var(--sep); }
+.tr-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: .5px solid var(--sep); }
+.tr-row .txt { flex: 1; min-width: 0; text-align: left; }
+.tr-row .it { font: 18px/1.3 var(--serif-ui); }
+.tr-row .en { font-size: 14px; color: var(--label-2); margin-top: 3px; }
+.tr-row.paused .it { color: var(--label-3); }
+.tr-row.now .it { color: var(--tint); }
+.tr-row .rv-say { width: 34px; height: 34px; }
+.tr-row .rv-say svg { width: 17px; height: 17px; }
+.lvl { flex: none; display: flex; gap: 3px; }
+.lvl i { width: 6px; height: 6px; border-radius: 50%; background: var(--fill-2); }
+.lvl i.on { background: var(--tint-fill); }
+.tr-tag { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--label-3); }
+.tr-tag.new { color: var(--blue); }
+.tr-tag.done { color: var(--green); display: grid; }
+.tr-tag.done svg { width: 18px; height: 18px; stroke-width: 2.6; }
+.tr-tip { font-size: 13px; margin: 10px 0 0; }
+.tr-sheet-it { font: 600 24px/1.3 var(--serif-ui); }
+.tr-sheet-en { color: var(--label-2); margin-top: 6px; font-size: 17px; }
+.tr-show-en { color: var(--tint); font-weight: 600; font-size: 15px; margin-top: 8px; }
+.tr-sheet-ctx { display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--label-2); background: var(--fill); padding: 4px 10px; border-radius: 99px; }
+.tr-sheet-tools { justify-content: flex-start; }
+.tr-seg { margin: 0; }
+.tr-seg button { font-size: 15px; padding: 8px 0; }
+.tr-seg button.on { color: var(--tint); }
+.tr-set-title { font-size: 17px; margin-top: 18px; }
+
+/* The session. */
+.drill .dr-step { display: flex; justify-content: space-between; font-size: 13px; color: var(--label-2); margin: -4px 0 12px; }
+.drill .dr-step b { color: var(--tint); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+.dr-intro { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 40px 16px 34px; }
+.dr-ico { width: 84px; height: 84px; border-radius: 50%; background: var(--fill); color: var(--tint); display: grid; place-items: center; }
+.dr-ico svg { width: 40px; height: 40px; }
+.dr-intro h3 { font-size: 28px; margin: 8px 0 0; }
+.dr-intro p { margin: 0; color: var(--label-2); max-width: 30ch; text-wrap: balance; }
+.dr-intro small { font-size: 13px; color: var(--label-3); }
+.drill .face { min-height: 300px; padding-top: 44px; position: relative; }
+.dr-ctx { position: absolute; top: 14px; left: 14px; font-size: 12px; font-weight: 600; color: var(--label-2); background: var(--fill); padding: 4px 10px; border-radius: 99px; }
+.dr-prompt { font: 600 26px/1.3 var(--sans); text-wrap: balance; }
+.dr-it { font: 600 25px/1.35 var(--serif-ui); text-wrap: balance; }
+.dr-en { font-size: 16px; color: var(--label-2); margin-top: 10px; text-wrap: balance; }
+.dr-hint { margin-top: 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.dr-hint-text { font: 21px/1.4 var(--serif-ui); color: var(--label-2); letter-spacing: .14em; }
+.dr-hint small { font-size: 12px; color: var(--orange); }
+.dr-hint-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--label-2); background: var(--fill); padding: 7px 12px; border-radius: 99px; }
+.dr-hint-btn svg { width: 15px; height: 15px; }
+.dr-hint-btn .dots { display: inline-flex; gap: 3px; margin-left: 2px; }
+.dr-hint-btn .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--fill-2); }
+.dr-hint-btn .dots i.on { background: var(--orange); }
+.dr-disc { width: 140px; height: 140px; border-radius: 50%; background: var(--tint-fill); color: var(--on-tint); display: grid; place-items: center; position: relative; margin: 4px auto; }
+.dr-disc svg { width: 52px; height: 52px; margin-left: 6px; }
+.dr-disc::before, .dr-disc::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--tint-fill); opacity: 0; }
+.dr-disc.playing::before { animation: ripple 1.4s ease-out infinite; }
+.dr-disc.playing::after { animation: ripple 1.4s ease-out .7s infinite; }
+@keyframes ripple { from { transform: scale(1); opacity: .8; } to { transform: scale(1.5); opacity: 0; } }
+.rv-tools button.playing { background: var(--tint-fill); color: var(--on-tint); }
+.dr-note { text-align: center; font-size: 12px; color: var(--label-3); margin-top: 10px; }
+.review-btns.four button:disabled { opacity: .3; }
+.dr-shadow { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 10px 0 22px; }
+.dr-new { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tint); }
+.dr-ring { position: relative; width: 180px; height: 180px; }
+.dr-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.dr-ring circle { fill: none; stroke-width: 10; }
+.dr-ring .track { stroke: var(--fill-2); }
+.dr-ring .prog { stroke: var(--tint-fill); stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; }
+.dr-ring.turn .prog { stroke: var(--blue); }
+.dr-ring .mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--tint); }
+.dr-ring.turn .mid { color: var(--blue); }
+.dr-ring .mid svg { width: 40px; height: 40px; }
+.dr-ring .mid b { font-size: 18px; color: var(--label); }
+.dr-reps { display: flex; gap: 8px; }
+.dr-reps i { width: 10px; height: 10px; border-radius: 50%; background: var(--fill-2); }
+.dr-reps i.on { background: var(--tint-fill); }
+.drill .rv-actions .link-btn { margin-top: 8px; }
+.dr-done-ico { width: 64px; height: 64px; border-radius: 50%; background: var(--tint-fill); color: var(--on-tint); display: grid; place-items: center; margin: 10px auto 12px; }
+.dr-done-ico svg { width: 32px; height: 32px; stroke-width: 2.6; }
+.drill .rv-done h3 { font-size: 24px; margin: 0 0 6px; }
+.dr-bonus { margin: 0 0 14px; }
+.drill > .primary { margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) { .dr-disc::before, .dr-disc::after { animation: none !important; } }

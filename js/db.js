@@ -6,9 +6,11 @@
 //   tcache    {key, value}   translation cache
 //   days      {date, seconds, wordsRead, known, lingqs, lemmas?, cover?, coverL?}
 //   collections {id, name, created}   books list theirs in book.collections
+//   sentences {id, it, en, ctx, packs: [id], order, created, cards: {listen, say}, paused?, hidden?, edited?}
+//             Training's sentences (see js/training.js); bundled ones have id `${pack}:${key}`
 
 const DB_NAME = 'langreader';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 let dbp;
 
 function open() {
@@ -26,6 +28,7 @@ function open() {
       if (!db.objectStoreNames.contains('tcache')) db.createObjectStore('tcache', { keyPath: 'key' });
       if (!db.objectStoreNames.contains('days')) db.createObjectStore('days', { keyPath: 'date' });
       if (!db.objectStoreNames.contains('collections')) db.createObjectStore('collections', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('sentences')) db.createObjectStore('sentences', { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

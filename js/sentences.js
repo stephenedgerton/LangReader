@@ -41,7 +41,14 @@ export function hint(text, level) {
 export const isNew = (s) => !s.cards?.listen && !s.cards?.say;
 export const mastered = (s) => DIRS.every((d) => (s.cards?.[d]?.s || 0) >= RETIRE_DAYS);
 // 0 new, 1–4 learning (from the say card, the harder one), 5 mastered.
-export function level(s) {
+// With a direction ('listen' for Shadowing, 'say' for Recall) it's that card's own level: each mode has its
+// own stars, and a sentence learned in one mode starts at 0 in the other until it's rated there.
+export function level(s, dir) {
+  if (dir) {
+    const c = s.cards?.[dir];
+    if (!c) return 0;
+    return c.s >= RETIRE_DAYS ? 5 : Math.min(4, levelFor(c.s));
+  }
   if (mastered(s)) return 5;
   const c = s.cards?.say || s.cards?.listen;
   return c ? Math.min(4, levelFor(c.s)) : 0;

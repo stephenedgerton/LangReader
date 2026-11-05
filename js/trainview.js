@@ -362,10 +362,10 @@ function trainingSettings() {
   const n = (list) => list.map((x) => [x, x === 0 ? 'Off' : String(x)]);
   const body = openSheet(`<h2>Training Settings<button class="x">${icons.close}</button></h2>
     <p class="muted" style="font-size:13px;margin:-6px 0 12px">Today's plan is the same size every day, however long you've been away.</p>
-    <label class="field"><span>Listen, sentences a day</span>${sel('trainListen', n([0, 2, 4, 6, 8, 10]))}</label>
-    <label class="field"><span>Shadow, sentences a day</span>${sel('trainShadow', n([0, 2, 3, 4, 6, 8]))}</label>
-    <label class="field"><span>Say it, sentences a day</span>${sel('trainSay', n([0, 4, 6, 8, 10, 12, 15]))}</label>
-    <label class="field"><span>New sentences a day</span>${sel('trainNew', [[0, 'None'], [2, '2'], [3, '3'], [5, '5'], [8, '8'], [10, '10']])}</label>
+    <label class="field"><span>Listen, sentences a day</span>${sel('trainListen', n([0, 2, 4, 6, 8, 10, 15, 20, 30, 40, 50]))}</label>
+    <label class="field"><span>Shadow, sentences a day</span>${sel('trainShadow', n([0, 2, 3, 4, 6, 8, 10, 15, 20, 30, 40, 50]))}</label>
+    <label class="field"><span>Say it, sentences a day</span>${sel('trainSay', n([0, 4, 6, 8, 10, 12, 15, 20, 30, 40, 50]))}</label>
+    <label class="field"><span>New sentences a day</span>${sel('trainNew', [[0, 'None'], [2, '2'], [3, '3'], [5, '5'], [8, '8'], [10, '10'], [15, '15'], [20, '20'], [30, '30'], [40, '40'], [50, '50']])}</label>
     <label class="field"><span>Memory target</span>${sel('retention', [['relaxed', 'Relaxed · keep about 80%, fewest reviews'], ['normal', 'Normal · keep about 85%'], ['intense', 'Intense · keep about 90%, most reviews']], false)}</label>
     <div class="section-title tr-set-title">Who's speaking</div>
     <label class="field"><span>I am</span>${sel('trainMe', [['', 'Not set'], ['m', 'Male'], ['f', 'Female']], false)}</label>

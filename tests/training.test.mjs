@@ -208,6 +208,7 @@ describe('training', () => {
     await page.click('#view-training [data-act=settings]'); await sleep(300);
     await page.selectOption('select[name=trainShadow]', '0');
     await page.selectOption('select[name=trainSay]', '10');
+    for (const n of ['trainListen', 'trainShadow', 'trainSay', 'trainNew']) assert.ok(await page.$(`select[name=${n}] option[value="50"]`), `${n} goes up to 50`);
     await page.selectOption('select[name=trainNew]', '8');
     await page.click('.sheet .x'); await sleep(400);
     const card = await page.textContent('.tr-today');

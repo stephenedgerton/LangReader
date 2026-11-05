@@ -2,6 +2,7 @@
 import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startServer, openApp, closeBrowser, sleep } from './helpers.mjs';
+import { PACKS, loadPack } from '../samples/packs/index.js';
 
 const tr = (page, fn, arg) => page.evaluate(async ({ fn, arg }) => {
   const m = await import('./js/training.js');
@@ -9,6 +10,9 @@ const tr = (page, fn, arg) => page.evaluate(async ({ fn, arg }) => {
   return new Function('m', 'arg', `return (${fn})(m, arg)`)(m, arg);
 }, { fn: fn.toString(), arg });
 const GENDER = { trainMe: 'm', trainPartner: 'f' };
+// How many sentences each ready-made pack has, so the packs can grow without breaking the tests.
+const SIZE = Object.fromEntries(await Promise.all(PACKS.map(async (p) => [p.id, (await loadPack(p.id)).length])));
+const N = SIZE.survival;
 
 describe('training', () => {
   const t = {};
@@ -23,11 +27,11 @@ describe('training', () => {
     assert.match(card, /About \d+ min/);
     const shelves = await page.$$eval('.shelf', (s) => s.map((x) => x.textContent.replace(/\s+/g, ' ')));
     assert.match(shelves[0], /^\s*New Pack\s*Your own sentences\s*$/, 'Your Packs: nothing yet but New Pack');
-    assert.match(shelves[1], /Survival\s*Ready-made\s*0 of 30 learned/);
-    assert.match(shelves[2], /Partner: everyday\s*Ready-made\s*30 sentences.*Partner: plans & errands\s*Ready-made\s*30 sentences/);
-    assert.match(shelves[2], /Café & restaurant\s*Ready-made\s*30 sentences.*When I don’t understand\s*Ready-made\s*27 sentences/);
+    assert.match(shelves[1], new RegExp(`Survival\\s*Ready-made\\s*0 of ${N} learned`));
+    assert.match(shelves[2], new RegExp(`Partner: everyday\\s*Ready-made\\s*${SIZE.partner} sentences.*Partner: plans & errands\\s*Ready-made\\s*${SIZE['partner-plans']} sentences`));
+    assert.match(shelves[2], new RegExp(`Café & restaurant\\s*Ready-made\\s*${SIZE.cafe} sentences.*When I don’t understand\\s*Ready-made\\s*${SIZE['not-understand']} sentences`));
     assert.equal(await page.$$eval('.shelf:nth-of-type(3) .pack, .shelf', (s) => s.at(-1).querySelectorAll('.pack').length), 9, 'nine packs to add');
-    assert.equal(await tr(page, (m) => m.trainingList().length), 30);
+    assert.equal(await tr(page, (m) => m.trainingList().length), N);
     await page.click('#tabbar button[data-tab=home]'); await sleep(300);
     assert.match(await page.textContent('.training-card'), /Today's Training\s*3 steps · about \d+ min/);
     assert.equal(await page.$('.review-card[data-act=review]'), null, 'the old review card has gone');
@@ -156,7 +160,7 @@ describe('training', () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'training' });
     await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push(u.text); setTimeout(() => u.onend?.(), 10); }; });
     await page.click('[data-pack=partner]'); await sleep(300);
-    assert.match(await page.textContent('.tr-hero'), /Ready-made · 30 sentences\s*Partner: everyday\s*Not in your training yet/);
+    assert.match(await page.textContent('.tr-hero'), new RegExp(`Ready-made · ${SIZE.partner} sentences\\s*Partner: everyday\\s*Not in your training yet`));
     const rows = await page.$$eval('.tr-row .it', (r) => r.map((x) => x.textContent));
     assert.equal(rows[0], 'Buongiorno, amore.', 'Italian only');
     assert.equal(await page.$('.tr-row .tr-rev'), null);
@@ -221,7 +225,7 @@ describe('training', () => {
     assert.equal(await page.$('[data-act=train]'), null, 'Train has moved to the ⋯ menu');
     assert.equal(await page.$('[data-act=shadow]'), null, 'Shadow all has gone');
     assert.equal(await page.textContent('.fc-mode .on'), 'Shadowing');
-    assert.equal(await page.textContent('[data-act=focus]'), 'Start Focus · 30');
+    assert.equal(await page.textContent('[data-act=focus]'), `Start Focus · ${N}`);
     const pin = await page.$eval('.fc-start', (e) => getComputedStyle(e).position);
     assert.equal(pin, 'fixed', 'pinned above the tab bar');
     await page.click('[data-mode=recall]'); await sleep(200);
@@ -248,7 +252,7 @@ describe('training', () => {
     // A paused sentence is left out of Focus.
     await page.click('.tr-row:nth-child(1) [data-sent]'); await sleep(300);
     await page.click('[data-a=pause]'); await sleep(300);
-    assert.equal(await page.textContent('[data-act=focus]'), 'Start Focus · 29');
+    assert.equal(await page.textContent('[data-act=focus]'), `Start Focus · ${N - 1}`);
     assert.deepEqual(errors, []);
   });
 
@@ -258,9 +262,9 @@ describe('training', () => {
     await page.click('[data-pack=survival]'); await sleep(300);
     await page.click('[data-act=focus]'); await sleep(200);
     assert.deepEqual(await page.evaluate(() => window.__said), ['Buongiorno!'], 'no intro: it plays in the tap');
-    assert.match(await page.textContent('.fc-count'), /Shadowing\s*1 \/ 30/);
+    assert.match(await page.textContent('.fc-count'), new RegExp(`Shadowing\\s*1 / ${N}`));
     assert.match(await page.textContent('.fc-togs'), /Translation.*Dual audio.*Repeat\s*3×.*Speed\s*1×/s);
-    await page.waitForFunction(() => document.querySelector('.fc-count')?.textContent.includes('2 / 30'), null, { timeout: 12000 });
+    await page.waitForFunction((n) => document.querySelector('.fc-count')?.textContent.includes(`2 / ${n}`), N, { timeout: 12000 });
     await page.waitForFunction(() => window.__said.length >= 4);
     assert.deepEqual((await page.evaluate(() => window.__said)).slice(0, 4), ['Buongiorno!', 'Buongiorno!', 'Buongiorno!', 'Buonasera!']);
     await page.click('[data-toggle]'); await sleep(200);
@@ -270,10 +274,10 @@ describe('training', () => {
     await sleep(2500);
     assert.equal((await page.evaluate(() => window.__said)).length, said, 'nothing plays while paused');
     await page.click('[data-next]'); await sleep(200);
-    assert.match(await page.textContent('.fc-count'), /3 \/ 30/, '›› moves on');
+    assert.match(await page.textContent('.fc-count'), new RegExp(`3 / ${N}`), '›› moves on');
     assert.equal((await page.evaluate(() => window.__said)).length, said, 'still paused');
     await page.click('[data-prev]'); await sleep(200);
-    assert.match(await page.textContent('.fc-count'), /2 \/ 30/, '‹‹ goes back');
+    assert.match(await page.textContent('.fc-count'), new RegExp(`2 / ${N}`), '‹‹ goes back');
     await page.click('[data-toggle]'); await sleep(200);
     assert.equal((await page.evaluate(() => window.__said)).at(-1), 'Buonasera!', 'Play starts it again');
     await page.click('.x'); await sleep(300);
@@ -312,7 +316,7 @@ describe('training', () => {
     assert.match(await page.textContent('.fc-rate'), /Didn’t get it\s*Hard\s*Good\s*Knew it/);
     assert.doesNotMatch(await page.textContent('.fc-bottom'), /\dd|\dw/, 'no intervals under the grades');
     await page.click('[data-r="1"]'); await sleep(300);
-    assert.match(await page.textContent('.fc-count'), /1 \/ 30/, 'rating doesn’t advance');
+    assert.match(await page.textContent('.fc-count'), new RegExp(`1 / ${N}`), 'rating doesn’t advance');
     let s = await tr(page, (m) => [m.sentence('survival:1').cards.listen, m.doneToday()]);
     assert.ok(s[0], 'Shadowing rates the listen card');
     assert.deepEqual(s[1].missed, ['survival:1']);
@@ -337,7 +341,7 @@ describe('training', () => {
     assert.match(await page.textContent('#sheet h2'), /Shadowing Settings/);
     await page.selectOption('select[data-k=repeats]', '1');
     await page.click('label:has(input[data-k=enFirst])');
-    assert.equal(await page.textContent('[data-start]'), 'Start Shadowing · 30', 'Start is pinned at the bottom');
+    assert.equal(await page.textContent('[data-start]'), `Start Shadowing · ${N}`, 'Start is pinned at the bottom');
     await page.click('[data-start]'); await sleep(200);
     await page.waitForFunction(() => window.__said.length >= 4, null, { timeout: 12000 });
     assert.deepEqual((await page.evaluate(() => window.__said)).slice(0, 4), ['en:Good morning!', 'Buongiorno!', 'en:Good evening!', 'Buonasera!']);
@@ -384,12 +388,12 @@ describe('training', () => {
     await page.click('#tabbar [data-tab="stats"]'); await sleep(600);
     const card = (await page.textContent('.st-train')).replace(/\s+/g, ' ');
     assert.match(card, /1 ?sentence you can say/);
-    assert.match(card, /Of 30 in your packs, you've started 3\./);
+    assert.match(card, new RegExp(`Of ${N} in your packs, you've started 3\\.`));
     assert.match(card, /🔥 1 ?day in a row 1 ?of the last 30 days 3 ?cards this week/);
     assert.match(card, /4 ?repetitions today 4 ?this week 4 ?in all/);
     assert.equal(await page.$$eval('.bars .bar', (b) => b.length), 14);
     assert.equal(await page.$$eval('.bars .bar:not(.zero)', (b) => b.length), 1, 'only today has cards');
-    assert.match(await page.getAttribute('.st-packs .band', 'title'), /^Survival: 1 learned, 2 started, of 30$/);
+    assert.match(await page.getAttribute('.st-packs .band', 'title'), new RegExp(`^Survival: 1 learned, 2 started, of ${N}$`));
     await page.$eval('.bars', (e) => e.scrollIntoView({ block: 'center' })); await sleep(200);
     const box = await page.$eval('.bars .hit', (r) => { const b = r.getBoundingClientRect(); return { x: b.right - 4, y: b.top + b.height / 2 }; });
     await page.mouse.move(box.x, box.y); await sleep(100);

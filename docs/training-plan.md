@@ -78,12 +78,13 @@ The throwaway prototype is on the `prototype/practice-tab` branch (`prototypes/p
   saved until you confirm it. Choose the pack it goes into.
 
 ### Bundled content
-- Written by hand, not machine-translated, about 25–30 sentences a pack, always with *tu* in the partner
-  packs. Planned packs: Survival, Partner: everyday, Partner: plans & errands, Café & restaurant,
+- Written by hand, not machine-translated, always with *tu* in the partner packs. The packs shipped with
+  25–30 sentences each; rev 2 grew every pack to 300 or more, so the daily plan has plenty of new ones. Planned packs: Survival, Partner: everyday, Partner: plans & errands, Café & restaurant,
   Directions, Shopping, Small talk, Travel, Feelings, When I don't understand.
 - `tools/check-sentences.mjs` and `tests/sentences.test.mjs` read every sentence with the app's tokenizer
   and lemma list: unknown words (typos), gender markup with both halves, pack sizes, unique ids, and a
-  "common lemmas only" target for the Survival and Partner packs.
+  "common lemmas only" target for the Survival and Partner packs (at most 12 words outside the 2,000
+  commonest, or one for every three sentences in a bigger pack).
 
 ## Shipping
 

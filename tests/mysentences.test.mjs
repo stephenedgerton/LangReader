@@ -117,17 +117,17 @@ describe('your own sentences', () => {
   });
 
   test('New Sentence: type English, check the suggested Italian, make a pack for it, then add it', async () => {
-    const { page, errors } = await openApp(t, srv.url, { hash: 'training', mt: 'Dove la stazione' });
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', mt: 'Dove il museo' });
     await page.click('#view-training [data-act=new]'); await sleep(300);
     assert.equal(await page.isVisible('.ns-suggest'), false, 'nothing to suggest yet');
-    await page.fill('[name=en]', 'Where is the station?');
+    await page.fill('[name=en]', 'Where is the museum?');
     assert.equal(await page.textContent('.ns-suggest'), 'Suggest the Italian');
     assert.ok(await page.$eval('[data-a=add]', (b) => b.disabled));
     await page.click('.ns-suggest'); await sleep(300);
-    assert.equal(await page.inputValue('[name=it]'), 'Dove la stazione');
+    assert.equal(await page.inputValue('[name=it]'), 'Dove il museo');
     assert.match(await page.textContent('.ns-note'), /Suggested by MyMemory/);
     assert.equal((await mine(page)).length, 0, 'nothing is saved until you add it');
-    await page.fill('[name=it]', 'Dov’è la stazione?');
+    await page.fill('[name=it]', 'Dov’è il museo?');
     assert.deepEqual(await page.$$eval('.ns-packs [data-p]', (b) => b.map((x) => [x.textContent.trim(), x.classList.contains('on')])), [['🧭 Survival', true]]);
     // A new pack, keeping what you typed.
     await page.click('.ns-packs [data-a=newpack]'); await sleep(300);
@@ -136,20 +136,20 @@ describe('your own sentences', () => {
     await page.click('[data-e="🚆"]'); await page.click('[data-c="3"]');
     assert.match(await page.textContent('.pk-preview'), /🚆\s*Viaggi/);
     await page.click('[data-a=save]'); await sleep(400);
-    assert.equal(await page.inputValue('[name=it]'), 'Dov’è la stazione?');
-    assert.equal(await page.inputValue('[name=en]'), 'Where is the station?');
+    assert.equal(await page.inputValue('[name=it]'), 'Dov’è il museo?');
+    assert.equal(await page.inputValue('[name=en]'), 'Where is the museum?');
     assert.match(await page.textContent('.ns-packs .on'), /Viaggi/, 'the new pack is chosen');
     await page.fill('[name=ctx]', 'in town');
     await page.click('[data-a=add]'); await sleep(400);
     assert.match(await page.textContent('#app-toast'), /Added to Viaggi/);
     const [s] = await mine(page);
     const pack = await tr(page, (m) => m.ownPacks()[0]);
-    assert.deepEqual([s.it, s.en, s.ctx, s.packs], ['Dov’è la stazione?', 'Where is the station?', 'in town', [pack.id]]);
+    assert.deepEqual([s.it, s.en, s.ctx, s.packs], ['Dov’è il museo?', 'Where is the museum?', 'in town', [pack.id]]);
     assert.deepEqual([pack.name, pack.emoji, pack.kind], ['Viaggi', '🚆', 'own']);
     assert.match(await page.$$eval('.shelf', (x) => x[0].textContent.replace(/\s+/g, ' ')), /🚆\s*Viaggi\s*Your pack\s*0 of 1 learned/);
     // Typing the same sentence again only adds it to the pack you chose.
     await page.click('#view-training [data-act=new]'); await sleep(300);
-    await page.fill('[name=it]', 'Dov’è la stazione'); await page.fill('[name=en]', 'x');
+    await page.fill('[name=it]', 'Dov’è il museo'); await page.fill('[name=en]', 'x');
     await page.click('.ns-packs [data-p=survival]'); await page.click('[data-a=add]'); await sleep(400);
     assert.match(await page.textContent('#app-toast'), /already had it/);
     assert.deepEqual((await mine(page)).map((x) => x.packs), [[pack.id, 'survival']]);
@@ -167,7 +167,7 @@ describe('your own sentences', () => {
     assert.equal(await page.inputValue('[name=en]'), 'I like the sea.');
     await page.click('[data-a=add]'); await sleep(400);
     const rows = await page.$$eval('.tr-row .it', (r) => r.map((x) => x.textContent));
-    assert.equal(rows.length, 31); assert.equal(rows[30], 'Mi piace molto il mare.', 'added at the end of the ready-made pack');
+    assert.equal(rows.at(-1), 'Mi piace molto il mare.', 'added at the end of the ready-made pack');
     assert.equal(await tr(page, (m) => m.todaysPlan().say[0]), (await mine(page))[0].id, 'but it’s the first new one you train');
     assert.deepEqual(errors, []);
   });

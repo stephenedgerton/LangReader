@@ -181,10 +181,10 @@ async function renderPack(id) {
   const lv = (s) => {
     if (s.preview) return '';
     if (s.paused) return '<span class="tr-tag">Paused</span>';
-    const n = level(s);
+    const n = level(s, recall ? 'say' : 'listen');
     if (!n) return '<span class="tr-tag new">New</span>';
     if (n === 5) return `<span class="tr-tag done">${icons.check}</span>`;
-    return `<span class="stars" aria-label="Level ${n} of 4">${[1, 2, 3, 4].map((k) => `<i class="${k <= n ? 'on' : ''}">${star}</i>`).join('')}</span>`;
+    return `<span class="stars" aria-label="${MODES[m].name} level ${n} of 4">${[1, 2, 3, 4].map((k) => `<i class="${k <= n ? 'on' : ''}">${star}</i>`).join('')}</span>`;
   };
   v.innerHTML = `
     <div class="tr-nav"><button class="tr-back" data-act="back">${back}Training</button>

@@ -34,6 +34,15 @@ test('levels come from the say card, and a sentence is mastered when both cards 
   assert.equal(level({ cards: { say: strong, listen: strong } }), 5);
 });
 
+test('with a direction, each card has its own level: Shadowing (listen) and Recall (say) don’t share stars', () => {
+  const c = schedule(null, GOOD, NOW), strong = { ...c, s: 200 }, mid = { ...c, s: 60 };
+  assert.equal(level({ cards: { listen: mid } }, 'listen'), 4);
+  assert.equal(level({ cards: { listen: mid } }, 'say'), 0, 'not rated in Recall yet: no stars there');
+  assert.equal(level({ cards: { listen: mid, say: c } }, 'say'), 2);
+  assert.equal(level({ cards: { listen: strong } }, 'listen'), 5, 'that card alone can be done');
+  assert.equal(level({ cards: { listen: strong } }, 'say'), 0);
+});
+
 const card = (dueInDays, s = 3, lastDaysAgo = 3) => ({ s, d: 5, last: NOW - lastDaysAgo * DAY, due: NOW + dueInDays * DAY, reps: 2, lapses: 0 });
 const sent = (id, cards = {}) => ({ id, it: id, en: id, cards });
 

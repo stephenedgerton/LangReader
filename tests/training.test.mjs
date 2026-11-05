@@ -246,9 +246,15 @@ describe('training', () => {
     assert.equal(await page.textContent('.tr-row:nth-child(1) .tr-tap'), 'Tap to show the English');
     await page.click('.tr-row:nth-child(1) [data-reveal]');
     assert.equal(await page.textContent('.tr-row:nth-child(1) .tr-rev'), 'Good morning!');
-    const lvl = await tr(page, async (m) => (await import('./js/sentences.js')).level(m.sentence('survival:2')));
-    assert.equal(await page.$$eval('.tr-row:nth-child(2) .stars i.on', (s) => s.length), lvl, 'the level as stars');
+    // Each mode has its own stars: survival:2 was rated only in Recall (say), so it's New under Shadowing.
+    assert.equal(await page.$('.tr-row:nth-child(2) .stars'), null, 'no stars in Shadowing');
+    assert.equal(await page.textContent('.tr-row:nth-child(2) .tr-tag'), 'New');
+    await page.click('[data-mode=recall]'); await sleep(200);
+    const lvl = await tr(page, async (m) => (await import('./js/sentences.js')).level(m.sentence('survival:2'), 'say'));
+    assert.ok(lvl > 0);
+    assert.equal(await page.$$eval('.tr-row:nth-child(2) .stars i.on', (s) => s.length), lvl, 'the say card’s level as stars in Recall');
     assert.equal(await page.$$eval('.tr-row:nth-child(2) .stars i', (s) => s.length), 4);
+    await page.click('[data-mode=shadow]'); await sleep(200);
     // A paused sentence is left out of Focus.
     await page.click('.tr-row:nth-child(1) [data-sent]'); await sleep(300);
     await page.click('[data-a=pause]'); await sleep(300);

@@ -306,7 +306,18 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
   position: absolute; left: 50%; bottom: calc(var(--safe-bottom) + 54px); transform: translateX(-50%); z-index: 45;
   background: rgba(30,30,30,.72); color: #fff; font-size: 14px; font-weight: 600;
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); box-shadow: inset 0 .5px 0 rgba(255,255,255,.18), 0 4px 18px rgba(0,0,0,.2);
-  padding: 8px 14px; border-radius: 99px; animation: fade .2s; white-space: nowrap;
+  padding: 8px 14px; border-radius: 99px; white-space: nowrap;
+}
+.toast.in { animation: toast-in .36s cubic-bezier(.2, 1.3, .4, 1) both; }
+.toast.swap { animation: toast-swap .24s ease-out both; }
+.toast.out { animation: toast-out .22s ease-in both; pointer-events: none; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 16px) scale(.85); } }
+@keyframes toast-swap { from { transform: translateX(-50%) scale(.94); } }
+@keyframes toast-out { to { opacity: 0; transform: translate(-50%, 10px) scale(.92); } }
+@media (prefers-reduced-motion: reduce) {
+  .toast.in, .toast.swap { animation: fade .2s; }
+  .toast.out { animation: toast-fade-out .2s both; }
+  @keyframes toast-fade-out { to { opacity: 0; } }
 }
 
 /* ============ Reader ============ */

@@ -94,7 +94,7 @@ describe('words', () => {
     const { page } = await openApp(t, srv.url);
     await openBook(page);
     await holdWord(page, 'treno'); await page.mouse.up(); await sleep(200);
-    assert.equal(await page.textContent('#r-toast'), 'Drag to select a phrase, or tap its last word');
+    assert.ok(await page.isHidden('#r-toast'), 'no hint toast while selecting');
     await tapWord(page, 'bologna'); await sleep(300);
     assert.equal(await text(page, '.wpop .wp-term'), 'treno arrivò a Bologna');
   });

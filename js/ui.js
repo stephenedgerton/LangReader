@@ -79,21 +79,32 @@ export function initSheetGestures() {
   $('#scrim').addEventListener('click', () => { if (!$('#sheet').classList.contains('full')) closeSheet(); });
 }
 
-let toastTimer;
+let toastTimer, toastOut;
 // opts.action + opts.onAction add a button (e.g. "Undo") and keep the toast up a little longer.
+// It rises in and sinks away (.out) before it's hidden.
 export function toast(msg, opts = {}) {
   const el = opts.el || ($('#reader').hidden ? $('#app-toast') : $('#r-toast'));
+  const hide = () => {
+    clearTimeout(toastOut);
+    el.classList.add('out');
+    toastOut = setTimeout(() => { el.hidden = true; el.classList.remove('out'); }, 220);
+  };
   el.textContent = msg;
   el.classList.toggle('has-action', !!opts.action);
   if (opts.action) {
     const b = document.createElement('button');
     b.textContent = opts.action;
-    b.onclick = (e) => { e.stopPropagation(); el.hidden = true; opts.onAction(); };
+    b.onclick = (e) => { e.stopPropagation(); clearTimeout(toastTimer); hide(); opts.onAction(); };
     el.appendChild(b);
   }
+  clearTimeout(toastOut);
+  const wasUp = !el.hidden && !el.classList.contains('out');
+  el.classList.remove('out', 'in', 'swap');
   el.hidden = false;
+  void el.offsetWidth; // restart the animation
+  el.classList.add(wasUp ? 'swap' : 'in');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, opts.action ? 4500 : 1800);
+  toastTimer = setTimeout(hide, opts.action ? 4500 : 1800);
 }
 
 // Generated cover for books without artwork: deterministic colour from the title.

@@ -637,7 +637,6 @@ function startPhrase(el) {
   setSel(+el.dataset.i);
   closeBubble();
   if (hapticAnytime) haptic();
-  toast('Drag to select a phrase, or tap its last word');
 }
 function extendSelection(x, y) {
   if (!R.phraseStart) return;

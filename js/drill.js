@@ -3,7 +3,8 @@
 // Focus mode (focus.js): the step's toggle row at the top, the sentence in the middle, the actions and grades
 // pinned at the bottom. You rate yourself (Listen: Didn't get it / Mostly / Got it; Say it: Focus's four);
 // nothing listens to you. The toggles share Focus mode's settings: Listen and Shadow use Shadowing's, Say it
-// Recall's. Shadow plays through createPlayer(), and Next shows once its repeats are done.
+// Recall's, except Listen's Translation, which is its own (settings.trainListenEn). ⚙︎ in the header opens the
+// step's settings in the same sheet. Shadow plays through createPlayer(), and Next shows once its repeats are done.
 //   drillSheet()                    today's plan
 //   drillSheet({ extra: 10 })       "Train 10 more" once today's is done (counts as today's work)
 //   drillSheet({ only: packId })    one pack's due and new sentences; rated for real, but today's plan is untouched
@@ -21,7 +22,7 @@ import { AGAIN, HARD, GOOD } from './srs.js';
 import { hint } from './sentences.js';
 import { STEPS, todaysPlan, sentence, textOf, rateCard, undoRate, countDone, stepFinished, packMeta, countRep } from './training.js';
 import { todaysCount, reviewSheet } from './review.js';
-import { createPlayer, focusCfg, toggleRowHTML, flipToggle, GRADES } from './focus.js';
+import { createPlayer, focusCfg, toggleRowHTML, flipToggle, settingsHTML, bindSettings, MODES, GRADES } from './focus.js';
 
 const ICON = {
   listen: '<svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.5"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.5"/></svg>',
@@ -76,21 +77,23 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
   body.classList.add('drill');
   addEventListener('keydown', onKey);
 
-  let si = 0, ii = -1, cur = null, busy = false, saving = Promise.resolve(), info = false;
+  let si = 0, ii = -1, cur = null, busy = false, saving = Promise.resolve(), info = false, setFor = null;
   const undo = [], tally = { n: 0, again: 0, shadowed: 0 }, missed = [];
   const total = steps.reduce((n, s) => n + s.ids.length, 0);
   const doneItems = () => steps.slice(0, si).reduce((n, s) => n + s.ids.length, 0) + Math.max(0, ii);
   const cfg = () => focusCfg(CFG[cur.st.k]);
   const rate = () => cfg().speed || 1;
 
-  const head = () => `<h2><span>${esc(title)}</span><span class="rv-hbtns">${undo.length ? `<button class="rv-undo" aria-label="Undo">${ICON.undo}</button>` : ''}<button class="x" aria-label="Close">${icons.close}</button></span></h2>
+  const head = () => `<h2><span>${esc(title)}</span><span class="rv-hbtns">${undo.length ? `<button class="rv-undo" aria-label="Undo">${ICON.undo}</button>` : ''}${cur ? `<button class="fc-gear" data-gear aria-label="Settings">${icons.gear}</button>` : ''}<button class="x" aria-label="Close">${icons.close}</button></span></h2>
     <div class="progress-line"><i style="width:${total ? (doneItems() / total) * 100 : 0}%"></i></div>`;
   const stepLine = () => {
     const { st } = cur;
     return `<div class="dr-step"><span class="dr-step-name"><b>${STEPS.find((x) => x.k === st.k).name}</b><button class="dr-info" data-info aria-label="How this step works">${ICON.info}</button></span>
       <span>${ii + 1} of ${st.ids.length}${st.practice ? '' : '<button class="dr-skip" data-skip-step>Skip step</button>'}</span></div>
-      ${toggleRowHTML(CFG[st.k], TOGS[st.k])}`;
+      ${togs()}`;
   };
+  const listenEn = () => settings.trainListenEn !== 'tap';
+  const togs = () => toggleRowHTML(CFG[cur.st.k], TOGS[cur.st.k], cur.st.k === 'listen' ? { en: listenEn() } : {});
   const say = (text, isSlow = false) => `<button class="dr-say" data-say="${esc(text)}"${isSlow ? ' data-slow' : ''}>${isSlow ? ICON.slow : icons.speaker}${isSlow ? 'Slow' : 'Play'}</button>`;
 
   const render = () => {
@@ -107,13 +110,38 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     if (!s) { ii++; return render(); }
     cur = { st, s, text: textOf(s), hint: 0, revealed: false, tapEN: false, tapIt: false };
     if (st.k === 'shadow') return renderShadow();
-    body.innerHTML = `${head()}${stepLine()}
-      <div class="dr-main"><div class="flash enter dr-${st.k}">${cardHTML()}</div></div>
-      <div class="fc-bottom dr-bottom">${actionsHTML()}</div>`;
+    drawCard(true);
     // In the tap that brought this card, for iOS.
     if (st.k === 'listen') playBtn($('.dr-disc', body));
     else if (cfg().enFirst && s.en) speak(s.en, { lang: 'en', rate: cfg().speed || 1 });
   };
+
+  const drawCard = (enter) => {
+    body.innerHTML = `${head()}${stepLine()}
+      <div class="dr-main"><div class="flash${enter ? ' enter' : ''}${cur.revealed ? ' flipped' : ''} dr-${cur.st.k}">${cardHTML()}</div></div>
+      <div class="fc-bottom dr-bottom">${actionsHTML()}</div>`;
+  };
+
+  // ---------- the step's settings, in this same sheet; Done comes back to the card ----------
+  const openSettings = () => {
+    closeBubble(); stopShadow(); stopSpeaking();
+    setFor = cur;
+    const k = cur.st.k, mode = CFG[k];
+    const listen = k === 'listen' ? `<div class="section-title fc-set-title">Listen</div>
+      <div class="ts-group"><label class="ts-item"><span class="lbl">English<small>On the back of the card</small></span>
+        <select data-train="trainListenEn"><option value="shown"${listenEn() ? ' selected' : ''}>Shown</option><option value="tap"${listenEn() ? '' : ' selected'}>Tap to reveal</option></select></label></div>` : '';
+    body.innerHTML = `<h2><span>${STEPS.find((x) => x.k === k).name} Settings</span><span class="rv-hbtns"><button class="fc-done-set" data-close-set>Done</button></span></h2>
+      <div class="fc-settings">${listen}${settingsHTML(mode, { note: `Shared with Focus mode’s ${MODES[mode].name}.${k === 'listen' ? ' The English above is Listen’s own.' : ''}` })}</div>`;
+  };
+  const closeSettings = () => {
+    cur = setFor; setFor = null;
+    cur.tapEN = false;
+    // Shadow starts the sentence again with the new settings (in this tap, for iOS); a card comes back as it was.
+    if (cur.st.k === 'shadow') return render();
+    drawCard(false);
+  };
+  bindSettings(body, () => CFG[setFor.st.k]);
+  body.addEventListener('change', (e) => { const k = e.target.dataset?.train; if (k) settings[k] = e.target.value; });
 
   const renderIntro = (st) => {
     const back = info;
@@ -131,8 +159,9 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
 
   const ctxChip = () => (cur.s.ctx ? `<span class="dr-ctx">${esc(cur.s.ctx)}</span>` : '');
   // The English under the Italian, as the Translation toggle has it (or tap to show it).
-  const enHTML = (en) => (cur.tapEN || cfg().en === 'shown' ? `<div class="dr-en">${esc(en)}</div>`
-    : cfg().en === 'tap' ? '<button class="fc-hidden en" data-reveal="en">Tap to show the English</button>' : '');
+  const enMode = () => (cur.st.k === 'listen' ? (listenEn() ? 'shown' : 'tap') : cfg().en);
+  const enHTML = (en) => (cur.tapEN || enMode() === 'shown' ? `<div class="dr-en">${esc(en)}</div>`
+    : enMode() === 'tap' ? '<button class="fc-hidden en" data-reveal="en">Tap to show the English</button>' : '');
   const cardHTML = () => {
     const { st, s, text } = cur;
     const back = `${ctxChip()}<div class="dr-it">${sentenceHTML(text)}</div>${st.k === 'say' ? `<div class="dr-en">${esc(s.en)}</div>` : enHTML(s.en)}
@@ -193,6 +222,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     job.then((snap) => { undo.push({ pos, snap }); refreshHead(); }).finally(() => { busy = false; });
   };
   const refreshHead = () => {
+    if (setFor) return;
     const h = $('h2 .rv-hbtns', body);
     if (h && undo.length && !$('.rv-undo', h)) h.insertAdjacentHTML('afterbegin', `<button class="rv-undo" aria-label="Undo">${ICON.undo}</button>`);
   };
@@ -325,6 +355,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select')) return;
     const k = e.key;
     if (k === 'Escape' && bubbleOpen()) { e.preventDefault(); return closeBubble(); }
+    if (setFor) return;
     if (k === 'z' || k === 'Z') { e.preventDefault(); return undoLast(); }
     if (!cur) { if (k === ' ' || k === 'Enter') { e.preventDefault(); $('[data-go], [data-done]', body)?.click(); } return; }
     if (cur.st.k === 'shadow') { if (k === ' ' || k === 'Enter') { e.preventDefault(); if (cur.done) nextShadow(); else player?.toggle(); } return; }
@@ -340,9 +371,10 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
   }
 
   const setTog = (k) => {
-    flipToggle(CFG[cur.st.k], k);
+    if (k === 'en' && cur.st.k === 'listen') settings.trainListenEn = listenEn() ? 'tap' : 'shown';
+    else flipToggle(CFG[cur.st.k], k);
     haptic();
-    $('.fc-togs', body).outerHTML = toggleRowHTML(CFG[cur.st.k], TOGS[cur.st.k]);
+    $('.fc-togs', body).outerHTML = togs();
     if (k !== 'en') return;
     cur.tapEN = false;
     if (cur.st.k === 'shadow') $('.dr-shadow-text', body).innerHTML = shadowText();
@@ -357,6 +389,8 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     if (b) {
       if (b.matches('.x') || b.dataset.done != null) return closeSheet();
       if (b.matches('.rv-undo')) return undoLast();
+      if (b.dataset.gear != null) return openSettings();
+      if (b.dataset.closeSet != null) return closeSettings();
       if (b.dataset.say != null) return playBtn(b);
       if (b.dataset.go != null) { if (steps[si]) sawIntro(steps[si].k); return render(); }
       if (b.dataset.info != null) { info = true; return render(); }

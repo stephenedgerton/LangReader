@@ -43,9 +43,10 @@ const x = (n) => `${n}×`;
 
 // The row of toggles over the sentence (Focus screen and the daily session): each writes the mode's settings.
 // `keys` picks which ones show: en (Translation: English shown ↔ tap to reveal), dual (English first),
-// rep (Repeat, round 1–5), speed (round 0.75–1.1×).
-export function toggleRowHTML(mode, keys = ['en', 'dual', 'rep', 'speed']) {
-  const c = focusCfg(mode);
+// rep (Repeat, round 1–5), speed (round 0.75–1.1×). `en` overrides whether Translation shows as on (the daily
+// Listen step keeps its own, settings.trainListenEn).
+export function toggleRowHTML(mode, keys = ['en', 'dual', 'rep', 'speed'], { en } = {}) {
+  const c = { ...focusCfg(mode), ...(en == null ? {} : { en: en ? 'shown' : 'tap' }) };
   const t = (k, label, on, val = '') => `<button class="fc-tog${on ? ' on' : ''}" data-tog="${k}" aria-pressed="${on}"><span>${label}</span>${val ? `<b>${val}</b>` : ''}</button>`;
   const all = { en: () => t('en', 'Translation', c.en === 'shown'), dual: () => t('dual', 'Dual audio', c.enFirst),
     rep: () => t('rep', 'Repeat', c.repeats > 1, x(c.repeats)), speed: () => t('speed', 'Speed', c.speed !== 1, x(c.speed)) };
@@ -147,7 +148,8 @@ export function createPlayer({ items, mode, at = 0, slow = () => false, config =
 }
 
 // ---------- settings ----------
-function settingsHTML(mode) {
+// The mode's settings, for the Focus screen and the daily session (`note` replaces the line at the bottom).
+export function settingsHTML(mode, { note } = {}) {
   const c = focusCfg(mode);
   const sel = (k, opts) => `<select data-k="${k}"${typeof opts[0][0] === 'number' ? ' data-num' : ''}>${opts.map(([v, l]) => `<option value="${v}"${String(c[k]) === String(v) ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
   const sw = (k) => `<span class="switch"><input type="checkbox" data-k="${k}"${c[k] ? ' checked' : ''}><i></i></span>`;
@@ -170,13 +172,14 @@ function settingsHTML(mode) {
       ${item('Italian text', sel('it', [['shown', 'Shown'], ['later', 'Hidden from the 2nd repeat'], ['hidden', 'Hidden']]))}
       ${item('English', sel('en', [['shown', 'Shown'], ['tap', 'Tap to reveal'], ['hidden', 'Hidden']]))}
     </div>
-    <p class="muted fc-set-note">Saved for ${MODES[mode].name} only. Changes apply from the next sentence.</p>`;
+    <p class="muted fc-set-note">${note || `Saved for ${MODES[mode].name} only. Changes apply from the next sentence.`}</p>`;
 }
-function bindSettings(root, mode, onChange) {
+// `mode` can be a function, for a sheet whose mode changes (the daily session's steps).
+export function bindSettings(root, mode, onChange) {
   root.addEventListener('change', (e) => {
     const t = e.target, k = t.dataset?.k;
     if (!k) return;
-    setFocusCfg(mode, { [k]: t.type === 'checkbox' ? t.checked : t.dataset.num != null ? +t.value : t.value });
+    setFocusCfg(typeof mode === 'function' ? mode() : mode, { [k]: t.type === 'checkbox' ? t.checked : t.dataset.num != null ? +t.value : t.value });
     onChange?.(k);
   });
 }

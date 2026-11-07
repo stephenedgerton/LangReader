@@ -63,6 +63,14 @@ describe('training', () => {
     assert.equal(await page.$('[data-next]'), null, 'Next waits for the repeats');
     assert.match(await page.textContent('.dr-bottom'), /Pause/);
     assert.equal(await page.$eval('.dr-ring .mid svg', (e) => getComputedStyle(e).transform), 'none', 'the icon in the ring is upright');
+    // ⚙︎ has Shadowing's settings (the gap for your turn among them); Done starts the sentence again.
+    await page.click('[data-gear]'); await sleep(200);
+    assert.match(await page.textContent('#sheet h2'), /Shadow Settings/);
+    await page.selectOption('.fc-settings [data-k=turn]', '1');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focus.shadow.turn), 1);
+    await page.click('[data-close-set]'); await sleep(200);
+    assert.match(await page.textContent('.dr-step'), /Shadow.*1 of/s);
+    assert.match(await page.textContent('.dr-bottom'), /Pause/, 'playing again');
     for (let i = 0; i < 4; i++) { await page.waitForSelector('[data-next]', { timeout: 8000 }); await page.click('[data-next]'); await sleep(150); }
 
     assert.match(await page.textContent('.dr-intro'), /Say it/);
@@ -124,13 +132,30 @@ describe('training', () => {
     assert.ok(await page.$('.dr-intro'), 'the first time, Listen has its intro');
     await page.click('[data-go]'); await sleep(200);
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.trainIntros'))), ['listen']);
-    // The Translation toggle is Shadowing's: the English is a tap away on the back of the card.
-    await page.click('[data-tog=en]'); await sleep(100);
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focus.shadow.en), 'tap');
+    // Listen's English is shown on the back by default, whatever Shadowing has.
     await page.click('[data-flip]'); await sleep(200);
+    assert.equal(await page.textContent('.face.back .dr-en'), 'Good morning!');
+    // Its Translation toggle is its own: off, the English is a tap away; Shadowing's is untouched.
+    await page.click('[data-tog=en]'); await sleep(100);
+    const set = await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')));
+    assert.equal(set.trainListenEn, 'tap');
+    assert.equal(set.focus?.shadow?.en, undefined);
     assert.equal(await page.$('.face.back .dr-en'), null);
     await page.click('.face.back [data-reveal=en]');
     assert.equal(await page.textContent('.face.back .dr-en'), 'Good morning!');
+    // ⚙︎ opens the step's settings in the same sheet: Listen's English, then Shadowing's; Done comes back to
+    // the card as it was.
+    await page.click('[data-gear]'); await sleep(200);
+    assert.match(await page.textContent('#sheet h2'), /Listen Settings/);
+    await page.selectOption('[data-train=trainListenEn]', 'shown');
+    await page.selectOption('.fc-settings [data-k=turn]', '2');
+    const set2 = await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')));
+    assert.deepEqual([set2.trainListenEn, set2.focus.shadow.turn], ['shown', 2]);
+    await page.click('[data-close-set]'); await sleep(200);
+    assert.ok(await page.$('.flash.flipped'), 'the card is still turned over');
+    assert.equal(await page.textContent('.face.back .dr-en'), 'Good morning!');
+    assert.match(await page.textContent('[data-tog=en]'), /Translation/);
+    assert.ok(await page.$('[data-tog=en].on'));
     await page.click('.x'); await sleep(300);
     // Again: no intro, the card plays straight away.
     await page.evaluate(() => { window.__said = []; });

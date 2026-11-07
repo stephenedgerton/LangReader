@@ -36,6 +36,7 @@ const defaults = {
   trainSay: 8,
   trainNew: 5,
   trainWords: false,
+  trainListenEn: 'shown',  // shown | tap: the English on the back of a Listen card (its own, not Shadowing's)
   trainPacks: null,        // ids of the ready-made packs you train (null: DEFAULT_PACKS in samples/packs/index.js)
   trainMe: '',             // m | f: picks gendered forms about you ('' until asked; masculine meanwhile)
   trainPartner: '',        // m | f: the same, about your partner

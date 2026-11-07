@@ -70,7 +70,7 @@ const ICON = {
 
 // ---------- the playback loop ----------
 // items: [{id, text, en}]. Calls on.show(i) when it moves to a sentence, on.phase(name, {rep, ms}) as each part
-// starts ('en', 'it', 'turn', 'rep' when a repetition ends, 'done' after the last), on.sentenceDone(item) when a
+// starts ('en', 'it', 'turn' (ms: how long it lasts, a guess for what's said), 'rep' when a repetition ends, 'done' after the last), on.sentenceDone(item) when a
 // sentence has played all its repeats (each repetition is counted with countRep()), on.state() when it starts or stops playing, on.end() at the end of the list.
 // The mode's settings are read at the start of each sentence, so changes apply from the next one; `config` can
 // adjust them (the daily session's Shadow plays one sentence at a time, so it turns Loop off).
@@ -101,14 +101,14 @@ export function createPlayer({ items, mode, at = 0, slow = () => false, config =
     }
     const r = (cfg.speed || 1) * (slow() ? 0.7 : 1), key = `${item.text}|${r}`;
     const next = () => { p.rep++; countRep(item.id); emit('rep'); rep(); };
-    const italian = (then) => { emit('it'); say(item.text, { rate: r }, (ms) => { lens.set(key, ms); then(ms); }); };
+    const italian = (then) => { emit('it', { ms: guess(item.text, r) }); say(item.text, { rate: r }, (ms) => { lens.set(key, ms); then(ms); }); };
     const turn = (ms, then) => {
       if (!cfg.turn) return wait(mode === 'recall' ? cfg.gap * 1000 : 300, then); // Speak along
       const t = Math.max(1200, ms * cfg.turn);
       emit('turn', { ms: t }); wait(t, () => { turnThen = null; then(); });
       turnThen = then;
     };
-    const english = (then) => { emit('en'); say(item.en, { lang: 'en', rate: cfg.speed || 1 }, () => then()); };
+    const english = (then) => { emit('en', { ms: guess(item.en, cfg.speed || 1) }); say(item.en, { lang: 'en', rate: cfg.speed || 1 }, () => then()); };
     const withEN = cfg.enFirst && item.en && (!cfg.enOnce || p.rep === 0);
     if (mode === 'shadow') {
       const go = () => italian((ms) => turn(ms, next));
@@ -150,6 +150,32 @@ export function createPlayer({ items, mode, at = 0, slow = () => false, config =
     stop() { halt(); stopSpeaking(); p.playing = false; },
   };
 }
+
+// ---------- the ring ----------
+// Both shadowing screens (the daily session's Shadow and the Focus screen) show where the player is as a ring
+// that fills while each part plays, with the part's name in the middle. During "Your turn" it can be tapped.
+export const ringHTML = () => `<div class="dr-ring"><svg viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="90"/><circle class="prog" cx="100" cy="100" r="90" pathLength="100"/></svg>
+  <div class="mid"></div></div>`;
+export const repsHTML = (n) => `<div class="dr-reps">${Array.from({ length: n }, () => '<i></i>').join('')}</div>`;
+const RING = {
+  en: () => [ICON.en, 'English'], it: () => [stepIcon('listen'), 'Listen…'], turn: () => [stepIcon('say'), 'Your turn', 'Tap when done'],
+  done: () => [icons.check, 'Nice'], paused: () => [ICON.pause, 'Paused'],
+};
+// Shows a part (a player phase, or 'paused'); `ms` animates the fill over that long. 'done' fills it at once.
+export function ringPhase(ring, name, ms) {
+  if (!ring || !RING[name]) return;
+  const prog = $('.prog', ring), [ic, label, sub] = RING[name]();
+  const turn = name === 'turn';
+  ring.classList.toggle('turn', turn);
+  ring.classList.toggle('paused', name === 'paused');
+  if (turn) { ring.setAttribute('role', 'button'); ring.setAttribute('aria-label', 'Your turn. Tap when you’ve said it'); }
+  else { ring.removeAttribute('role'); ring.removeAttribute('aria-label'); }
+  $('.mid', ring).innerHTML = `${ic}<b>${label}</b>${sub ? `<small>${sub}</small>` : ''}`;
+  prog.style.transition = 'none';
+  prog.style.strokeDashoffset = name === 'done' ? 0 : 100;
+  if (ms && name !== 'done') { prog.getBoundingClientRect(); prog.style.transition = `stroke-dashoffset ${ms}ms linear`; prog.style.strokeDashoffset = 0; }
+}
+export const ringReps = (root, rep) => $$('.dr-reps i', root).forEach((d, k) => d.classList.toggle('on', k < rep));
 
 // ---------- settings ----------
 // The mode's settings, for the Focus screen and the daily session (`note` replaces the line at the bottom).
@@ -258,21 +284,10 @@ export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
   };
   const drawText = () => { const el = $('.fc-text', body); if (el) el.innerHTML = textHTML(); };
 
-  const PHASE = { en: ['English', ICON.en], it: ['Listen…', stepIcon('listen')], turn: ['Your turn <small>· tap when done</small>', stepIcon('say')], done: ['Next one…', icons.check] };
   const drawPhase = (name, rep, ms) => {
-    const el = $('.fc-phase', body); if (!el) return;
-    const n = player.cfg.repeats;
-    $$('.fc-reps i', el).forEach((d, k) => d.classList.toggle('on', k < Math.min(rep, n)));
-    const lab = $('.fc-ph', el), bar = $('.fc-bar i', el);
+    ringReps(body, Math.min(rep, player.cfg.repeats));
     if (name === 'rep') return;
-    const [txt, ic] = !player.playing ? (player.ended ? ['The end', icons.check] : ['Paused', ICON.pause]) : PHASE[name] || ['', ''];
-    lab.innerHTML = `${ic}<span>${txt}</span>`;
-    const turn = name === 'turn' && player.playing;
-    el.classList.toggle('turn', turn);
-    if (turn) { el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Your turn. Tap when you’ve said it'); }
-    else { el.removeAttribute('role'); el.removeAttribute('aria-label'); }
-    bar.style.transition = 'none'; bar.style.width = '0';
-    if (name === 'turn' && ms) { bar.getBoundingClientRect(); bar.style.transition = `width ${ms}ms linear`; bar.style.width = '100%'; }
+    ringPhase($('.dr-ring', body), player.playing ? name : 'paused', ms);
   };
   const drawTransport = () => {
     const b = $('[data-toggle]', body);
@@ -296,9 +311,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
       <div class="fc-main">${ended ? `<div class="fc-end"><div class="dr-done-ico">${icons.check}</div><h3>That’s the whole pack</h3>
           <p class="muted">${n} sentence${n === 1 ? '' : 's'}. ${rated.size ? `${rated.size} rated.` : 'Rating them is up to you.'}</p>
           <button class="secondary" data-restart>Play again from the start</button><button class="link-btn" data-done>Done</button></div>`
-        : `<div class="fc-text">${textHTML()}</div>
-        <div class="fc-phase"><div class="fc-ph"></div><div class="fc-bar"><i></i></div>
-          <div class="fc-reps">${Array.from({ length: player.cfg.repeats }, () => '<i></i>').join('')}</div></div>
+        : `${ringHTML()}<div class="fc-text">${textHTML()}</div>${repsHTML(player.cfg.repeats)}
         <div class="rv-tools fc-tools"><button data-replay>${icons.speaker}Play</button><button data-slow class="${slow ? 'on' : ''}" aria-pressed="${slow}">${stepIcon('slow')}Slow</button></div>`}</div>
       <div class="fc-bottom">
         <div class="fc-rate-label">Optional: how well did you know it?</div>
@@ -307,7 +320,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
           <button class="fc-play" data-toggle aria-label="${player.playing ? 'Pause' : 'Play'}">${player.playing ? ICON.pause : ICON.play}</button>
           <button data-next aria-label="Next sentence">${ICON.next}</button></div>
       </div>`;
-    if (!ended) drawPhase(player.playing ? 'it' : 'stop', player.rep);
+    if (!ended) drawPhase('it', player.rep);
   };
 
   // Settings, in this same sheet (the shared sheet can only hold one thing); playback carries on behind it.
@@ -366,7 +379,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
       return;
     }
     // Tapping "Your turn" ends it: you've said it, go on.
-    if (e.target.closest('.fc-phase.turn') && player.skipTurn()) return haptic();
+    if (e.target.closest('.dr-ring.turn') && player.skipTurn()) return haptic();
     // A word: the reader's bubble, with the playback paused so the two don't talk over each other.
     const cw = e.target.closest('.cw');
     if (cw) { player.pause(); return openCardBubble(cw, { root: body, context: item()?.text || '' }); }

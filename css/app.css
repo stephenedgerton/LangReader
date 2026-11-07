@@ -1110,9 +1110,10 @@ svg.solid { fill: currentColor; stroke: none; }
 .dr-ring.turn .prog { stroke: var(--blue); }
 .dr-ring .mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--tint); }
 .dr-ring.turn .mid { color: var(--blue); }
-.dr-ring.turn, .fc-phase.turn { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dr-ring.turn { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dr-ring.paused .mid { color: var(--label-3); }
+.dr-ring.paused .prog { visibility: hidden; }
 .dr-ring .mid small { font-size: 12px; font-weight: 500; color: var(--label-3); margin-top: -4px; }
-.fc-ph small { font-size: 12px; font-weight: 500; color: var(--label-3); }
 .dr-ring .mid svg { width: 40px; height: 40px; }
 .dr-ring .mid b { font-size: 18px; color: var(--label); }
 .dr-reps { display: flex; gap: 8px; }
@@ -1204,17 +1205,18 @@ svg.solid { fill: currentColor; stroke: none; }
 .fc-hidden { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding: 16px 12px; border: 1.5px dashed var(--sep); border-radius: 14px; color: var(--label-2); font: 600 17px var(--sans); }
 .fc-hidden small { font-size: 12px; font-weight: 500; color: var(--label-3); }
 .fc-hidden.en { margin-top: 10px; padding: 10px 12px; font-size: 14px; }
-.fc-phase { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 64px; }
-.fc-ph { display: inline-flex; align-items: center; gap: 6px; color: var(--tint); font-weight: 600; font-size: 15px; min-height: 22px; }
-.fc-ph svg { width: 20px; height: 20px; }
-.fc-ph span { color: var(--label); }
-.fc-phase.turn .fc-ph { color: var(--blue); }
-.fc-bar { width: 160px; height: 4px; border-radius: 2px; background: var(--fill); overflow: hidden; }
-.fc-bar i { display: block; height: 100%; width: 0; background: var(--tint-fill); }
-.fc-phase.turn .fc-bar i { background: var(--blue); }
-.fc-reps { display: flex; gap: 8px; }
-.fc-reps i { width: 9px; height: 9px; border-radius: 50%; background: var(--fill-2); }
-.fc-reps i.on { background: var(--tint-fill); }
+/* Focus has more under the sentence than the session, so while it plays the screen is one screen high and the
+   ring takes what room is left (96–160px), rather than a long sentence pushing Play and Slow under the controls. */
+.focus:has(.dr-ring) { height: calc(100dvh - var(--safe-bottom) - 18px); min-height: 0; }
+.focus .fc-main:has(.dr-ring) { min-height: 0; overflow-y: auto; justify-content: safe center; } /* scrolls only if even the smallest ring can't fit */
+.focus .fc-main > * { flex-shrink: 0; }
+.focus .fc-main > .dr-ring { flex: 0 1 160px; min-height: 96px; width: auto; height: auto; aspect-ratio: 1; container-type: size; }
+@container (max-width: 124px) { .dr-ring .mid small { display: none; } .dr-ring .mid b { font-size: 14px; } .dr-ring .mid svg { width: 24px; height: 24px; } }
+.focus .dr-ring .mid { gap: 4px; }
+.focus .dr-ring .mid svg { width: 30px; height: 30px; }
+.focus .dr-ring .mid b { font-size: 16px; }
+.focus .dr-ring .mid small { font-size: 11px; margin-top: -2px; }
+.focus .fc-main:has(.dr-ring) { gap: 10px; padding: 4px 0 8px; }
 .fc-tools { margin-top: 0; }
 .fc-tools button.on, .fc-tools button.playing { background: var(--tint-fill); color: var(--on-tint); }
 .fc-bottom { position: sticky; bottom: 0; z-index: 4; background: var(--bg-elev); padding: 8px 0 4px; }

@@ -46,9 +46,9 @@ describe('training', () => {
     await page.click('[data-mode=recall]'); await sleep(200);
     await page.evaluate(() => { window.__said = []; });
     await page.click('[data-act=focus]');
-    await page.waitForSelector('.fc-phase.turn');
+    await page.waitForSelector('.dr-ring.turn');
     assert.deepEqual(await page.evaluate(() => window.__said), ['en:Good morning!']);
-    await page.click('.fc-phase'); await sleep(250);
+    await page.click('.dr-ring'); await sleep(250);
     assert.deepEqual(await page.evaluate(() => window.__said), ['en:Good morning!', 'Buongiorno!']);
     await page.click('.x'); await sleep(200);
     assert.deepEqual(errors, []);
@@ -334,7 +334,7 @@ describe('training', () => {
     await page.waitForFunction(() => window.__said.length >= 4);
     assert.deepEqual((await page.evaluate(() => window.__said)).slice(0, 4), ['Buongiorno!', 'Buongiorno!', 'Buongiorno!', 'Buonasera!']);
     await page.click('[data-toggle]'); await sleep(200);
-    assert.match(await page.textContent('.fc-phase'), /Paused/);
+    assert.match(await page.textContent('.dr-ring'), /Paused/);
     assert.equal(await page.getAttribute('[data-toggle]', 'aria-label'), 'Play');
     const said = (await page.evaluate(() => window.__said)).length;
     await sleep(2500);
@@ -411,7 +411,7 @@ describe('training', () => {
     await page.click('[data-start]'); await sleep(200);
     await page.waitForFunction(() => window.__said.length >= 4, null, { timeout: 12000 });
     assert.deepEqual((await page.evaluate(() => window.__said)).slice(0, 4), ['en:Good morning!', 'Buongiorno!', 'en:Good evening!', 'Buonasera!']);
-    assert.equal(await page.$$eval('.fc-reps i', (r) => r.length), 1);
+    assert.equal(await page.$$eval('.dr-reps i', (r) => r.length), 1);
     await page.click('.x'); await sleep(300);
     const f = await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focus);
     assert.deepEqual(f, { shadow: { repeats: 1, enFirst: true } }, 'only Shadowing changed');
@@ -421,7 +421,7 @@ describe('training', () => {
     await page.click('[data-act=focus]'); await sleep(300);
     assert.deepEqual(await page.evaluate(() => window.__said), ['en:Good morning!']);
     assert.match(await page.textContent('.fc-text'), /Good morning!\s*Say it in Italian/);
-    assert.match(await page.textContent('.fc-phase'), /Your turn/);
+    assert.match(await page.textContent('.dr-ring'), /Your turn/);
     await page.waitForFunction(() => window.__said.length >= 2, null, { timeout: 8000 });
     assert.equal((await page.evaluate(() => window.__said))[1], 'Buongiorno!');
     await sleep(100);

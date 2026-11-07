@@ -22,7 +22,7 @@ import { AGAIN, HARD, GOOD } from './srs.js';
 import { hint } from './sentences.js';
 import { STEPS, todaysPlan, sentence, textOf, rateCard, undoRate, countDone, stepFinished, packMeta, countRep } from './training.js';
 import { todaysCount, reviewSheet } from './review.js';
-import { createPlayer, focusCfg, toggleRowHTML, flipToggle, settingsHTML, bindSettings, MODES, GRADES } from './focus.js';
+import { createPlayer, ringHTML, repsHTML, ringPhase, ringReps, focusCfg, toggleRowHTML, flipToggle, settingsHTML, bindSettings, MODES, GRADES } from './focus.js';
 
 const ICON = {
   listen: '<svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.5"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.5"/></svg>',
@@ -257,17 +257,12 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     body.innerHTML = `${head()}${stepLine()}
       <div class="dr-main dr-shadow">
         ${!s.cards?.say && !s.cards?.listen ? '<span class="dr-new">New today</span>' : ''}
-        <div class="dr-ring"><svg viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="90"/><circle class="prog" cx="100" cy="100" r="90" pathLength="100"/></svg>
-          <div class="mid"></div></div>
+        ${ringHTML()}
         <div class="dr-shadow-text">${shadowText()}</div>
-        <div class="dr-reps">${Array.from({ length: cfg().repeats }, () => '<i></i>').join('')}</div>
+        ${repsHTML(cfg().repeats)}
       </div>
       <div class="fc-bottom dr-bottom">${shadowActions()}</div>`;
-    const ring = $('.dr-ring', body), prog = $('.prog', ring), mid = $('.mid', ring);
-    const anim = (ms) => {
-      prog.style.transition = 'none'; prog.style.strokeDashoffset = 100; prog.getBoundingClientRect();
-      prog.style.transition = `stroke-dashoffset ${ms}ms linear`; prog.style.strokeDashoffset = 0;
-    };
+    const ring = $('.dr-ring', body);
     const bottom = () => { $('.dr-bottom', body).innerHTML = shadowActions(); };
     const mine = cur;
     player = createPlayer({
@@ -276,19 +271,12 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
       on: {
         phase: (name, { rep, ms }) => {
           if (cur !== mine) return;
-          ring.classList.toggle('turn', name === 'turn');
-          if (name === 'turn') { ring.setAttribute('role', 'button'); ring.setAttribute('aria-label', 'Your turn. Tap when you’ve said it'); }
-          else { ring.removeAttribute('role'); ring.removeAttribute('aria-label'); }
-          if (name === 'en') { mid.innerHTML = `${ICON.en}<b>English</b>`; anim(Math.max(1200, s.en.length * 75)); }
-          if (name === 'it') { mid.innerHTML = `${ICON.listen}<b>Listen…</b>`; anim(Math.max(1200, (cur.text.length * 75) / rate())); }
-          if (name === 'turn') { mid.innerHTML = `${ICON.say}<b>Your turn</b><small>Tap when done</small>`; anim(ms); }
+          ringPhase(ring, name, ms);
           if (name === 'rep') {
-            $$('.dr-reps i', body).forEach((d, k) => d.classList.toggle('on', k < rep));
+            ringReps(body, rep);
             $('.dr-shadow-text', body).innerHTML = shadowText();
           }
           if (name === 'done') {
-            mid.innerHTML = `${icons.check}<b>Nice</b>`;
-            prog.style.transition = 'none'; prog.style.strokeDashoffset = 0;
             cur.done = true; bottom();
           }
         },
@@ -307,7 +295,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
   };
   const shadowAgain = () => {
     cur.done = false;
-    $$('.dr-reps i', body).forEach((x) => x.classList.remove('on'));
+    ringReps(body, 0);
     $('.dr-bottom', body).innerHTML = shadowActions();
     player.goto(0); player.play();
   };

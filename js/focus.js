@@ -78,7 +78,8 @@ export function createPlayer({ items, mode, at = 0, slow = () => false, config =
   const p = { i: Math.max(0, Math.min(at, items.length - 1)), rep: 0, playing: false, ended: false, cfg: config() };
   let run = 0, timer = null;
   const lens = new Map(); // `${text}|${rate}` -> how long the Italian took, for Recall's gap before it
-  const halt = () => { run++; clearTimeout(timer); timer = null; };
+  let turnThen = null; // what comes after "Your turn", while it's running, so a tap can skip to it
+  const halt = () => { run++; clearTimeout(timer); timer = null; turnThen = null; };
   const wait = (ms, then) => { const mine = ++run; timer = setTimeout(() => { if (mine === run) then(); }, ms); };
   const guess = (text, rate) => Math.max(1200, (text.length * 75) / rate);
   // Says one thing; `then(ms)` gets how long it took (from the voice's end, else the length-based guess).
@@ -104,7 +105,8 @@ export function createPlayer({ items, mode, at = 0, slow = () => false, config =
     const turn = (ms, then) => {
       if (!cfg.turn) return wait(mode === 'recall' ? cfg.gap * 1000 : 300, then); // Speak along
       const t = Math.max(1200, ms * cfg.turn);
-      emit('turn', { ms: t }); wait(t, then);
+      emit('turn', { ms: t }); wait(t, () => { turnThen = null; then(); });
+      turnThen = then;
     };
     const english = (then) => { emit('en'); say(item.en, { lang: 'en', rate: cfg.speed || 1 }, () => then()); };
     const withEN = cfg.enFirst && item.en && (!cfg.enOnce || p.rep === 0);
@@ -142,6 +144,8 @@ export function createPlayer({ items, mode, at = 0, slow = () => false, config =
     toggle() { if (p.playing) this.pause(); else this.play(); },
     next() { if (p.i + 1 < items.length) goto(p.i + 1); else if (p.cfg.loop) goto(0); else if (!p.ended) { goto(p.i); halt(); p.playing = false; p.ended = true; on.state?.(); on.end?.(); } },
     prev() { goto(p.i - 1); },
+    // Ends "Your turn" now (you finished saying it before the gap ran out) and goes on. Call it in a tap, for iOS.
+    skipTurn() { if (!p.playing || !turnThen) return false; const then = turnThen; halt(); then(); return true; },
     goto,
     stop() { halt(); stopSpeaking(); p.playing = false; },
   };
@@ -254,7 +258,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
   };
   const drawText = () => { const el = $('.fc-text', body); if (el) el.innerHTML = textHTML(); };
 
-  const PHASE = { en: ['English', ICON.en], it: ['Listen…', stepIcon('listen')], turn: ['Your turn', stepIcon('say')], done: ['Next one…', icons.check] };
+  const PHASE = { en: ['English', ICON.en], it: ['Listen…', stepIcon('listen')], turn: ['Your turn <small>· tap when done</small>', stepIcon('say')], done: ['Next one…', icons.check] };
   const drawPhase = (name, rep, ms) => {
     const el = $('.fc-phase', body); if (!el) return;
     const n = player.cfg.repeats;
@@ -263,7 +267,10 @@ export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
     if (name === 'rep') return;
     const [txt, ic] = !player.playing ? (player.ended ? ['The end', icons.check] : ['Paused', ICON.pause]) : PHASE[name] || ['', ''];
     lab.innerHTML = `${ic}<span>${txt}</span>`;
-    el.classList.toggle('turn', name === 'turn' && player.playing);
+    const turn = name === 'turn' && player.playing;
+    el.classList.toggle('turn', turn);
+    if (turn) { el.setAttribute('role', 'button'); el.setAttribute('aria-label', 'Your turn. Tap when you’ve said it'); }
+    else { el.removeAttribute('role'); el.removeAttribute('aria-label'); }
     bar.style.transition = 'none'; bar.style.width = '0';
     if (name === 'turn' && ms) { bar.getBoundingClientRect(); bar.style.transition = `width ${ms}ms linear`; bar.style.width = '100%'; }
   };
@@ -358,6 +365,8 @@ export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
       if (b.dataset.replay != null) { player.pause(); b.classList.add('playing'); return speak(item().text, { rate: (focusCfg(mode).speed || 1) * (slow ? 0.7 : 1), onend: () => b.classList.remove('playing') }); }
       return;
     }
+    // Tapping "Your turn" ends it: you've said it, go on.
+    if (e.target.closest('.fc-phase.turn') && player.skipTurn()) return haptic();
     // A word: the reader's bubble, with the playback paused so the two don't talk over each other.
     const cw = e.target.closest('.cw');
     if (cw) { player.pause(); return openCardBubble(cw, { root: body, context: item()?.text || '' }); }

@@ -277,9 +277,11 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
         phase: (name, { rep, ms }) => {
           if (cur !== mine) return;
           ring.classList.toggle('turn', name === 'turn');
+          if (name === 'turn') { ring.setAttribute('role', 'button'); ring.setAttribute('aria-label', 'Your turn. Tap when you’ve said it'); }
+          else { ring.removeAttribute('role'); ring.removeAttribute('aria-label'); }
           if (name === 'en') { mid.innerHTML = `${ICON.en}<b>English</b>`; anim(Math.max(1200, s.en.length * 75)); }
           if (name === 'it') { mid.innerHTML = `${ICON.listen}<b>Listen…</b>`; anim(Math.max(1200, (cur.text.length * 75) / rate())); }
-          if (name === 'turn') { mid.innerHTML = `${ICON.say}<b>Your turn</b>`; anim(ms); }
+          if (name === 'turn') { mid.innerHTML = `${ICON.say}<b>Your turn</b><small>Tap when done</small>`; anim(ms); }
           if (name === 'rep') {
             $$('.dr-reps i', body).forEach((d, k) => d.classList.toggle('on', k < rep));
             $('.dr-shadow-text', body).innerHTML = shadowText();
@@ -413,6 +415,8 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
       if (b.dataset.missed != null) return drillSheet({ practice: [...missed], onClose });
       return;
     }
+    // Tapping the ring during "Your turn" ends it: you've said it, go on.
+    if (e.target.closest('.dr-ring.turn') && player?.skipTurn()) return haptic();
     const cw = e.target.closest('.cw');
     if (cw && (cur?.revealed || cur?.st.k === 'shadow' || cw.closest('.dr-missed'))) return showWord(cw);
   };

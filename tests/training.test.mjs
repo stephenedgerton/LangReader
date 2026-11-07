@@ -20,6 +20,40 @@ describe('training', () => {
   before(async () => { srv = await startServer(); });
   after(async () => { await closeBrowser(t); srv.server.close(); });
 
+  test('tapping "Your turn" goes straight on, in the session’s Shadow and in Focus mode', async () => {
+    // A long gap, so only the tap can end it quickly.
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { ...GENDER, focus: { shadow: { repeats: 2, turn: 2 }, recall: { turn: 2 } } } });
+    await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push((u.lang.startsWith('en') ? 'en:' : '') + u.text); setTimeout(() => u.onend?.(), 10); }; });
+    await page.click('[data-act=start]'); await sleep(300);
+    await page.click('[data-skip-step]'); await sleep(250);
+    await page.click('[data-go]');
+    await page.waitForSelector('.dr-ring.turn');
+    assert.match(await page.textContent('.dr-ring'), /Your turn\s*Tap when done/);
+    assert.equal(await page.$eval('.dr-ring', (e) => e.getAttribute('role')), 'button');
+    assert.equal((await page.evaluate(() => window.__said)).length, 1);
+    await page.click('.dr-ring'); await sleep(250);
+    assert.deepEqual(await page.evaluate(() => window.__said), ['Buongiorno!', 'Buongiorno!'], 'the second repeat starts at once');
+    assert.equal(await page.$eval('.dr-reps i', (e) => e.classList.contains('on')), true, 'the first repeat counted');
+    await page.waitForSelector('.dr-ring.turn');
+    await page.click('.dr-ring');
+    await page.waitForSelector('[data-next]', { timeout: 2000 });
+    await page.click('.dr-ring'); await sleep(150); // not your turn: nothing happens
+    assert.equal((await page.evaluate(() => window.__said)).length, 2);
+    await page.click('.x'); await sleep(300);
+
+    // Focus mode's Recall: tapping "Your turn" plays the Italian now.
+    await page.click('[data-pack=survival]'); await sleep(300);
+    await page.click('[data-mode=recall]'); await sleep(200);
+    await page.evaluate(() => { window.__said = []; });
+    await page.click('[data-act=focus]');
+    await page.waitForSelector('.fc-phase.turn');
+    assert.deepEqual(await page.evaluate(() => window.__said), ['en:Good morning!']);
+    await page.click('.fc-phase'); await sleep(250);
+    assert.deepEqual(await page.evaluate(() => window.__said), ['en:Good morning!', 'Buongiorno!']);
+    await page.click('.x'); await sleep(200);
+    assert.deepEqual(errors, []);
+  });
+
   test('a fresh install trains Survival: three steps today, and Home points to them', async () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'training' });
     const card = await page.textContent('.tr-today');

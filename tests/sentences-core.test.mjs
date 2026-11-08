@@ -72,9 +72,26 @@ test('a sentence started in one direction is due in the other, misses are shadow
   const strong = { ...card(400, 300), s: 300 };
   const list = [sent('half', { listen: card(4) }), sent('miss', { listen: card(1), say: card(1) }), sent('done', { listen: strong, say: strong })];
   const p = buildPlan(list, { now: NOW, sizes: { listen: 5, shadow: 1, say: 5 }, maxNew: 5, missed: ['miss'] });
-  assert.deepEqual(p.say, ['half']);
-  assert.deepEqual(p.listen, []);
+  assert.deepEqual(p.say.slice(0, 1), ['half']);
+  assert.ok(!p.listen.includes('done') && !p.say.includes('done'));
   assert.deepEqual(p.shadow, ['miss']);
+});
+
+test('a step with room fills up with cards ahead of schedule, then new sentences past the allowance', () => {
+  const list = [
+    sent('due', { listen: card(-1), say: card(-1) }),
+    sent('soon', { listen: card(1, 3, 3), say: card(1, 3, 3) }),
+    sent('later', { listen: card(20, 30, 3), say: card(20, 30, 3) }),
+    sent('today', { listen: card(3, 3, 0), say: card(3, 3, 0) }),
+    sent('n1'), sent('n2'), sent('n3'), sent('n4'),
+  ];
+  const p = buildPlan(list, { now: NOW, sizes: { listen: 6, shadow: 8, say: 50 }, maxNew: 1, rand: () => 0 });
+  assert.deepEqual(p.fresh, ['n1']);
+  assert.deepEqual(p.listen, ['due', 'n1', 'soon', 'later', 'n2', 'n3'], 'due, the day’s new, ahead (closest to forgotten first), then more new');
+  assert.ok(!p.say.includes('today'), 'a card done today isn’t practised again');
+  assert.equal(p.say.length, 7, 'as many as there are, when that’s fewer than the size');
+  assert.deepEqual(p.shadow.slice(0, 1), ['n1']);
+  assert.ok(['n2', 'n3', 'n4'].every((id) => p.shadow.includes(id)), 'Shadow tops up with new ones too');
 });
 
 test('new sentences: the focus pack first, then your own, then the ready-made ones in pack order', () => {

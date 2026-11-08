@@ -58,31 +58,40 @@ export const learned = (s) => (s.cards?.say?.s || 0) >= 7;
 
 // Today's plan. `list` is the sentences you're training (enabled packs, not paused), with the new ones in
 // the order they should come in. Each step takes what's due first, the cards you're closest to forgetting
-// first, then fills up with new sentences while today's new allowance lasts. The plan is the same size every
-// day however long you've been away; whatever doesn't fit waits, unseen.
+// first, then today's new sentences while the new allowance lasts. A step that still has room fills up with
+// cards ahead of schedule, then more new sentences, so it's its full size whenever there are sentences to fill
+// it. The plan is the same size every day however long you've been away; whatever doesn't fit waits.
 //   sizes = {listen, shadow, say}: the day's share of each step; done = what's been done today
 //   (listen, shadow, say, fresh); missed = ids rated Again today (shadowed again after the new ones).
 export function buildPlan(list, { now, sizes, maxNew, done = {}, missed = [], rand = Math.random }) {
   const active = list.filter((s) => !mastered(s));
   const room = (k) => Math.max(0, (+sizes[k] || 0) - (done[k] || 0));
-  const fresh = active.filter(isNew).slice(0, Math.max(0, (+maxNew || 0) - (done.fresh || 0)));
-  const end = endOfDay(now);
+  const unseen = active.filter(isNew);
+  const fresh = unseen.slice(0, Math.max(0, (+maxNew || 0) - (done.fresh || 0)));
+  // Past the new-a-day allowance, more new sentences only top a step up when nothing else is left.
+  const spare = unseen.slice(fresh.length);
+  const end = endOfDay(now), start = new Date(now).setHours(0, 0, 0, 0);
+  const score = (s, dir) => { const c = s.cards[dir]; return 1 - retrievability(Math.max(0, (now - c.last) / DAY), c.s); };
   const due = (dir) => {
-    const score = (s) => { const c = s.cards[dir]; return 1 - retrievability(Math.max(0, (now - c.last) / DAY), c.s); };
-    const ready = active.filter((s) => s.cards?.[dir] && s.cards[dir].due <= end).sort((a, b) => score(b) - score(a) || a.cards[dir].due - b.cards[dir].due);
+    const ready = active.filter((s) => s.cards?.[dir] && s.cards[dir].due <= end).sort((a, b) => score(b, dir) - score(a, dir) || a.cards[dir].due - b.cards[dir].due);
     // Started in the other direction only: its first card in this one is due now.
     const half = active.filter((s) => !isNew(s) && !s.cards?.[dir]);
     return [...half, ...ready];
   };
+  // Not due yet and not done today: practised ahead, the ones closest to being forgotten first.
+  const ahead = (dir) => active.filter((s) => s.cards?.[dir] && s.cards[dir].due > end && s.cards[dir].last < start)
+    .sort((a, b) => score(b, dir) - score(a, dir) || a.cards[dir].due - b.cards[dir].due);
+  // A step is always its full size while there are sentences to fill it: due cards, today's new ones, cards
+  // ahead of schedule, then more new ones.
   const step = (dir) => {
-    const r = room(dir);
-    const out = due(dir).slice(0, r);
-    for (const s of fresh) if (out.length < r && !out.includes(s)) out.push(s);
+    const r = room(dir), out = [];
+    const add = (s) => { if (out.length < r && !out.includes(s)) out.push(s); };
+    due(dir).forEach(add); fresh.forEach(add); ahead(dir).forEach(add); spare.forEach(add);
     return out.map((s) => s.id);
   };
   const listen = step('listen'), say = step('say');
   // Shadowing isn't scheduled: today's new sentences first, so they go hear → repeat → say, then today's
-  // misses, then others you've started.
+  // misses, then others you've started, then the new ones Listen and Say took past the allowance.
   const r = room('shadow'), shadow = [];
   const add = (id) => { if (shadow.length < r && !shadow.includes(id)) shadow.push(id); };
   fresh.forEach((s) => add(s.id));
@@ -91,6 +100,7 @@ export function buildPlan(list, { now, sizes, maxNew, done = {}, missed = [], ra
   const others = active.filter((s) => !isNew(s)).map((s) => s.id);
   for (let k = others.length - 1; k > 0; k--) { const j = Math.floor(rand() * (k + 1)); [others[k], others[j]] = [others[j], others[k]]; }
   others.forEach(add);
+  spare.forEach((s) => add(s.id));
   return { listen, shadow, say, fresh: fresh.map((s) => s.id) };
 }
 

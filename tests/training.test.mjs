@@ -9,7 +9,9 @@ const tr = (page, fn, arg) => page.evaluate(async ({ fn, arg }) => {
   await m.loadSentences();
   return new Function('m', 'arg', `return (${fn})(m, arg)`)(m, arg);
 }, { fn: fn.toString(), arg });
-const GENDER = { trainMe: 'm', trainPartner: 'f' };
+// Most tests click through a whole session, so they keep the plan small (the default is 50 a step).
+const SMALL = { trainListen: 4, trainShadow: 4, trainSay: 8, trainSizesV: 2 };
+const GENDER = { trainMe: 'm', trainPartner: 'f', ...SMALL };
 // How many sentences each ready-made pack has, so the packs can grow without breaking the tests.
 const SIZE = Object.fromEntries(await Promise.all(PACKS.map(async (p) => [p.id, (await loadPack(p.id)).length])));
 const N = SIZE.survival;
@@ -57,7 +59,7 @@ describe('training', () => {
   test('a fresh install trains Survival: three steps today, and Home points to them', async () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'training' });
     const card = await page.textContent('.tr-today');
-    assert.match(card, /Listen\s*4/); assert.match(card, /Shadow\s*4/); assert.match(card, /Say it\s*5/, '5 new sentences a day, nothing due yet');
+    assert.match(card, /Listen\s*50/); assert.match(card, /Shadow\s*50/); assert.match(card, /Say it\s*50/, 'each step is full: 5 new a day, then more new ones while nothing’s due');
     assert.match(card, /About \d+ min/);
     const shelves = await page.$$eval('.shelf', (s) => s.map((x) => x.textContent.replace(/\s+/g, ' ')));
     assert.match(shelves[0], /^\s*New Pack\s*Your own sentences\s*$/, 'Your Packs: nothing yet but New Pack');
@@ -76,7 +78,7 @@ describe('training', () => {
 
   test('a session: Listen, Shadow, then Say it with hints, and the plan is done for today', async () => {
     // One repeat a sentence keeps Shadow short; the daily session shares Focus's Shadowing settings.
-    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { focus: { shadow: { repeats: 1 } } } });
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { ...SMALL, focus: { shadow: { repeats: 1 } } } });
     await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push(u.text); setTimeout(() => u.onend?.(), 10); }; });
     await page.click('[data-act=start]'); await sleep(300);
     // Today's sentences don't change with who's speaking, so it doesn't ask.
@@ -126,10 +128,11 @@ describe('training', () => {
     await page.click('[data-hint]'); await sleep(200);
     assert.match(await page.textContent('.dr-bottom'), /counts as Again/);
     await page.click('[data-r="1"]'); await sleep(200);
-    for (let i = 0; i < 3; i++) { await page.click('[data-flip]'); await sleep(100); await page.click('[data-r="3"]'); await sleep(150); }
+    // Say it is full (8): the 5 new a day, then 3 more new ones, since nothing else is left to fill it.
+    for (let i = 0; i < 6; i++) { await page.click('[data-flip]'); await sleep(100); await page.click('[data-r="3"]'); await sleep(150); }
 
     assert.match(await page.textContent('.rv-done'), /Done for today/);
-    assert.match(await page.textContent('.rv-done'), /9 cards · 4 shadowed · 1 to go over/);
+    assert.match(await page.textContent('.rv-done'), /12 cards · 4 shadowed · 1 to go over/);
     assert.ok(await page.$('[data-missed]'), 'the miss can be gone over again');
     assert.match(await page.textContent('.dr-missed'), /^\s*Buonasera!\s*Good evening!\s*$/, 'the end screen lists it');
     await page.evaluate(() => { window.__said = []; });
@@ -138,7 +141,7 @@ describe('training', () => {
     const s = await tr(page, (m) => [m.sentence('survival:1'), m.sentence('survival:2'), m.doneToday()]);
     assert.ok(s[0].cards.listen && s[0].cards.say, 'a sentence holds a listen and a say card');
     assert.equal(s[1].cards.say.lapses, 0); assert.ok(s[1].cards.say.s < 1, 'shown = Again');
-    assert.deepEqual([s[2].listen, s[2].shadow, s[2].say, s[2].fresh, s[2].missed], [4, 4, 5, 5, ['survival:2']]);
+    assert.deepEqual([s[2].listen, s[2].shadow, s[2].say, s[2].fresh, s[2].missed], [4, 4, 8, 8, ['survival:2']]);
     await page.click('[data-done]'); await sleep(400);
     assert.match(await page.textContent('.tr-today'), /Done for today/);
     assert.match(await page.textContent('.tr-today'), /1 day in a row/);
@@ -272,7 +275,7 @@ describe('training', () => {
     await page.click('.sheet .x'); await sleep(400);
     const card = await page.textContent('.tr-today');
     assert.doesNotMatch(card, /Shadow/, 'a step set to 0 is left out');
-    assert.match(card, /Say it\s*8/);
+    assert.match(card, /Say it\s*10/, 'a step fills to its size past the new allowance');
     const s = await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')));
     assert.deepEqual([s.trainShadow, s.trainSay, s.trainNew], [0, 10, 8]);
     assert.deepEqual(errors, []);

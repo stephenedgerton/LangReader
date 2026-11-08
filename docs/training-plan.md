@@ -17,16 +17,18 @@ The throwaway prototype is on the `prototype/practice-tab` branch (`prototypes/p
   and the word-review settings that used to be in the main settings.
 
 ### The daily plan
-- One session, three steps, about 10 minutes:
-  1. **Listen**: 4 sentences. The sentence plays; you reveal it (Italian and English) and rate yourself.
-  2. **Shadow**: 4 sentences × 3. Listen, then repeat it aloud straight after, three times. Not scheduled.
-  3. **Say it**: 8 sentences. See the English (plus a context chip like "to your partner"), say the
+- One session, three steps (sizes are settings; 50 each by default, changed from 4/4/8):
+  1. **Listen**: 50 sentences. The sentence plays; you reveal it (Italian and English) and rate yourself.
+  2. **Shadow**: 50 sentences × 3. Listen, then repeat it aloud straight after, three times. Not scheduled.
+  3. **Say it**: 50 sentences. See the English (plus a context chip like "to your partner"), say the
      Italian aloud, then check and rate yourself.
 - **Words** is a bonus after the steps ("Bonus: 10 words"): the existing review sheet, unchanged. It never
   counts toward the day being done or the streak, unless "Include Words in the plan" is on.
 - The plan is the same size every day. Missed days never make it bigger; the overdue cards closest to being
-  forgotten come first. A step with too few due cards fills up with new sentences (within the new-a-day cap);
-  a step with nothing at all shows as done.
+  forgotten come first. A step with too few due cards fills up with today's new sentences (within the new-a-day
+  cap), then cards ahead of schedule (closest to forgotten first, not ones already done today), then more new
+  sentences from any pack you train, so it's its full size whenever there are sentences to fill it; a step
+  with nothing at all shows as done.
 - Each step can be skipped for today, and you can stop between steps. Each count can be set to 0.
 - When it's done: "Done for today", with optional extras (train 10 more, go over the ones I missed).
 - Shadowing uses today's new sentences first, then recent misses, then others from your packs, so a new

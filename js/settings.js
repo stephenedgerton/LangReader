@@ -31,9 +31,9 @@ const defaults = {
   reviewStyle: 'mixed',    // mixed (flashcards, pick the meaning, fill the gap) | flip (flashcards only)
   // Training (see js/training.js): today's share of each step, new sentences a day, and whether word reviews
   // are part of the plan or a bonus after it.
-  trainListen: 4,
-  trainShadow: 4,
-  trainSay: 8,
+  trainListen: 50,         // a step fills up to its size from due cards, new ones and cards ahead of schedule
+  trainShadow: 50,
+  trainSay: 50,
   trainNew: 5,
   trainWords: false,
   trainListenEn: 'shown',  // shown | tap: the English on the back of a Listen card (its own, not Shadowing's)
@@ -50,6 +50,15 @@ const defaults = {
 
 let stored = {};
 try { stored = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { stored = {}; }
+
+// The step sizes used to default to 4/4/8. Every write saves the whole object, so installs that never
+// changed them have those stored: move them to the new defaults, once.
+if (!stored.trainSizesV) {
+  if (stored.trainListen === 4 && stored.trainShadow === 4 && stored.trainSay === 8) {
+    Object.assign(stored, { trainListen: defaults.trainListen, trainShadow: defaults.trainShadow, trainSay: defaults.trainSay });
+  }
+  stored.trainSizesV = 2;
+}
 
 export const settings = new Proxy({ ...defaults, ...stored }, {
   set(obj, prop, value) {

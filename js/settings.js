@@ -46,6 +46,7 @@ const defaults = {
   // FOCUS_DEFAULTS there). Replace the whole object to change it; the Proxy only saves top-level writes.
   focusMode: 'shadow',     // shadow | recall
   focus: {},               // {shadow: {...}, recall: {...}}
+  focusAt: {},             // {'pack id:mode': sentence id}: where Focus stopped in each pack and mode, to continue
 };
 
 let stored = {};

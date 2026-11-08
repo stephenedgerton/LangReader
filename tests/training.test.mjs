@@ -356,6 +356,34 @@ describe('training', () => {
     assert.deepEqual(errors, []);
   });
 
+  test('Focus from a chosen sentence, and Continue from where it stopped', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
+    await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push(u.text); setTimeout(() => u.onend?.(), 10); }; });
+    await page.click('[data-pack=survival]'); await sleep(300);
+    const third = await page.textContent('.tr-row:nth-child(3) .it');
+    await page.click('.tr-row:nth-child(3) [data-sent]'); await sleep(300);
+    await page.click('[data-a=focus]'); await sleep(200);
+    assert.match(await page.textContent('.fc-count'), new RegExp(`3 / ${N}`), 'starts at that sentence');
+    assert.equal((await page.evaluate(() => window.__said))[0], third);
+    await page.click('[data-next]'); await sleep(100);
+    await page.click('.x'); await sleep(400);
+    assert.equal(await page.textContent('[data-act=focus]'), `Continue · 4 / ${N}`);
+    assert.equal(await page.textContent('[data-act=focus0]'), 'From the start');
+    assert.ok(await page.$('.tr-row:nth-child(4).here .tr-here'), 'the row it continues from is marked');
+    await page.click('[data-mode=recall]'); await sleep(200);
+    assert.equal(await page.textContent('[data-act=focus]'), `Start Focus · ${N}`, 'each mode keeps its own place');
+    await page.click('[data-mode=shadow]'); await sleep(200);
+    await page.click('[data-act=focus]'); await sleep(200);
+    assert.match(await page.textContent('.fc-count'), new RegExp(`4 / ${N}`), 'Continue picks up there');
+    await page.click('.x'); await sleep(400);
+    await page.click('[data-act=focus0]'); await sleep(200);
+    assert.match(await page.textContent('.fc-count'), new RegExp(`1 / ${N}`));
+    await page.click('.x'); await sleep(400);
+    assert.equal(await page.textContent('[data-act=focus]'), `Start Focus · ${N}`, 'stopping on the first sentence forgets the place');
+    assert.equal(await page.$('.tr-row.here'), null);
+    assert.deepEqual(errors, []);
+  });
+
   test('repetitions are counted per sentence and per day, and shown on the Training tab and the pack page', async () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { ...GENDER, focus: { shadow: { repeats: 2, loop: false } } } });
     await page.evaluate(() => { speechSynthesis.speak = (u) => setTimeout(() => u.onend?.(), 10); });

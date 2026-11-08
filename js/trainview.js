@@ -153,6 +153,8 @@ function moreSheet() {
 // ▶ plays the pack right here, in the mode the switch is on, with that mode's settings (the same loop as the
 // Focus screen), highlighting the sentence that's playing.
 let playing = null;
+// The open pack page's "Start Focus from this sentence" (for the sentence's sheet).
+let focusFrom = null;
 function stopPlayAll() {
   if (!playing) return;
   playing.stop(); playing = null;
@@ -171,6 +173,9 @@ async function renderPack(id) {
   // A pack that isn't on yet shows its sentences straight from the pack file.
   const list = on ? packSentences(id) : (await loadPack(id)).map((x) => ({ id: `${id}:${x.k}`, it: x.it, en: x.en, ctx: x.ctx, cards: {}, preview: true }));
   const st = packStats(id), live = list.filter((s) => !s.paused), m = mode();
+  // Where Focus stopped last time in this pack, in this mode: past the first sentence, the pinned button continues from there.
+  const at = on ? live.findIndex((s) => s.id === settings.focusAt?.[`${id}:${m}`]) : -1;
+  const here = at > 0 ? live[at].id : null;
   const text = (s) => genderize(s.it, settings.trainMe || 'm', settings.trainPartner || 'm');
   // Shadowing lists the Italian, Recall the English (so the list doesn't give the answer away); the other
   // language is behind a tap on each row.
@@ -206,15 +211,28 @@ async function renderPack(id) {
     <div class="tr-list-head"><div class="section-title">Sentences</div>
       <div><button data-act="en">${showAll ? 'Hide' : 'Show'} ${other}</button></div></div>
     ${list.length ? '' : `<p class="muted tr-empty">No sentences yet. Add one with + Sentence${p.kind === 'reading' ? ', or with “Train this sentence” on a word while you read' : ''}.</p>`}
-    <div class="tr-list">${list.map((s) => `<div class="tr-row${s.paused ? ' paused' : ''}" data-id="${esc(s.id)}">
+    <div class="tr-list">${list.map((s) => `<div class="tr-row${s.paused ? ' paused' : ''}${s.id === here ? ' here' : ''}" data-id="${esc(s.id)}">
         <button class="rv-say" data-play aria-label="Play">${icons.speaker}</button>
-        <button class="txt" data-reveal aria-expanded="${showAll || shownEN.has(s.id)}"><div class="it">${esc(main(s))}</div>${under(s)}</button>${lv(s)}
+        <button class="txt" data-reveal aria-expanded="${showAll || shownEN.has(s.id)}">${s.id === here ? '<div class="tr-here">Focus continues here</div>' : ''}<div class="it">${esc(main(s))}</div>${under(s)}</button>${lv(s)}
         <button class="tr-row-more" data-sent aria-label="Sentence options">${icons.more}</button></div>`).join('')}</div>
     <p class="muted tr-tip">${showAll ? `Tap Hide ${other} to test yourself again.` : `The ${other} is hidden so the list doesn’t give the answers away. Tap a sentence to see it, and again to hide it.`}</p>
-    ${on && live.length ? `<div class="fc-start-space"></div><div class="fc-start"><button class="primary" data-act="focus">Start Focus · ${live.length}</button></div>` : ''}`;
+    ${on && live.length ? `<div class="fc-start-space"></div><div class="fc-start${here ? ' two' : ''}">${here
+      ? `<button class="secondary" data-act="focus0">From the start</button><button class="primary" data-act="focus">Continue · ${at + 1} / ${live.length}</button>`
+      : `<button class="primary" data-act="focus">Start Focus · ${live.length}</button>`}</div>` : ''}`;
   const find = (row) => list.find((s) => s.id === row.dataset.id);
   const items = () => live.map((s) => ({ id: s.id, text: text(s), en: s.en }));
-  const startFocus = () => { stopPlayAll(); return askGender(packSentences(id), () => focusSheet({ pack: id, mode: mode(), ids: live.map((s) => s.id), onClose: () => renderPack(id) })); };
+  // Starts at sentence `from` (an index into live); closing it remembers where it stopped, to continue later.
+  const startFocus = (from = 0) => {
+    stopPlayAll();
+    return askGender(packSentences(id), () => focusSheet({ pack: id, mode: mode(), ids: live.map((s) => s.id), at: from, onClose: (where) => {
+      const next = { ...settings.focusAt };
+      const key = `${id}:${mode()}`;
+      if (where && where !== live[0]?.id) next[key] = where; else delete next[key];
+      settings.focusAt = next;
+      if (page === id) renderPack(id);
+    } }));
+  };
+  focusFrom = on ? (sid) => { const i = live.findIndex((s) => s.id === sid); return i >= 0 && startFocus(i); } : null;
   v.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     const row = b.closest('.tr-row'), a = b.dataset.act;
@@ -232,8 +250,9 @@ async function renderPack(id) {
     if (a === 'back') { stopPlayAll(); page = null; return renderTraining(); }
     if (a === 'en') { showAll = !showAll; shownEN.clear(); return renderPack(id); }
     if (a === 'play') return playing ? stopPlayAll() : playHere(b);
-    if (a === 'focus') return startFocus();
-    if (a === 'fsettings') { stopPlayAll(); return focusSettingsSheet(mode(), { count: on ? live.length : 0, onStart: on ? startFocus : null }); }
+    if (a === 'focus') return startFocus(Math.max(0, at));
+    if (a === 'focus0') return startFocus(0);
+    if (a === 'fsettings') { stopPlayAll(); return focusSettingsSheet(mode(), { count: on ? live.length : 0, at: Math.max(0, at), onStart: on ? () => startFocus(Math.max(0, at)) : null }); }
     if (a === 'add') { haptic(); await setPackOn(id, true); return askGender(packSentences(id), () => renderPack(id), () => renderPack(id)); }
     if (a === 'packmenu') return packMenu(id);
     if (a === 'addsent') { stopPlayAll(); return newSentenceSheet({ pack: id }, { onDone: () => renderPack(id) }); }
@@ -273,6 +292,7 @@ function sentenceSheet(s) {
     ${s.reps ? `<div class="tr-sheet-from">Repeated ${s.reps === 1 ? 'once' : `${s.reps.toLocaleString()} times`}</div>` : ''}
     <div class="rv-tools tr-sheet-tools"><button data-a="play">${icons.speaker}Play</button><button data-a="slow">${stepIcon('slow')}Slow</button></div>
     ${live ? `<div class="action-list" style="margin-top:18px">
+        ${!s.paused && focusFrom ? `<button data-a="focus"><span>Start Focus from here<small class="muted">Plays on from this sentence, in ${MODES[mode()].name}</small></span></button>` : ''}
         <button data-a="edit"><span>Edit</span></button>
         <button data-a="packs"><span>Packs…</span><small class="muted">${esc(names)}</small></button>
         <button data-a="pause"><span>${s.paused ? 'Resume training this' : 'Pause training this'}</span></button>
@@ -286,6 +306,7 @@ function sentenceSheet(s) {
     if (a === 'en') { $('.tr-sheet-en', body).hidden = false; b.remove(); return; }
     if (a === 'play') return speak(text);
     if (a === 'slow') return speak(text, { slow: true });
+    if (a === 'focus') return focusFrom?.(s.id);
     if (a === 'pause') { await setPaused(s.id, !s.paused); closeSheet(); return back(); }
     if (a === 'edit') return editSentenceSheet(s, { onDone: back });
     if (a === 'packs') return sentencePacksSheet(s, { onDone: back });

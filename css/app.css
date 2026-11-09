@@ -1202,6 +1202,7 @@ svg.solid { fill: currentColor; stroke: none; }
 .fc-tog b { font-size: 13px; color: var(--label); }
 .fc-tog.on { background: var(--tint-fill); color: var(--on-tint); }
 .fc-tog.on b { color: var(--on-tint); }
+.fc-togs:has(> :nth-child(5)) .fc-tog { font-size: 11px; letter-spacing: -0.1px; } /* Shadow has five */
 .fc-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 18px; padding: 22px 0; }
 .fc-text { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
 .fc-text .dr-ctx { position: static; margin-bottom: 10px; }

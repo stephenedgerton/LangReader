@@ -59,6 +59,15 @@ test('the plan takes due cards first, then fills up with new ones within the new
   assert.deepEqual(p.shadow, ['n1', 'n2'], 'new sentences are shadowed first');
 });
 
+test('coming back to Shadow carries on: today’s started ones first, and none shadowed twice', () => {
+  const list = Array.from({ length: 6 }, (_, i) => sent('s' + i, { listen: card(-5), say: card(-5) }));
+  // s4 and s5 were new this morning (Listen started them), s0 has been shadowed already.
+  const p = buildPlan(list, { now: NOW, sizes: { listen: 0, shadow: 4, say: 0 }, maxNew: 5, done: { shadow: 1 }, shadowed: ['s0'], started: ['s5', 's4'], rand: () => 0 });
+  assert.equal(p.shadow.length, 3);
+  assert.deepEqual(p.shadow.slice(0, 2), ['s5', 's4']);
+  assert.ok(!p.shadow.includes('s0'));
+});
+
 test('the plan is the same size after a break, and shrinks as today’s work is done', () => {
   const list = Array.from({ length: 30 }, (_, i) => sent('s' + i, { listen: card(-20 + i % 5), say: card(-20) }));
   const p = buildPlan(list, { now: NOW, sizes: { listen: 4, shadow: 4, say: 8 }, maxNew: 5 });

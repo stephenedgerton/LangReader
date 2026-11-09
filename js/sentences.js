@@ -63,7 +63,7 @@ export const learned = (s) => (s.cards?.say?.s || 0) >= 7;
 // it. The plan is the same size every day however long you've been away; whatever doesn't fit waits.
 //   sizes = {listen, shadow, say}: the day's share of each step; done = what's been done today
 //   (listen, shadow, say, fresh); missed = ids rated Again today (shadowed again after the new ones).
-export function buildPlan(list, { now, sizes, maxNew, done = {}, missed = [], rand = Math.random }) {
+export function buildPlan(list, { now, sizes, maxNew, done = {}, missed = [], shadowed = [], started = [], rand = Math.random }) {
   const active = list.filter((s) => !mastered(s));
   const room = (k) => Math.max(0, (+sizes[k] || 0) - (done[k] || 0));
   const unseen = active.filter(isNew);
@@ -90,12 +90,14 @@ export function buildPlan(list, { now, sizes, maxNew, done = {}, missed = [], ra
     return out.map((s) => s.id);
   };
   const listen = step('listen'), say = step('say');
-  // Shadowing isn't scheduled: today's new sentences first, so they go hear → repeat → say, then today's
-  // misses, then others you've started, then the new ones Listen and Say took past the allowance.
-  const r = room('shadow'), shadow = [];
-  const add = (id) => { if (shadow.length < r && !shadow.includes(id)) shadow.push(id); };
-  fresh.forEach((s) => add(s.id));
+  // Shadowing isn't scheduled: today's new sentences first (those started today, then those still new), so they
+  // go hear → repeat → say, then today's misses, then others you've started, then the new ones Listen and Say
+  // took past the allowance. Sentences already shadowed today are left out, so coming back carries on.
+  const r = room('shadow'), shadow = [], skip = new Set(shadowed);
+  const add = (id) => { if (shadow.length < r && !shadow.includes(id) && !skip.has(id)) shadow.push(id); };
   const ids = new Set(active.map((s) => s.id));
+  started.filter((id) => ids.has(id)).forEach(add); // the day's first new ones, so these come before those still new
+  fresh.forEach((s) => add(s.id));
   missed.filter((id) => ids.has(id)).forEach(add);
   const others = active.filter((s) => !isNew(s)).map((s) => s.id);
   for (let k = others.length - 1; k > 0; k--) { const j = Math.floor(rand() * (k + 1)); [others[k], others[j]] = [others[j], others[k]]; }

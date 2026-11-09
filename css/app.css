@@ -1185,6 +1185,11 @@ svg.solid { fill: currentColor; stroke: none; }
 .fc-start { position: fixed; z-index: 15; left: 50%; transform: translateX(-50%); width: min(calc(100% - 32px), 608px); bottom: calc(var(--safe-bottom) + 66px); }
 .fc-start-space { height: 64px; }
 .fc-start .primary { box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+.fc-start.two { display: flex; gap: 10px; }
+.fc-start.two .secondary { flex: none; width: auto; padding: 14px 16px; font-size: 16px; background: var(--bg-elev); box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+.tr-here { font-size: 12px; font-weight: 600; color: var(--tint); margin-bottom: 2px; }
+.tr-row.here { box-shadow: inset 3px 0 0 var(--tint-fill); padding-left: 10px; margin-left: -10px; }
+.action-list button > span:has(small) { text-align: left; }
 .action-list button > span small { display: block; font-size: 13px; margin-top: 1px; }
 .action-list button:disabled { opacity: .45; }
 

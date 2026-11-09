@@ -215,10 +215,11 @@ export function bindSettings(root, mode, onChange) {
 }
 
 // From the pack page: the settings for the mode, with Start pinned at the bottom.
-export function focusSettingsSheet(mode, { onStart, count = 0 } = {}) {
+// `at` > 0: Start continues from that sentence (where Focus stopped last time).
+export function focusSettingsSheet(mode, { onStart, count = 0, at = 0 } = {}) {
   const body = openSheet(`<h2>${MODES[mode].name} Settings<button class="x" aria-label="Close">${icons.close}</button></h2>
     <div class="fc-settings">${settingsHTML(mode)}</div>
-    ${onStart ? `<div class="fc-pin"><button class="primary" data-start>Start ${MODES[mode].name}${count ? ` · ${count}` : ''}</button></div>` : ''}`);
+    ${onStart ? `<div class="fc-pin"><button class="primary" data-start>${at > 0 ? `Continue ${MODES[mode].name} · ${at + 1} / ${count}` : `Start ${MODES[mode].name}${count ? ` · ${count}` : ''}`}</button></div>` : ''}`);
   bindSettings(body, mode);
   body.onclick = (e) => {
     const b = e.target.closest('button'); if (!b) return;
@@ -231,7 +232,8 @@ export function focusSettingsSheet(mode, { onStart, count = 0 } = {}) {
 // Labels say how well you knew it, not intervals. Shared with the daily session's Say it.
 export const GRADES = [[AGAIN, 'Didn’t get it', 'again'], [HARD, 'Hard', 'hard'], [GOOD, 'Good', 'good'], [EASY, 'Knew it', 'easy']];
 
-export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
+// `at` is the index to start at. `onClose(id)` gets the sentence it stopped on (null once it played to the end).
+export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
   const items = ids.map(sentence).filter(Boolean).map((s) => ({ id: s.id, text: textOf(s), en: s.en, ctx: s.ctx }));
   const M = MODES[mode], title = packMeta(pack)?.name || 'Pack';
   const rated = new Map();    // id -> {g, job: Promise<snap>}: changing it re-rates from the first rating's snapshot
@@ -242,12 +244,13 @@ export function focusSheet({ pack, mode = 'shadow', ids, onClose }) {
   navigator.wakeLock?.request('screen').then((l) => { wake = l; }, () => {});
   const body = openSheet('', { full: true, onClose: () => {
     removeEventListener('keydown', onKey); closeBubble(); player.stop(); wake?.release().catch(() => {});
-    saving.catch(() => {}).then(() => onClose?.());
+    const where = player.ended ? null : items[player.i]?.id || null;
+    saving.catch(() => {}).then(() => onClose?.(where));
   } });
   body.classList.add('focus');
   addEventListener('keydown', onKey);
 
-  const player = createPlayer({ items, mode, slow: () => slow, on: {
+  const player = createPlayer({ items, mode, at, slow: () => slow, on: {
     show: () => { cur = { heard: false, tapIt: false, tapEN: false }; closeBubble(); draw(); },
     phase: (name, { rep, ms }) => {
       if (name === 'it') cur.heard = true;

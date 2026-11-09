@@ -646,6 +646,23 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .rv-ring b { font-size: 34px; font-weight: 700; }
 .rv-ring small { font-size: 13px; color: var(--label-2); }
 .rv-coffee { font-size: 56px; margin: 10px 0; }
+.celebrate { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 65; pointer-events: none; }
+/* The result glows softly as the celebration starts, then the lines under it rise in. */
+.rv-done.celebrating .rv-ring::before, .rv-done.celebrating .dr-done-ico::before {
+  content: ''; position: absolute; inset: -6px; border-radius: 50%; z-index: -1; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--tint-fill) 55%, transparent) 0, transparent 70%);
+  opacity: 0; animation: cheer-glow 1.8s ease-out .15s;
+}
+@keyframes cheer-glow { 30% { opacity: 1; transform: scale(1.35); } to { opacity: 0; transform: scale(1.6); } }
+.rv-done.celebrating .rv-ring, .rv-done.celebrating .dr-done-ico { position: relative; isolation: isolate; animation: done-pop .7s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes done-pop { from { transform: scale(.7); opacity: 0; } }
+.rv-done.celebrating .rv-ring b { display: inline-block; animation: done-pop .6s cubic-bezier(.2, 1.4, .4, 1) .45s both; }
+.rv-done.celebrating > :not(.rv-ring):not(.dr-done-ico) { animation: cheer-rise .5s ease-out both; }
+.rv-done.celebrating > :nth-child(2) { animation-delay: .25s; }
+.rv-done.celebrating > :nth-child(3) { animation-delay: .35s; }
+.rv-done.celebrating > :nth-child(4) { animation-delay: .45s; }
+@keyframes cheer-rise { from { transform: translateY(8px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .rv-done.celebrating *, .rv-done.celebrating *::before { animation: none !important; } }
 .rv-done-line { font-size: 16px; color: var(--label); }
 .rv-done-sub { font-size: 14px; color: var(--label-2); margin-top: 4px; }
 .rv-badges:empty { display: none; }

@@ -15,6 +15,7 @@ import { settings } from './settings.js';
 import { openSheet, closeSheet, esc, icons, $, $$ } from './ui.js';
 import { speak, stopSpeaking } from './services.js';
 import { haptic } from './haptics.js';
+import { celebrate } from './celebrate.js';
 import { tokenize, normalize } from './text.js';
 import { openCardBubble, closeBubble, bubbleOpen } from './bubble.js';
 import { entry } from './vocab.js';
@@ -330,7 +331,8 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     const moreN = more ? more.listen.length + more.say.length : 0;
     const words = !settings.trainWords && todaysCount();
     const missedList = missed.map(sentence).filter(Boolean);
-    body.innerHTML = `${head()}<div class="rv-done">
+    const did = tally.n || tally.shadowed;
+    body.innerHTML = `${head()}<div class="rv-done${did ? ' celebrating' : ''}">
         <div class="dr-done-ico">${icons.check}</div>
         <h3>${practice ? 'That’s all of them' : only ? 'Pack session done' : allDone ? 'Done for today' : 'Done for now'}</h3>
         <div class="rv-done-line">${tally.n ? `${tally.n} card${tally.n === 1 ? '' : 's'}${tally.shadowed ? ` · ${tally.shadowed} shadowed` : ''}${tally.again ? ` · ${tally.again} to go over` : ''}` : tally.shadowed ? `${tally.shadowed} shadowed` : 'Nothing was due.'}</div>
@@ -344,6 +346,8 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
       ${moreN || (missed.length && !practice) ? `<div class="rv-more"><div class="rv-more-title">Want to keep going? <span>Only if you feel like it.</span></div>
         ${moreN ? `<button class="secondary" data-extra>Train ${Math.min(10, moreN)} more</button>` : ''}
         ${missed.length && !practice ? `<button class="secondary" data-missed>Go over the ${missed.length === 1 ? 'one' : missed.length} I missed</button>` : ''}</div>` : ''}`;
+    // The whole day's plan done gets the full celebration; a part of it, a pack or extras a smaller one.
+    if (did) celebrate($('.dr-done-ico', body), { big: allDone && !practice });
   };
 
   // ---------- looking up a word on the card: the reader's bubble ----------

@@ -1,5 +1,5 @@
 // Offline support: app shell is cached; translation requests always go to the network.
-const VERSION = 'langreader-v51';
+const VERSION = 'langreader-v52';
 // The Piper voices, their runtime and the word-frequency list never change in place (a new version gets
 // a new file name), so they're cache-first in a cache of their own that survives app updates.
 const ASSETS = 'langreader-assets-v1';
@@ -7,7 +7,7 @@ const isAsset = (url) => /\/(voices|vendor|data)\//.test(url.pathname);
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/db.js', 'js/text.js', 'js/vocab.js', 'js/settings.js', 'js/services.js',
-  'js/ui.js', 'js/stats.js', 'js/wordcard.js', 'js/reader.js', 'js/importer.js', 'js/dictionary.js', 'js/storage.js', 'js/bubble.js', 'js/curl.js', 'js/haptics.js', 'js/names.js', 'js/goals.js', 'js/difficulty.js', 'js/achievements.js', 'js/piper.js', 'js/tts-worker.js', 'js/freq.js', 'js/themes.js', 'js/statsview.js', 'js/srs.js', 'js/review.js', 'js/english.js', 'js/collections.js', 'js/sentences.js', 'js/training.js', 'js/trainview.js', 'js/drill.js', 'js/focus.js', 'js/mysentences.js',
+  'js/ui.js', 'js/stats.js', 'js/wordcard.js', 'js/reader.js', 'js/importer.js', 'js/dictionary.js', 'js/storage.js', 'js/bubble.js', 'js/curl.js', 'js/haptics.js', 'js/names.js', 'js/goals.js', 'js/difficulty.js', 'js/achievements.js', 'js/piper.js', 'js/tts-worker.js', 'js/freq.js', 'js/themes.js', 'js/statsview.js', 'js/srs.js', 'js/review.js', 'js/english.js', 'js/collections.js', 'js/sentences.js', 'js/training.js', 'js/trainview.js', 'js/drill.js', 'js/focus.js', 'js/mysentences.js', 'js/celebrate.js',
   'samples/sample.js', 'samples/stories.js', 'samples/packs/index.js', 'samples/packs/survival.js', 'samples/packs/partner.js', 'samples/packs/partner-plans.js', 'samples/packs/cafe.js', 'samples/packs/directions.js', 'samples/packs/shopping.js', 'samples/packs/small-talk.js', 'samples/packs/travel.js', 'samples/packs/feelings.js', 'samples/packs/not-understand.js', 'samples/series/index.js', 'samples/series/book.js', 'samples/series/01.js', 'samples/series/02.js', 'samples/series/03.js', 'samples/series/04.js', 'samples/series/05.js', 'samples/series/06.js', 'samples/series/07.js', 'samples/series/08.js', 'samples/series/09.js', 'samples/series/10.js', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 

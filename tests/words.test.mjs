@@ -65,6 +65,34 @@ describe('words', () => {
     assert.match(pageUrl.searchParams.get('text'), /Capitolo 1 · L’arrivo.*Il treno arrivò a Bologna/);
   });
 
+  test('with a Google key, Google translates words and pages', async () => {
+    const { page, errors, google } = await openApp(t, srv.url, { settings: { googleKey: 'AIza-test' }, gt: 'the suitcase' });
+    await openBook(page);
+    await tapWord(page, 'valigia'); await sleep(500);
+    assert.match(await text(page, '.wpop'), /the suitcase/);
+    assert.deepEqual(google[0], { key: 'AIza-test', q: 'valigia', source: 'it', target: 'en', format: 'text' });
+    await page.mouse.click(195, 40); await sleep(600);
+    await page.click('#r-menu'); await page.click('[data-act=translate-page]'); await sleep(600);
+    assert.equal(await text(page, '.trans-block'), 'the suitcase', 'one request for the whole page');
+    assert.match(google.at(-1).q, /Il treno arrivò a Bologna/);
+    assert.deepEqual(errors, []);
+  });
+
+  test('a rejected Google key falls back to MyMemory, and Settings says so', async () => {
+    const { page, google } = await openApp(t, srv.url, { settings: { googleKey: 'bad' }, gt: null });
+    await openBook(page);
+    await tapWord(page, 'valigia'); await sleep(500);
+    assert.match(await text(page, '.wpop'), /mock translation/);
+    assert.equal(google.length, 1);
+    await page.mouse.click(195, 40); await sleep(600);
+    await closeReader(page);
+    await page.click('#tabbar button[data-tab=home]'); await sleep(300);
+    await page.click('[data-act=settings]'); await sleep(400);
+    await page.fill('[name=googleKey]', 'still-bad'); await page.press('[name=googleKey]', 'Tab'); await sleep(400);
+    assert.match(await text(page, '.gkey-status'), /That key didn’t work: API key not valid/);
+    assert.equal(google.at(-1).key, 'still-bad');
+  });
+
   test('hold and drag selects a phrase without turning the page', async () => {
     const { page } = await openApp(t, srv.url);
     await openBook(page);

@@ -91,14 +91,14 @@ export async function newSentenceSheet(draft = {}, { onDone } = {}) {
     if (a === 'suggest') {
       const toIt = !val('it'), from = toIt ? val('en') : val('it');
       sug.disabled = true; sug.textContent = toIt ? 'Suggesting…' : 'Translating…';
-      let out = '';
-      try { out = (await translate(from, { reverse: toIt })).main; } catch {}
+      let out = '', by = 'MyMemory';
+      try { ({ main: out, by } = await translate(from, { reverse: toIt })); } catch {}
       sug.disabled = false;
       if (!body.isConnected) return;
       if (!out) { note.textContent = 'No suggestion right now (offline?). You can type it yourself.'; note.hidden = false; return paint(); }
       const name = toIt ? 'it' : 'en';
       f(name).value = out; suggested = name;
-      note.textContent = `Suggested by MyMemory. Check the ${toIt ? 'Italian' : 'English'}, and change it if it isn’t right, before you add it.`;
+      note.textContent = `Suggested by ${by}. Check the ${toIt ? 'Italian' : 'English'}, and change it if it isn’t right, before you add it.`;
       note.hidden = false;
       return paint();
     }

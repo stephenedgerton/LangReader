@@ -531,6 +531,9 @@ describe('training', () => {
 
   test('the Stats tab shows Training: sentences you can say, the streak, repetitions, cards a day and each pack', async () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'stats' });
+    assert.ok(await page.isHidden('.st-train'), 'Reading is the first pane');
+    await page.click('[data-stab="training"]'); await sleep(200);
+    assert.ok(await page.isHidden('.st-level'));
     assert.match(await page.textContent('.st-train'), /start after your first session/);
     await tr(page, async (m) => {
       await m.syncPacks();
@@ -542,6 +545,7 @@ describe('training', () => {
     });
     await page.click('#tabbar [data-tab="training"]'); await sleep(300);
     await page.click('#tabbar [data-tab="stats"]'); await sleep(600);
+    assert.ok(await page.isVisible('.st-train'), 'the pane you picked stays picked');
     const card = (await page.textContent('.st-train')).replace(/\s+/g, ' ');
     assert.match(card, /1 ?sentence you can say/);
     assert.match(card, new RegExp(`Of ${N} in your packs, you've started 3\\.`));

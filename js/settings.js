@@ -26,6 +26,7 @@ const defaults = {
   goalMinutes: 15,
   librarySort: 'recent',   // see SORTS in collections.js
   libraryFilter: 'all',    // all | reading | unread | finished | c:<collection id>
+  statsTab: 'reading',     // reading | training: the Stats tab's pane
   retention: 'normal',     // relaxed | normal | intense: how much of your LingQs reviews aim to keep (80/85/90%)
   reviewsPerDay: 20,       // due cards offered a day; the rest wait, most valuable first
   newPerDay: 10,

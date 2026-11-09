@@ -1,6 +1,7 @@
-// The Stats tab: your vocabulary against the most common words in Italian fiction (js/freq.js), a rough
-// level, coverage of a typical novel and its trend, frequency bands and themes, and Training (sentences you can
-// say, the training streak, cards a day and each pack's progress).
+// The Stats tab, in two panes behind a Reading | Training switch (settings.statsTab). Reading: your vocabulary
+// against the most common words in Italian fiction (js/freq.js), a rough level, coverage of a typical novel and
+// its trend, frequency bands and themes. Training: sentences you can say, the training streak, cards a day and
+// each pack's progress. Both panes are rendered; the switch only shows one.
 import { openSheet, closeSheet, esc, icons, $ } from './ui.js';
 import { loadFreq, lemmaStates, wordStats, themeWords, recordSnapshot, bandLabel, freqSource, COMFORT, LEVELS } from './freq.js';
 import { THEMES } from './themes.js';
@@ -9,6 +10,9 @@ import { openWordCard } from './wordcard.js';
 import { loadSentences, syncPacks, packSentences, packMeta, isTrained, readingPack, ownPacks, trainingStreak } from './training.js';
 import { learned, mastered, isNew } from './sentences.js';
 import { PACKS } from '../samples/packs/index.js';
+import { settings } from './settings.js';
+
+const TABS = { reading: 'Reading', training: 'Training' };
 
 const pct = (x, d = 0) => `${x.toFixed(d)}%`;
 // Known is solid; learning (LingQs) is a hatched layer on top, so the two never rely on colour alone.
@@ -30,8 +34,11 @@ export async function renderStats(v) {
   const next = s.next ? LEVELS.find(([, n]) => n === s.next.level)[0] : null;
   const prevAt = LEVELS.filter(([n]) => n <= s.known).at(-1)?.[0] || 0;
 
+  const tab = TABS[settings.statsTab] ? settings.statsTab : 'reading';
   v.innerHTML = `
     <div class="view-head"><h1 class="large-title">Stats</h1></div>
+    <div class="seg st-tabs" role="tablist">${Object.entries(TABS).map(([k, name]) => `<button data-stab="${k}" role="tab" aria-selected="${k === tab}" class="${k === tab ? 'on' : ''}">${name}</button>`).join('')}</div>
+    <div class="st-pane" data-pane="reading" role="tabpanel"${tab === 'reading' ? '' : ' hidden'}>
     <div class="card st-level">
       <div class="st-hero"><b>${s.level}</b><span>rough level</span></div>
       <p>You know <b>${s.known.toLocaleString()}</b> of the 20,000 most common words in Italian fiction${s.learning ? `, and you're learning ${s.learning.toLocaleString()} more` : ''}.</p>
@@ -59,8 +66,6 @@ export async function renderStats(v) {
         <span class="bv">${pct(b.knownPct)}${b.learningPct >= 0.5 ? `<small> +${pct(b.learningPct)}</small>` : ''}</span></div>`).join('')}
     </div>
 
-    ${train}
-
     <div class="section-title">Themes</div>
     <div class="list st-themes">${THEMES.map((t) => {
       const ws = themeWords(t.words, st);
@@ -70,9 +75,18 @@ export async function renderStats(v) {
         <div class="txt"><div class="tn">${esc(t.name)}<span>${known} of ${ws.length}</span></div>${bar(kp, lp)}</div>
         <span class="bv">${pct(kp)}</span></button>`;
     }).join('')}</div>
-    <p class="muted small st-source">Word frequencies: ${esc(freqSource())}. Names are left out; Ignored words count as known in coverage.</p>`;
+    <p class="muted small st-source">Word frequencies: ${esc(freqSource())}. Names are left out; Ignored words count as known in coverage.</p>
+    </div>
+    <div class="st-pane" data-pane="training" role="tabpanel"${tab === 'training' ? '' : ' hidden'}>${train}</div>`;
 
   v.onclick = (e) => {
+    const t = e.target.closest('[data-stab]');
+    if (t) {
+      settings.statsTab = t.dataset.stab;
+      v.querySelectorAll('[data-stab]').forEach((b) => { const on = b === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+      v.querySelectorAll('.st-pane').forEach((p) => { p.hidden = p.dataset.pane !== t.dataset.stab; });
+      return;
+    }
     const b = e.target.closest('[data-theme]');
     if (b) themeSheet(THEMES.find((t) => t.id === b.dataset.theme), () => renderStats(v));
   };
@@ -89,7 +103,7 @@ async function trainingHTML(days) {
   for (const p of packs) for (const x of packSentences(p.id)) if (!seen.has(x.id)) { seen.add(x.id); all.push(x); }
   const byDate = new Map(days.map((d) => [d.date, d]));
   const last = Array.from({ length: CHART_DAYS }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (CHART_DAYS - 1 - i)); return { date: todayKey(d), t: +d, n: byDate.get(todayKey(d))?.drills || 0 }; });
-  const head = '<div class="section-title">Training</div>';
+  const head = '';
   // Repetitions (once through hearing a sentence and saying it): today, the last 7 days and in all.
   const repsOn = (i) => { const d = new Date(); d.setDate(d.getDate() - i); return byDate.get(todayKey(d))?.reps || 0; };
   const reps = { today: repsOn(0), week: [0, 1, 2, 3, 4, 5, 6].reduce((n, i) => n + repsOn(i), 0), all: days.reduce((n, d) => n + (d.reps || 0), 0) };

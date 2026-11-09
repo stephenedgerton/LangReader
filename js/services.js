@@ -3,16 +3,74 @@ import { db } from './db.js';
 import { settings } from './settings.js';
 import { VOICES, piperSupported, warmUp, unlockAudio, speakPiper, stopPiper } from './piper.js';
 
-// ---------- Translation (MyMemory: free, CORS-enabled, no key needed) ----------
+// ---------- Translation ----------
+// With a Google Cloud Translation API key in Settings (settings.googleKey, kept on this device only),
+// Google translates and MyMemory is the fallback; without one, MyMemory (free, CORS-enabled, no key).
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
+const GOOGLE = 'https://translation.googleapis.com/language/translate/v2';
 
 // `reverse` translates the other way, into the language you're learning (New Sentence's suggestion).
+// Returns {main, options: [{text, src}], by: 'Google' | 'MyMemory'}.
 export async function translate(text, { word = false, reverse = false } = {}) {
   const [src, tgt] = reverse ? [settings.target, settings.lang] : [settings.lang, settings.target];
+  const gkey = settings.googleKey;
+  if (gkey) {
+    const key = `g|${src}|${tgt}|${text}`;
+    const cached = await db.get('tcache', key).catch(() => null);
+    if (cached) return cached.value;
+    // A word also gets MyMemory's alternatives, best-effort.
+    const [g, m] = await Promise.allSettled([googleTranslate(text, src, tgt, gkey), word ? myMemory(text, src, tgt, word) : null]);
+    if (g.status === 'fulfilled') {
+      const opts = new Options(text, word);
+      const main = clean(g.value, !word && /[.;:]\s*$/.test(text));
+      opts.add(main, 'MT');
+      for (const o of (m.status === 'fulfilled' && m.value?.options) || []) if (o.src === 'TM' && opts.list.length < 5) opts.add(o.text, 'TM');
+      const value = { main, options: opts.list, by: 'Google' };
+      db.put('tcache', { key, value }).catch(() => {});
+      return value;
+    }
+    console.warn('Google Translate failed, using MyMemory:', g.reason?.message);
+  }
   const key = `${src}|${tgt}|${text}`;
   const cached = await db.get('tcache', key).catch(() => null);
-  if (cached) return cached.value;
+  if (cached) return { by: 'MyMemory', ...cached.value };
+  const value = await myMemory(text, src, tgt, word);
+  db.put('tcache', { key, value }).catch(() => {});
+  return value;
+}
 
+// Checks a key with a one-word translation; resolves to an error message, or '' when it works.
+export async function checkGoogleKey(key) {
+  try { await googleTranslate('ciao', 'it', 'en', key); return ''; } catch (e) { return e.message || 'It didn’t work'; }
+}
+
+async function googleTranslate(text, src, tgt, key) {
+  let res;
+  try {
+    res = await fetch(`${GOOGLE}?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: text, source: src, target: tgt, format: 'text' }),
+    });
+  } catch { throw new Error('Couldn’t reach Google (offline?)'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error?.message || `Google Translate failed (${res.status})`);
+  const out = data.data?.translations?.[0]?.translatedText;
+  if (out == null) throw new Error('Google Translate returned nothing');
+  return out;
+}
+
+class Options {
+  constructor(text, word) { this.text = text.toLowerCase(); this.word = word; this.seen = new Set(); this.list = []; }
+  add(t, src) {
+    t = clean(t);
+    const k = t.toLowerCase();
+    if (!t || this.seen.has(k) || k === this.text || (this.word && t.length > 80)) return;
+    this.seen.add(k); this.list.push({ text: t, src });
+  }
+}
+
+async function myMemory(text, src, tgt, word) {
   const url = new URL(MYMEMORY);
   url.searchParams.set('q', text);
   url.searchParams.set('langpair', `${src}|${tgt}`);
@@ -24,26 +82,17 @@ export async function translate(text, { word = false, reverse = false } = {}) {
 
   // A sentence that ends with a full stop keeps it in translation; a word's gloss never has one.
   const main = clean(data.responseData?.translatedText || '', !word && /[.;:]\s*$/.test(text));
-  const seen = new Set();
-  const options = [];
-  const add = (t, src) => {
-    t = clean(t);
-    const k = t.toLowerCase();
-    if (!t || seen.has(k) || k === text.toLowerCase() || (word && t.length > 80)) return;
-    seen.add(k); options.push({ text: t, src });
-  };
-  add(main, 'MT');
+  const opts = new Options(text, word);
+  opts.add(main, 'MT');
   if (word) {
     const ms = (data.matches || []).slice().sort((a, b) => (b.match - a.match) || (b.quality - a.quality));
     for (const m of ms) {
       if (normalizeCmp(m.segment) !== normalizeCmp(text)) continue;
-      add(m.translation, 'TM');
-      if (options.length >= 5) break;
+      opts.add(m.translation, 'TM');
+      if (opts.list.length >= 5) break;
     }
   }
-  const value = { main, options };
-  db.put('tcache', { key, value }).catch(() => {});
-  return value;
+  return { main, options: opts.list, by: 'MyMemory' };
 }
 
 const clean = (s, keepEnd = false) => String(s || '').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim().replace(keepEnd ? /^[.,;:!?]+/ : /^[.,;:!?]+|[.,;:]+$/g, '');

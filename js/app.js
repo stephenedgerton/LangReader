@@ -21,6 +21,7 @@ import { renderStats } from './statsview.js';
 import { renderTraining, trainingCardHTML, leaveTraining } from './trainview.js';
 import { forgetSentences } from './training.js';
 import { requestPersistence, isPersisted, backupDue, backupAge, markBackedUp, snoozeBackup, saveFile } from './storage.js';
+import { checkGoogleKey } from './services.js';
 
 let tab = 'home';
 let books = [];
@@ -245,6 +246,8 @@ function settingsSheet() {
   const body = openSheet(`<h2>Settings<button class="x">${icons.close}</button></h2>
     <label class="field"><span>Translate into</span><select name="target">${Object.entries(TARGETS).map(([k, n]) => `<option value="${k}" ${settings.target === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
     <label class="field"><span>Email for MyMemory (optional, raises the free daily quota)</span><input name="email" type="email" value="${esc(settings.email)}" placeholder="you@example.com"></label>
+    <label class="field"><span>Google Translate API key (optional)</span><input name="googleKey" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(settings.googleKey)}" placeholder="AIza…"></label>
+    <p class="muted gkey-status" style="font-size:13px;margin:4px 0 0">${settings.googleKey ? 'Google translates; MyMemory steps in if it fails.' : 'With a Cloud Translation API key from Google Cloud, Google translates instead of MyMemory. The key stays on this device.'}</p>
     <p class="muted" style="font-size:13px;margin:4px 0 0">Reviews and training have their own settings: ⚙︎ on the Training tab.</p>
     <div class="section-title" style="font-size:17px;margin-top:18px">Backup</div>
     <p class="muted storage-status" style="font-size:13px;margin:-4px 0 10px">Last backup: ${backupAge()}.</p>
@@ -258,7 +261,7 @@ function settingsSheet() {
       <button data-act="names"><span>Ignore common Italian names</span></button>
     </div>
     <input type="file" accept=".json,application/json" hidden>
-    <p class="muted" style="font-size:13px;margin-top:14px">Everything is stored privately on this device. Translations by MyMemory (translated.net). Word frequencies come from 199 Italian novels on Project Gutenberg, with word forms from Morph-it! by Marco Baroni and Eros Zanchetta (CC BY-SA 2.0). Speech uses Riccardo, a Piper neural voice that runs on this device (about 30 MB, downloaded the first time you open a book). Paola and Serena, or your device's Italian voice, are in the reader's Themes &amp; Settings.</p>`);
+    <p class="muted" style="font-size:13px;margin-top:14px">Everything is stored privately on this device. Translations by Google Cloud Translation when you add a key, otherwise by MyMemory (translated.net). Word frequencies come from 199 Italian novels on Project Gutenberg, with word forms from Morph-it! by Marco Baroni and Eros Zanchetta (CC BY-SA 2.0). Speech uses Riccardo, a Piper neural voice that runs on this device (about 30 MB, downloaded the first time you open a book). Paola and Serena, or your device's Italian voice, are in the reader's Themes &amp; Settings.</p>`);
   body.onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.matches('.x')) return closeSheet();
@@ -281,6 +284,16 @@ function settingsSheet() {
       + `Last backup: ${backupAge()}.`;
   });
   body.oninput = (e) => { if (e.target.name) settings[e.target.name] = e.target.dataset.num != null ? +e.target.value : e.target.value.trim(); };
+  // Try the Google key as soon as it's entered, so a typo shows now rather than as MyMemory's translations later.
+  body.onchange = async (e) => {
+    if (e.target.name !== 'googleKey') return;
+    const el = $('.gkey-status', body), key = settings.googleKey;
+    if (!key) { el.textContent = 'No key: MyMemory translates.'; return; }
+    el.textContent = 'Checking the key…';
+    const err = await checkGoogleKey(key);
+    if (settings.googleKey !== key) return;
+    el.textContent = err ? `That key didn’t work: ${err}` : 'The key works: Google translates now.';
+  };
   $('input[type=file]', body).onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
     try {

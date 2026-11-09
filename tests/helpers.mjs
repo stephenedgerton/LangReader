@@ -45,8 +45,9 @@ export const WIKTIONARY = {
 const json = (status, body) => ({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
 
 // opts.wiktionary: map of title -> response (default WIKTIONARY); opts.mt: translation text, or null to fail.
+// opts.gt: Google's translation (used once settings.googleKey is set), or null for a rejected key.
 // opts.voice: settings.voice; the device voice by default, so tests don't load Riccardo (pass '' for him).
-export async function openApp(t, base, { hash = 'library', tipsSeen = true, settings = null, wiktionary = WIKTIONARY, mt = 'mock translation', voice = 'system', context = {} } = {}) {
+export async function openApp(t, base, { hash = 'library', tipsSeen = true, settings = null, wiktionary = WIKTIONARY, mt = 'mock translation', gt = 'google translation', voice = 'system', context = {} } = {}) {
   const browser = t.browser || (t.browser = await chromium.launch());
   const ctx = await browser.newContext({ ...devices['iPhone 13'], acceptDownloads: true, ...context });
   const page = await ctx.newPage();
@@ -68,9 +69,16 @@ export async function openApp(t, base, { hash = 'library', tipsSeen = true, sett
   });
   await page.route('https://api.mymemory.translated.net/**', (r) => r.fulfill(mt == null ? json(503, {})
     : json(200, { responseStatus: 200, responseData: { translatedText: mt }, matches: [] })));
+  const google = [];
+  await page.route('https://translation.googleapis.com/**', (r) => {
+    if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' } });
+    google.push({ key: new URL(r.request().url()).searchParams.get('key'), ...r.request().postDataJSON() });
+    r.fulfill(gt == null ? json(400, { error: { message: 'API key not valid. Please pass a valid API key.' } })
+      : json(200, { data: { translations: [{ translatedText: gt }] } }));
+  });
   await page.goto(base + '#' + hash);
   await page.waitForSelector('#view-' + hash + ' > *');
-  return { page, ctx, errors, wikt };
+  return { page, ctx, errors, wikt, google };
 }
 
 export async function closeBrowser(t) { if (t.browser) await t.browser.close(); }

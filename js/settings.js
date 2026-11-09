@@ -5,6 +5,7 @@ const defaults = {
   lang: 'it',
   target: 'en',
   email: '',               // optional: raises MyMemory's free quota
+  googleKey: '',           // optional: a Google Cloud Translation API key; Google translates, MyMemory is the fallback
   theme: 'original',       // original | quiet | paper | bold | calm | focus
   appearance: 'auto',      // auto | light | dark  (reader dark variant)
   font: 'original',

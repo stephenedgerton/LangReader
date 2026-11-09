@@ -864,10 +864,11 @@ async function translatePage() {
     <a class="secondary gt-page" href="${googleTranslateURL(sents.join(' '))}" target="_blank" rel="noopener">Open in Google Translate ↗</a>
     <div class="trans-block">Translating…</div>`);
   $('.x', body).onclick = closeSheet;
-  // MyMemory accepts up to ~500 characters per request: batch sentences.
+  // MyMemory accepts up to ~500 characters per request (Google far more): batch sentences.
+  const max = settings.googleKey ? 4000 : 450;
   const chunks = [];
   let cur = '';
-  for (const s of sents) { if ((cur + ' ' + s).length > 450 && cur) { chunks.push(cur); cur = s; } else cur = cur ? cur + ' ' + s : s; }
+  for (const s of sents) { if ((cur + ' ' + s).length > max && cur) { chunks.push(cur); cur = s; } else cur = cur ? cur + ' ' + s : s; }
   if (cur) chunks.push(cur);
   const out = [];
   const box = $('.trans-block', body);

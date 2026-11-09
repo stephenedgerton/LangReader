@@ -927,6 +927,9 @@ input[type=date] { background: transparent; border: 0; color: var(--tint); font:
 @media (prefers-color-scheme: dark) { :root:not([data-appearance="light"]) { --known: #6fedbd; --learning: #c99a26; } }
 :root[data-appearance="dark"] { --known: #6fedbd; --learning: #c99a26; }
 .small { font-size: 13px; }
+.st-tabs { margin: 0 0 16px; }
+.st-speaking + .card, .st-train + .card { margin-top: 16px; }
+.st-tabs button { font-size: 15px; padding: 8px 0; }
 .st-level p, .st-cover p, .st-trend p { margin: 8px 0 0; }
 .st-hero { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .st-hero b { font: 700 40px/1 var(--sans); font-variant-numeric: tabular-nums; }

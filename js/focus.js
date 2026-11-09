@@ -45,11 +45,12 @@ const x = (n) => `${n}×`;
 // `keys` picks which ones show: en (Translation: English shown ↔ tap to reveal), dual (English first),
 // rep (Repeat, round 1–5), speed (round 0.75–1.1×). `en` overrides whether Translation shows as on (the daily
 // Listen step keeps its own, settings.trainListenEn).
-export function toggleRowHTML(mode, keys = ['en', 'dual', 'rep', 'speed'], { en } = {}) {
+export function toggleRowHTML(mode, keys = ['en', 'dual', 'rep', 'speed'], { en, auto } = {}) {
   const c = { ...focusCfg(mode), ...(en == null ? {} : { en: en ? 'shown' : 'tap' }) };
   const t = (k, label, on, val = '') => `<button class="fc-tog${on ? ' on' : ''}" data-tog="${k}" aria-pressed="${on}"><span>${label}</span>${val ? `<b>${val}</b>` : ''}</button>`;
   const all = { en: () => t('en', 'Translation', c.en === 'shown'), dual: () => t('dual', 'Dual audio', c.enFirst),
-    rep: () => t('rep', 'Repeat', c.repeats > 1, x(c.repeats)), speed: () => t('speed', 'Speed', c.speed !== 1, x(c.speed)) };
+    rep: () => t('rep', 'Repeat', c.repeats > 1, x(c.repeats)), speed: () => t('speed', 'Speed', c.speed !== 1, x(c.speed)),
+    auto: () => t('auto', 'Auto next', !!auto) };
   return `<div class="fc-togs" style="grid-template-columns:repeat(${keys.length},1fr)">${keys.map((k) => all[k]()).join('')}</div>`;
 }
 export function flipToggle(mode, k) {

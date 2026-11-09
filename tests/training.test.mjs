@@ -76,6 +76,41 @@ describe('training', () => {
     assert.deepEqual(errors, []);
   });
 
+  test('leaving the session and coming back carries on; Shadow’s Auto next goes on by itself', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { ...SMALL, focus: { shadow: { repeats: 1, turn: 0.5 } } } });
+    await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push(u.text); setTimeout(() => u.onend?.(), 10); }; });
+    await page.click('[data-act=start]'); await sleep(300);
+    await page.click('[data-go]'); await sleep(250);
+    for (let i = 0; i < 4; i++) { await page.click('[data-flip]'); await sleep(100); await page.click('[data-r="3"]'); await sleep(150); }
+    await page.click('[data-go]'); await sleep(200);
+    await page.waitForSelector('[data-next]', { timeout: 5000 });
+    await page.click('[data-next]'); await sleep(200);
+    assert.match(await page.textContent('.dr-shadow'), /Buonasera!/);
+    await page.click('.x'); await sleep(400);
+
+    // Back in: Listen is done, and Shadow carries on with the second of today’s new sentences, not the first.
+    await page.click('[data-act=start]'); await sleep(300);
+    assert.match(await page.textContent('.dr-step'), /Shadow.*1 of 3/s);
+    assert.match(await page.textContent('.dr-shadow'), /Buonasera!/);
+    assert.match(await page.textContent('.fc-togs'), /Auto next/);
+
+    // Auto next: once the repeats are done, the next sentence starts by itself, to the end of the step.
+    await page.click('[data-tog=auto]'); await sleep(100);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).trainShadowAuto), true);
+    await page.waitForSelector('.dr-intro', { timeout: 15000 });
+    assert.match(await page.textContent('.dr-intro'), /Say it/);
+    const d = await tr(page, (m) => m.doneToday());
+    assert.equal(d.shadow, 4);
+    assert.equal(new Set(d.shadowed).size, 4, 'four different sentences shadowed');
+
+    // A skipped step stays skipped when you come back.
+    await page.click('[data-skip-step]'); await sleep(300);
+    await page.click('[data-done]').catch(() => page.click('.x')); await sleep(400);
+    assert.deepEqual((await tr(page, (m) => m.doneToday())).skipped, ['say']);
+    assert.match(await page.textContent('.tr-today'), /Done for today/);
+    assert.deepEqual(errors, []);
+  });
+
   test('a session: Listen, Shadow, then Say it with hints, and the plan is done for today', async () => {
     // One repeat a sentence keeps Shadow short; the daily session shares Focus's Shadowing settings.
     const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { ...SMALL, focus: { shadow: { repeats: 1 } } } });

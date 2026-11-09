@@ -4,7 +4,8 @@
 // pinned at the bottom. You rate yourself (Listen: Didn't get it / Mostly / Got it; Say it: Focus's four);
 // nothing listens to you. The toggles share Focus mode's settings: Listen and Shadow use Shadowing's, Say it
 // Recall's, except Listen's Translation, which is its own (settings.trainListenEn). ⚙︎ in the header opens the
-// step's settings in the same sheet. Shadow plays through createPlayer(), and Next shows once its repeats are done.
+// step's settings in the same sheet. Shadow plays through createPlayer(), and Next shows once its repeats are done
+// (with the Auto next toggle, settings.trainShadowAuto, the next sentence starts by itself).
 //   drillSheet()                    today's plan
 //   drillSheet({ extra: 10 })       "Train 10 more" once today's is done (counts as today's work)
 //   drillSheet({ only: packId })    one pack's due and new sentences; rated for real, but today's plan is untouched
@@ -20,7 +21,7 @@ import { entry } from './vocab.js';
 import { bump } from './stats.js';
 import { AGAIN, HARD, GOOD } from './srs.js';
 import { hint } from './sentences.js';
-import { STEPS, todaysPlan, sentence, textOf, rateCard, undoRate, countDone, stepFinished, packMeta, countRep } from './training.js';
+import { STEPS, todaysPlan, sentence, textOf, rateCard, undoRate, countDone, markToday, doneToday, stepFinished, packMeta, countRep } from './training.js';
 import { todaysCount, reviewSheet } from './review.js';
 import { createPlayer, ringHTML, repsHTML, ringPhase, ringReps, focusCfg, toggleRowHTML, flipToggle, settingsHTML, bindSettings, MODES, GRADES } from './focus.js';
 
@@ -42,7 +43,9 @@ export const stepIcon = (k) => ICON[k];
 const LISTEN_GRADES = [[AGAIN, 'Didn’t get it', 'again'], [HARD, 'Mostly', 'hard'], [GOOD, 'Got it', 'good']];
 // Which Focus mode's settings each step uses, and which toggles it shows.
 const CFG = { listen: 'shadow', shadow: 'shadow', say: 'recall' };
-const TOGS = { listen: ['en', 'speed'], shadow: ['en', 'dual', 'rep', 'speed'], say: ['dual', 'speed'] };
+const TOGS = { listen: ['en', 'speed'], shadow: ['en', 'dual', 'rep', 'speed', 'auto'], say: ['dual', 'speed'] };
+// Shadow's "Auto": the next sentence starts by itself once the repeats are done, hands-free.
+const AUTO_WAIT = 1200;
 
 // Step intros show the first time only; the steps you've seen are kept on this device.
 const INTRO_KEY = 'langreader.trainIntros';
@@ -69,11 +72,11 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
   else {
     const plan = todaysPlan({ extra, only });
     steps = STEPS.filter((s) => plan[s.k].length).map((s) => ({ k: s.k, ids: plan[s.k] }));
-    if (counts && settings.trainWords && todaysCount()) steps.push({ k: 'words', ids: [] });
+    if (counts && settings.trainWords && todaysCount() && !doneToday().skipped.includes('words')) steps.push({ k: 'words', ids: [] });
   }
   const title = only ? packMeta(only)?.name || 'Pack' : practice ? 'Missed sentences' : extra ? 'Extra Training' : "Today's Training";
   const onKey = (e) => keydown(e);
-  const body = openSheet('', { full: true, onClose: () => { removeEventListener('keydown', onKey); closeBubble(); stopShadow(); stopSpeaking(); saving.catch(() => {}).then(() => onClose?.()); } });
+  const body = openSheet('', { full: true, onClose: () => { removeEventListener('keydown', onKey); closeBubble(); stopShadow(); holdWake(false); stopSpeaking(); saving.catch(() => {}).then(() => onClose?.()); } });
   body.classList.add('drill');
   addEventListener('keydown', onKey);
 
@@ -93,7 +96,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
       ${togs()}`;
   };
   const listenEn = () => settings.trainListenEn !== 'tap';
-  const togs = () => toggleRowHTML(CFG[cur.st.k], TOGS[cur.st.k], cur.st.k === 'listen' ? { en: listenEn() } : {});
+  const togs = () => toggleRowHTML(CFG[cur.st.k], TOGS[cur.st.k], cur.st.k === 'listen' ? { en: listenEn() } : { auto: !!settings.trainShadowAuto });
   const say = (text, isSlow = false) => `<button class="dr-say" data-say="${esc(text)}"${isSlow ? ' data-slow' : ''}>${isSlow ? ICON.slow : icons.speaker}${isSlow ? 'Slow' : 'Play'}</button>`;
 
   const render = () => {
@@ -232,7 +235,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     const u = undo.pop();
     try {
       if (u.snap) await undoRate(u.snap);
-      if (u.shadow && counts) countDone('shadow', -1);
+      if (u.shadow && counts) { countDone('shadow', -1); markToday('shadowed', u.shadow, false); }
     } finally { busy = false; }
     ({ si, ii } = u.pos);
     Object.assign(tally, u.pos.tally); missed.length = 0; missed.push(...u.pos.missed);
@@ -241,7 +244,18 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
 
   // ---------- Shadow: Focus's Shadowing for one sentence (listen, your turn, × Repeat); then Next ----------
   let player = null;
-  function stopShadow() { player?.stop(); player = null; }
+  let autoTimer = 0, wake = null;
+  function stopShadow() { clearTimeout(autoTimer); player?.stop(); player = null; }
+  const autoNext = () => {
+    clearTimeout(autoTimer);
+    const mine = cur;
+    autoTimer = setTimeout(() => { if (cur === mine && cur.done && !setFor && !bubbleOpen()) nextShadow(); }, AUTO_WAIT);
+  };
+  // While Auto is on, keep the screen awake through Shadow, as Focus mode does.
+  const holdWake = (on) => {
+    if (on && !wake) { wake = navigator.wakeLock?.request('screen').then((l) => l, () => null) || null; }
+    if (!on && wake) { wake.then((l) => l?.release().catch(() => {})); wake = null; }
+  };
   const shadowText = () => {
     const c = cfg(), rep = player?.rep || 0;
     const showIT = cur.tapIt || c.it === 'shown' || (c.it === 'later' && rep === 0);
@@ -253,6 +267,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     : `<button class="secondary dr-pause" data-toggle>${player?.playing ? `${ICON.pause}Pause` : `${ICON.play}Play`}</button>`);
   const renderShadow = () => {
     const { s } = cur;
+    if (settings.trainShadowAuto) holdWake(true);
     cur.done = false;
     body.innerHTML = `${head()}${stepLine()}
       <div class="dr-main dr-shadow">
@@ -278,6 +293,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
           }
           if (name === 'done') {
             cur.done = true; bottom();
+            if (settings.trainShadowAuto) autoNext();
           }
         },
         state: () => { if (cur === mine && !cur.done) bottom(); },
@@ -288,12 +304,14 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
   const nextShadow = () => {
     if (!cur || !cur.done) return;
     haptic();
-    if (counts) countDone('shadow');
+    clearTimeout(autoTimer);
+    if (counts) { countDone('shadow'); markToday('shadowed', cur.s.id); }
     tally.shadowed++; bump('drills');
-    undo.push({ pos: { si, ii, tally: { ...tally, shadowed: tally.shadowed - 1 }, missed: [...missed] }, shadow: true });
+    undo.push({ pos: { si, ii, tally: { ...tally, shadowed: tally.shadowed - 1 }, missed: [...missed] }, shadow: cur.s.id });
     ii++; render();
   };
   const shadowAgain = () => {
+    clearTimeout(autoTimer);
     cur.done = false;
     ringReps(body, 0);
     $('.dr-bottom', body).innerHTML = shadowActions();
@@ -361,7 +379,12 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
   }
 
   const setTog = (k) => {
-    if (k === 'en' && cur.st.k === 'listen') settings.trainListenEn = listenEn() ? 'tap' : 'shown';
+    if (k === 'auto') {
+      settings.trainShadowAuto = !settings.trainShadowAuto;
+      holdWake(settings.trainShadowAuto);
+      if (!settings.trainShadowAuto) clearTimeout(autoTimer);
+      else if (cur.done) autoNext();
+    } else if (k === 'en' && cur.st.k === 'listen') settings.trainListenEn = listenEn() ? 'tap' : 'shown';
     else flipToggle(CFG[cur.st.k], k);
     haptic();
     $('.fc-togs', body).outerHTML = togs();
@@ -384,7 +407,11 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
       if (b.dataset.say != null) return playBtn(b);
       if (b.dataset.go != null) { if (steps[si]) sawIntro(steps[si].k); return render(); }
       if (b.dataset.info != null) { info = true; return render(); }
-      if (b.dataset.skipStep != null) { if (steps[si]) sawIntro(steps[si].k); steps[si].skipped = true; si++; ii = -1; return render(); }
+      if (b.dataset.skipStep != null) {
+        const st = steps[si];
+        if (st) { sawIntro(st.k); st.skipped = true; if (counts) markToday('skipped', st.k); }
+        si++; ii = -1; return render();
+      }
       // Each of these replaces this sheet (openSheet closes it first).
       if (b.dataset.words != null) return reviewSheet({ onClose });
       if (b.dataset.flip != null) return reveal();

@@ -4,7 +4,8 @@
 // Bundled sentences go into the store the first time their pack is on (id `${pack}:${key}`), and new ones
 // join when a pack's `rev` goes up. One already in the store is never overwritten, so your edits, pauses and
 // progress stay. Today's counts live in localStorage langreader.trainDay = {date, listen, shadow, say, fresh,
-// missed: [ids rated Again]}; which pack revisions are in the store, in langreader.packRevs.
+// missed: [ids rated Again], shadowed: [ids], started: [ids new today], skipped: [step keys]}, so leaving the
+// session and coming back carries on where you were; which pack revisions are in the store, in langreader.packRevs.
 //
 // Packs come in three kinds: ready-made (samples/packs/, on when you add them), your own (IndexedDB `packs`)
 // and From reading (id `reading`, made by "Train this sentence"; it has no record and exists while it has
@@ -164,7 +165,7 @@ export function trainingList(only = null) {
 
 // ---------- today ----------
 export function doneToday() {
-  const blank = { date: todayKey(), listen: 0, shadow: 0, say: 0, fresh: 0, missed: [] };
+  const blank = { date: todayKey(), listen: 0, shadow: 0, say: 0, fresh: 0, missed: [], shadowed: [], started: [], skipped: [] };
   try {
     const d = JSON.parse(localStorage.getItem(DAY_KEY) || '{}');
     if (d.date === blank.date) return { ...blank, ...d };
@@ -173,6 +174,13 @@ export function doneToday() {
 }
 function saveDay(d) { try { localStorage.setItem(DAY_KEY, JSON.stringify(d)); } catch {} }
 export function countDone(field, n = 1) { const d = doneToday(); d[field] = Math.max(0, (d[field] || 0) + n); saveDay(d); }
+// A list in today's record (shadowed, started, skipped): `on` adds the id, otherwise takes it out.
+export function markToday(field, id, on = true) {
+  const d = doneToday(), has = d[field].includes(id);
+  if (on && !has) d[field].push(id);
+  if (!on && has) d[field] = d[field].filter((x) => x !== id);
+  saveDay(d);
+}
 
 export const sizes = () => ({ listen: +settings.trainListen || 0, shadow: +settings.trainShadow || 0, say: +settings.trainSay || 0 });
 
@@ -183,7 +191,10 @@ export function todaysPlan({ extra = 0, only = null } = {}) {
   const d = only ? {} : doneToday(), sz = sizes();
   if (extra) { sz.listen += Math.ceil(extra / 2); sz.say += Math.floor(extra / 2); sz.shadow = 0; }
   if (only) sz.shadow = 0;
-  return buildPlan(trainingList(only), { now: Date.now(), sizes: sz, maxNew: (+settings.trainNew || 0) + (extra ? 3 : 0), done: d, missed: d.missed || [] });
+  // A step skipped today stays skipped (coming back to the session doesn't bring it back).
+  else if (!extra) for (const k of d.skipped || []) if (k in sz) sz[k] = 0;
+  return buildPlan(trainingList(only), { now: Date.now(), sizes: sz, maxNew: (+settings.trainNew || 0) + (extra ? 3 : 0), done: d,
+    missed: d.missed || [], shadowed: d.shadowed || [], started: d.started || [] });
 }
 export const minutes = (plan) => Math.max(1, Math.round(STEPS.reduce((n, s) => n + plan[s.k].length * SECONDS[s.k], 0) / 60));
 
@@ -196,7 +207,7 @@ export async function rateCard(id, dir, g, { count = true, drill = true } = {}) 
   const snap = { prev: s, dir, counted: [], missed: false, drill };
   if (count) {
     countDone(dir); snap.counted.push(dir);
-    if (wasNew) { countDone('fresh'); snap.counted.push('fresh'); }
+    if (wasNew) { countDone('fresh'); snap.counted.push('fresh'); markToday('started', id); snap.started = true; }
   }
   if (g === AGAIN) {
     const d = doneToday();
@@ -223,6 +234,7 @@ export async function undoRate(snap) {
   await putSentence({ ...snap.prev, reps: cache.get(snap.prev.id)?.reps || snap.prev.reps });
   for (const f of snap.counted) countDone(f, -1);
   if (snap.missed) { const d = doneToday(); d.missed = d.missed.filter((x) => x !== snap.prev.id); saveDay(d); }
+  if (snap.started) markToday('started', snap.prev.id, false);
   if (snap.drill !== false) bump('drills', -1);
 }
 // One repetition of a sentence: once through hearing it and saying it (each repeat in Shadowing, Recall or the

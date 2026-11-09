@@ -5,7 +5,8 @@
 //   Recall     the English plays (Dual audio) or shows, a gap to say it in Italian, then the Italian.
 // Rating is optional and never advances: a grade rates that sentence's card (Shadowing → listen, Recall → say)
 // without touching today's plan, and can be changed while you're still in the session (it's re-rated from
-// where the card was, so it counts once). An unrated sentence isn't scheduled.
+// where the card was, so it counts once). A sentence played through all its repeats without a rating, and new
+// in that mode, is rated Hard for you (1 star): you've said it, so it shouldn't read New.
 //
 //   focusSheet({ pack, mode, ids })   the full-screen Focus screen (no intro: it starts playing in the tap)
 //   focusSettingsSheet(mode, { onStart })  the settings sheet, with Start pinned at the bottom
@@ -260,7 +261,18 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
       if (name === 'it' || name === 'rep') drawText();
       drawPhase(name, rep, ms);
     },
-    sentenceDone: (item) => { if (!counted.has(item.id)) { counted.add(item.id); bump('drills'); } },
+    sentenceDone: (item) => {
+      const first = !counted.has(item.id);
+      counted.add(item.id);
+      // Said through to the end but not rated, and new in this mode: it's rated Hard for you (1 star), so it
+      // doesn't still read New. Not shown as your rating; picking a grade replaces it as the one review.
+      if (!rated.has(item.id) && !sentence(item.id)?.cards?.[M.dir]) {
+        const job = rateCard(item.id, M.dir, HARD, { count: false, drill: first });
+        job.catch(() => {});
+        rated.set(item.id, { g: HARD, job, auto: true });
+        saving = Promise.all([saving, job]).catch(() => {});
+      } else if (first) bump('drills');
+    },
     state: () => { if (view === 'player') drawTransport(); },
     end: () => { if (view === 'player') draw(); },
   } });
@@ -298,9 +310,11 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
     if (b) { b.innerHTML = player.playing ? ICON.pause : ICON.play; b.setAttribute('aria-label', player.playing ? 'Pause' : 'Play'); }
     if (!player.playing) drawPhase('stop', player.rep);
   };
+  const byYou = () => [...rated.values()].filter((r) => !r.auto).length;
   const rateHTML = () => {
     const r = item() && rated.get(item().id);
-    return GRADES.map(([g, l, c]) => `<button class="${c}${r?.g === g ? ' on' : ''}" data-r="${g}" aria-pressed="${r?.g === g}">${l}</button>`).join('');
+    const on = (g) => !!r && !r.auto && r.g === g;
+    return GRADES.map(([g, l, c]) => `<button class="${c}${on(g) ? ' on' : ''}" data-r="${g}" aria-pressed="${on(g)}">${l}</button>`).join('');
   };
 
   const draw = () => {
@@ -313,7 +327,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
       <div class="fc-count"><b>${M.name}</b><span>${player.i + 1} / ${n}</span></div>
       ${togs()}
       <div class="fc-main">${ended ? `<div class="fc-end"><div class="dr-done-ico">${icons.check}</div><h3>That’s the whole pack</h3>
-          <p class="muted">${n} sentence${n === 1 ? '' : 's'}. ${rated.size ? `${rated.size} rated.` : 'Rating them is up to you.'}</p>
+          <p class="muted">${n} sentence${n === 1 ? '' : 's'}. ${byYou() ? `${byYou()} rated.` : 'Rating them is up to you.'}</p>
           <button class="secondary" data-restart>Play again from the start</button><button class="link-btn" data-done>Done</button></div>`
         : `${ringHTML()}<div class="fc-text">${textHTML()}</div>${repsHTML(player.cfg.repeats)}
         <div class="rv-tools fc-tools"><button data-replay>${icons.speaker}Play</button><button data-slow class="${slow ? 'on' : ''}" aria-pressed="${slow}">${stepIcon('slow')}Slow</button></div>`}</div>
@@ -338,7 +352,10 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
     const it = item(); if (!it || player.ended) return;
     haptic();
     const prev = rated.get(it.id);
-    if (prev?.g === g) return;
+    if (prev?.g === g) {
+      if (prev.auto) { rated.set(it.id, { ...prev, auto: false }); const row = $('.fc-rate', body); if (row) row.innerHTML = rateHTML(); }
+      return;
+    }
     const job = prev ? prev.job.then((snap) => rerateCard(snap, g))
       : rateCard(it.id, M.dir, g, { count: false, drill: !counted.has(it.id) });
     counted.add(it.id);

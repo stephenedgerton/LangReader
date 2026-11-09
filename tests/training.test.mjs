@@ -360,7 +360,7 @@ describe('training', () => {
     assert.deepEqual(errors, []);
   });
 
-  test('Focus, Shadowing: each sentence three times, then the next by itself; Pause, ‹‹ and ››; nothing rated or counted', async () => {
+  test('Focus, Shadowing: each sentence three times, then the next by itself; Pause, ‹‹ and ››; a sentence played through unrated is rated Hard', async () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
     await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push(u.text); setTimeout(() => u.onend?.(), 10); }; });
     await page.click('[data-pack=survival]'); await sleep(300);
@@ -387,7 +387,10 @@ describe('training', () => {
     await page.click('.x'); await sleep(300);
     const d = await tr(page, (m) => [m.doneToday(), m.sentence('survival:1').cards]);
     assert.deepEqual([d[0].listen, d[0].shadow, d[0].fresh], [0, 0, 0], 'today’s plan is untouched');
-    assert.deepEqual(d[1], {}, 'nothing is rated');
+    assert.equal(d[1].say, undefined);
+    assert.equal(d[1].listen?.reps, 1, 'played through unrated: rated once, for Shadowing');
+    assert.ok(d[1].listen.s < 2, 'as Hard: 1 star');
+    assert.deepEqual(await tr(page, (m) => m.sentence('survival:3').cards), {}, 'skipped past: still new');
     assert.deepEqual(errors, []);
   });
 
@@ -462,6 +465,27 @@ describe('training', () => {
     assert.deepEqual([s[1].listen, s[1].fresh, s[1].missed], [0, 0, []], 'today’s plan is untouched');
     const drills = await page.evaluate(async () => (await (await import('./js/stats.js')).getDays()).at(-1)?.drills);
     assert.equal(drills, 1, 'counted once in the stats');
+    assert.deepEqual(errors, []);
+  });
+
+  test('Focus: the automatic Hard isn’t shown as your grade, a grade picked after it is still one review, and a rated card is left alone', async () => {
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { ...GENDER, focus: { shadow: { repeats: 1, loop: false } } } });
+    await page.evaluate(() => { speechSynthesis.speak = (u) => setTimeout(() => u.onend?.(), 10); });
+    await page.click('[data-pack=survival]'); await sleep(300);
+    await page.click('[data-act=focus]');
+    for (let i = 0; i < 80 && !(await tr(page, (m) => m.sentence('survival:1').cards.listen)); i++) await sleep(100);
+    await page.click('[data-toggle]'); await page.click('[data-prev]'); await sleep(200);
+    assert.match(await page.textContent('.fc-count'), new RegExp(`1 / ${N}`));
+    assert.equal(await page.$('.fc-rate .on'), null, 'not shown as a grade you picked');
+    await page.click('[data-r="3"]'); await sleep(300);
+    const c = await tr(page, (m) => m.sentence('survival:1').cards.listen);
+    assert.deepEqual([c.reps, c.s > 2], [1, true], 'Good replaces the automatic Hard: one review');
+    // Played through again in a new session: a card it already has isn't rated again.
+    await page.click('.x'); await sleep(300);
+    await page.click('[data-act=focus]');
+    for (let i = 0; i < 80 && !(await tr(page, (m) => m.sentence('survival:2').cards.listen)); i++) await sleep(100);
+    await page.click('[data-toggle]'); await page.click('.x'); await sleep(300);
+    assert.equal((await tr(page, (m) => m.sentence('survival:1').cards.listen)).reps, 1);
     assert.deepEqual(errors, []);
   });
 

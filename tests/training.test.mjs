@@ -533,7 +533,8 @@ describe('training', () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'stats' });
     assert.ok(await page.isHidden('.st-train'), 'Reading is the first pane');
     await page.click('[data-stab="training"]'); await sleep(200);
-    assert.ok(await page.isHidden('.st-level'));
+    assert.ok(await page.isHidden('.st-reading'));
+    assert.match((await page.textContent('.st-speaking')).replace(/\s+/g, ' '), /^ ?Pre-A1 ?speaking level You can say 0 of the 20,000 most common words/);
     assert.match(await page.textContent('.st-train'), /start after your first session/);
     await tr(page, async (m) => {
       await m.syncPacks();
@@ -551,6 +552,11 @@ describe('training', () => {
     assert.match(card, new RegExp(`Of ${N} in your packs, you've started 3\\.`));
     assert.match(card, /🔥 1 ?day in a row 1 ?of the last 30 days 3 ?cards this week/);
     assert.match(card, /4 ?repetitions today 4 ?this week 4 ?in all/);
+    // survival:1 is learned: its words count toward speaking; the two started ones are practising.
+    const speak = (await page.textContent('.st-speaking')).replace(/\s+/g, ' ');
+    const [, n] = speak.match(/You can say (\d+) of/);
+    assert.ok(+n > 0, speak);
+    assert.match(speak, /you're practising \d+ more/);
     assert.equal(await page.$$eval('.bars .bar', (b) => b.length), 14);
     assert.equal(await page.$$eval('.bars .bar:not(.zero)', (b) => b.length), 1, 'only today has cards');
     assert.match(await page.getAttribute('.st-packs .band', 'title'), new RegExp(`^Survival: 1 learned, 2 started, of ${N}$`));

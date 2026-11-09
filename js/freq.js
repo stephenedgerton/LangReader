@@ -6,6 +6,7 @@
 import { allEntries } from './vocab.js';
 import { record } from './stats.js';
 import { esc } from './ui.js';
+import { tokenize, normalize } from './text.js';
 
 const URL = 'data/freq-it-v1.json';
 export const COMMON = 2000;  // new words this common get a stronger mark in the reader
@@ -110,6 +111,18 @@ export function wordStats(st = lemmaStates()) {
     bands: bands.map((b) => ({ ...b, knownPct: (b.known / b.top) * 100, learningPct: (b.learning / b.top) * 100 })),
     ...levelFor(known),
   };
+}
+
+// The lemmas (as indices) of the words in some Italian texts; words not in the list are skipped. The Stats
+// tab's speaking level counts these over the sentences you can say.
+export function lemmasIn(texts) {
+  const out = new Set();
+  for (const t of texts) for (const x of tokenize(t)) {
+    if (x.type !== 'w') continue;
+    const i = data.forms.get(normalize(x.text));
+    if (i !== undefined) out.add(i);
+  }
+  return out;
 }
 
 // A theme's words that are in the list, most common first, each with its state.

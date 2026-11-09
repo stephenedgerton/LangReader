@@ -45,7 +45,7 @@ describe('stats', () => {
 
   test('Stats tab: level, fiction coverage, bands and themes follow your vocabulary', async () => {
     const { page, errors } = await openApp(t, srv.url, { hash: 'stats' });
-    assert.match(await text(page, '.st-level'), /^Pre-A1\s*rough level You know \d+ of the 20,000 most common words.* 500 more to reach A1\./);
+    assert.match(await text(page, '.st-reading'), /^Pre-A1\s*reading level You know \d+ of the 20,000 most common words.* 500 more to reach A1\./);
     assert.match(await text(page, '.st-cover'), /^\d+\.\d%\s*of the words in a typical novel/);
     assert.equal(await page.$$eval('.band', (e) => e.length), 7);
     assert.equal(await page.$$eval('.theme-row', (e) => e.length), 26);

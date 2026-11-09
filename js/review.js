@@ -16,6 +16,7 @@ import { dictHTML, dictionaryHints } from './wordcard.js';
 import { tokenize, normalize } from './text.js';
 import { lookup } from './dictionary.js';
 import { haptic } from './haptics.js';
+import { celebrate } from './celebrate.js';
 import { speak, translate, dictionaryLinks } from './services.js';
 import { trainButtonHTML, onTrainButton } from './mysentences.js';
 import { openCardBubble, closeBubble, bubbleOpen } from './bubble.js';
@@ -266,7 +267,7 @@ export async function reviewSheet({ onClose } = {}) {
     const pct = stats.n ? Math.round((stats.right / stats.n) * 100) : 0;
     const tricky = stats.tricky.map((t) => entry(t)).filter((w) => w && isLingq(w));
     body.innerHTML = `${headHTML(stats.n ? 'All done for today' : 'Nothing to review')}
-      <div class="rv-done">
+      <div class="rv-done${stats.n ? ' celebrating' : ''}">
         ${stats.n ? `<div class="rv-ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" pathLength="100"/><circle class="fg" cx="60" cy="60" r="52" pathLength="100" style="--p:${pct}"/></svg><div><b>${pct}%</b><small>remembered</small></div></div>`
           : '<div class="rv-coffee">☕</div>'}
         <div class="rv-done-line">${stats.n ? `${stats.n} card${stats.n === 1 ? '' : 's'} reviewed · ${stats.right} remembered${stats.known ? ` · ${stats.known} now Known` : ''}`
@@ -277,6 +278,8 @@ export async function reviewSheet({ onClose } = {}) {
       <div class="rv-badges"></div>
       <button class="primary" data-done>Done</button>
       ${keepGoingHTML(more, tricky.length)}`;
+    // A finished day's cards get the full celebration; extra practice a smaller one.
+    if (stats.n) celebrate($('.rv-ring', body), { big: session === 'today' });
     showNewBadges();
   };
   // Bookmarks earned in this session (reviews done, review streaks, or words that just became Known).
@@ -287,6 +290,7 @@ export async function reviewSheet({ onClose } = {}) {
     if (!fresh.length || !box?.isConnected) return;
     box.innerHTML = `<div class="rv-badges-title">New bookmark${fresh.length > 1 ? 's' : ''}!</div>
       <div class="rv-badges-row">${fresh.map((b) => `<div class="ach-item">${bookmarkHTML(b)}<b>${esc(b.title)}</b></div>`).join('')}</div>`;
+    setTimeout(() => { if (box.isConnected) celebrate(box); }, 1600); // after the first burst has settled
   };
   // Optional extras, never pushed: today's remaining due cards first, else cards that aren't due yet,
   // and today's misses once more.

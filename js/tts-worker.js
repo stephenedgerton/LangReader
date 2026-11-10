@@ -1,17 +1,19 @@
-// Piper text-to-speech, off the main thread: espeak-ng turns Italian text into phoneme ids,
+// Piper text-to-speech, off the main thread: espeak-ng turns the text into phoneme ids,
 // then the voice's VITS model (ONNX Runtime, WebAssembly) turns those into audio samples.
 // A classic worker, so the two vendored Emscripten/UMD scripts load with importScripts.
-importScripts('../vendor/piper/piper_phonemize.js', '../vendor/onnxruntime/ort.wasm.min.js');
+importScripts('../vendor/piper-v2/piper_phonemize.js', '../vendor/onnxruntime/ort.wasm.min.js');
 
-const PIPER = '../vendor/piper/';
+const PIPER = '../vendor/piper-v2/';
 const get = async (url, as) => { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r[as](); };
 let phonemizer = null;          // the phonemizer's wasm and data, shared by every voice
-let engine = null;              // {voice, ready}: one voice in memory at a time
+const engines = {};             // lang -> {voice, ready}: one voice per language in memory (Focus's Recall
+                                // alternates the English prompt and the Italian answer)
 
-function load(voice) {
+function load(voice, lang = 'it') {
+  const engine = engines[lang];
   if (engine?.voice === voice) return engine.ready;
   const old = engine;
-  const mine = engine = { voice };
+  const mine = engines[lang] = { voice };
   mine.ready = (async () => {
     // Threads need cross-origin isolation, which GitHub Pages can't give us.
     ort.env.wasm.numThreads = 1;
@@ -21,7 +23,7 @@ function load(voice) {
     const [config, model, [wasm, data]] = await Promise.all([get(voice + '.json', 'json'), get(voice, 'arrayBuffer'), phonemizer]);
     const session = await ort.InferenceSession.create(model, { executionProviders: ['wasm'] });
     return { config, session, wasm, data };
-  })().catch((e) => { if (engine === mine) engine = null; throw e; });
+  })().catch((e) => { if (engines[lang] === mine) delete engines[lang]; throw e; });
   old?.ready.then((e) => e.session.release(), () => {});
   return mine.ready;
 }
@@ -40,8 +42,8 @@ async function phonemize({ config, wasm, data }, text) {
   return lines.map((l) => { try { return JSON.parse(l).phoneme_ids; } catch { return null; } }).filter((ids) => ids?.length);
 }
 
-async function synthesize(voice, text, rate) {
-  const eng = await load(voice);
+async function synthesize(voice, lang, text, rate) {
+  const eng = await load(voice, lang);
   const { noise_scale, length_scale, noise_w } = eng.config.inference;
   const sampleRate = eng.config.audio.sample_rate;
   const gap = new Float32Array(Math.round(sampleRate * 0.25));
@@ -61,10 +63,10 @@ async function synthesize(voice, text, rate) {
   return { samples, sampleRate };
 }
 
-self.onmessage = async ({ data: { id, voice, text, rate } }) => {
+self.onmessage = async ({ data: { id, voice, lang, text, rate } }) => {
   try {
-    if (text == null) { await load(voice); self.postMessage({ id }); return; }
-    const out = await synthesize(voice, text, rate || 1);
+    if (text == null) { await load(voice, lang); self.postMessage({ id }); return; }
+    const out = await synthesize(voice, lang, text, rate || 1);
     self.postMessage({ id, ...out }, [out.samples.buffer]);
   } catch (e) {
     self.postMessage({ id, error: String(e?.message || e) });

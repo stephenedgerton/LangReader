@@ -47,6 +47,7 @@ const json = (status, body) => ({ status, contentType: 'application/json', heade
 // opts.wiktionary: map of title -> response (default WIKTIONARY); opts.mt: translation text, or null to fail.
 // opts.gt: Google's translation (used once settings.googleKey is set), or null for a rejected key.
 // opts.voice: settings.voice; the device voice by default, so tests don't load Riccardo (pass '' for him).
+// The English voice (settings.enVoice) follows it: the device's unless voice is ''.
 export async function openApp(t, base, { hash = 'library', tipsSeen = true, settings = null, wiktionary = WIKTIONARY, mt = 'mock translation', gt = 'google translation', voice = 'system', context = {} } = {}) {
   const browser = t.browser || (t.browser = await chromium.launch());
   const ctx = await browser.newContext({ ...devices['iPhone 13'], acceptDownloads: true, ...context });
@@ -57,8 +58,8 @@ export async function openApp(t, base, { hash = 'library', tipsSeen = true, sett
   page.on('console', (m) => { if (m.type() === 'error' && !/404/.test(m.text())) errors.push(m.text()); });
   await page.addInitScript(({ tipsSeen, settings, voice }) => {
     if (tipsSeen) localStorage.setItem('langreader.tipsSeen', '1');
-    if (settings) localStorage.setItem('langreader.settings', JSON.stringify({ voice, ...settings }));
-    else if (!localStorage.getItem('langreader.settings')) localStorage.setItem('langreader.settings', JSON.stringify({ voice }));
+    if (settings) localStorage.setItem('langreader.settings', JSON.stringify({ voice, ...(voice ? { enVoice: 'system' } : {}), ...settings }));
+    else if (!localStorage.getItem('langreader.settings')) localStorage.setItem('langreader.settings', JSON.stringify({ voice, ...(voice ? { enVoice: 'system' } : {}) }));
   }, { tipsSeen, settings, voice });
   const wikt = [];
   await page.route('https://en.wiktionary.org/**', (r) => {

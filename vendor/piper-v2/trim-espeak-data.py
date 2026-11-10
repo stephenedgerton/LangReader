@@ -1,7 +1,8 @@
-# Rewrite piper_phonemize's Emscripten preload package so it holds only the espeak-ng files Italian needs.
+# Rewrite piper_phonemize's Emscripten preload package so it holds only the espeak-ng files Italian and
+# US English need (the languages of the bundled voices).
 import re, json, sys
 src, out = sys.argv[1], sys.argv[2]
-KEEP = {'intonations', 'phondata', 'phonindex', 'phontab', 'it_dict', 'lang/roa/it'}
+KEEP = {'intonations', 'phondata', 'phonindex', 'phontab', 'it_dict', 'lang/roa/it', 'en_dict', 'lang/gmw/en', 'lang/gmw/en-US'}
 js = open(src + '/piper_phonemize.js').read()
 data = open(src + '/piper_phonemize.data', 'rb').read()
 m = re.search(r'loadPackage\((\{.*?\})\)\}', js)

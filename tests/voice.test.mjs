@@ -57,6 +57,27 @@ describe('voice', () => {
     assert.deepEqual(errors, []);
   });
 
+  test('English has its own voice, Lessac, kept in memory alongside the Italian one', async () => {
+    const { page, errors } = await openApp(t, srv.url, { voice: '' });
+    const out = await page.evaluate(async () => {
+      const m = await import('./js/piper.js');
+      const secs = ({ samples, sampleRate }) => ({ secs: samples.length / sampleRate, sampleRate });
+      m.warmUp('riccardo'); m.warmUp('lessac');
+      return { it: secs(await m.synth('treno', 1, 'riccardo')), en: secs(await m.synth('Good morning!', 1, 'lessac')) };
+    });
+    await ready(page, 'riccardo'); await ready(page, 'lessac');
+    assert.equal(out.en.sampleRate, 22050);
+    assert.ok(out.en.secs > 0.4 && out.en.secs < 3, `lessac: ${out.en.secs}s`);
+    assert.equal(out.it.sampleRate, 16000);
+    assert.ok(await page.evaluate(() => import('./js/piper.js').then((m) => m.piperReady('riccardo'))), 'both voices stay loaded');
+    // speak(…, {lang: 'en'}) uses Lessac once he's loaded (not the device voice).
+    await page.evaluate(spy);
+    await page.evaluate(() => import('./js/services.js').then((m) => m.speak('Good evening!', { lang: 'en' })));
+    for (let i = 0; i < 50 && !(await page.evaluate(() => window.__played.length)); i++) await sleep(100);
+    assert.equal((await page.evaluate(() => window.__played))[0]?.[0], 'piper');
+    assert.deepEqual(errors, []);
+  });
+
   test('tapping a word says it: Riccardo once he has loaded, the device voice before that', async () => {
     const { page, errors } = await openApp(t, srv.url, { voice: '' });
     await page.addInitScript(spy); await page.reload(); await page.waitForSelector('#view-library .book');

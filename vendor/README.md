@@ -8,11 +8,11 @@ From the npm package `onnxruntime-web@1.31.1`, `dist/`: `ort.wasm.min.js` (the W
 build), and the `ort-wasm-simd-threaded.{mjs,wasm}` runtime it loads. Runs single-threaded
 (GitHub Pages can't send the cross-origin-isolation headers threads need).
 
-## `piper/` (piper_phonemize: piper-phonemize + espeak-ng, compiled to WebAssembly)
+## `piper-v2/` (piper_phonemize: piper-phonemize + espeak-ng, compiled to WebAssembly)
 From the npm package `@diffusionstudio/piper-wasm@1.0.0` (MIT), `build/`. It contains
 [espeak-ng](https://github.com/espeak-ng/espeak-ng) (GPL-3.0) and
 [piper-phonemize](https://github.com/rhasspy/piper-phonemize) (MIT).
-**Modified:** `piper_phonemize.data` holds only the espeak-ng files Italian needs (18 MB → 0.8 MB),
+**Modified:** `piper_phonemize.data` holds only the espeak-ng files Italian and US English need (18 MB → 0.97 MB),
 and the file table in `piper_phonemize.js` matches it. `trim-espeak-data.py` does this:
 `python3 trim-espeak-data.py <package>/build <out-dir>`.
 
@@ -23,3 +23,5 @@ each has its model card beside it.
 - `it_IT-paola-medium`: female, 22 kHz, fine-tuned from the English lessac voice.
 - `it_IT-serena-medium`: female, 22 kHz, trained on a synthetic dataset (CC-BY-4.0). Her `high`
   model is 114 MB, over GitHub's 100 MB file limit, so it isn't included.
+- `en_US-lessac-medium` (from `en/en_US/lessac/medium`): female, 22 kHz, US English, for Focus mode's English
+  prompts. Trained on the Blizzard 2013 Lessac dataset, whose licence is for non-commercial use.

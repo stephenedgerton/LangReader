@@ -13,7 +13,7 @@
 // A pack's hands-free playing (Shadowing and Recall) is Focus mode, in focus.js.
 import { settings } from './settings.js';
 import { openSheet, closeSheet, esc, icons, $, $$ } from './ui.js';
-import { speak, stopSpeaking } from './services.js';
+import { speak, stopSpeaking, prepareVoice } from './services.js';
 import { haptic } from './haptics.js';
 import { celebrate } from './celebrate.js';
 import { tokenize, normalize } from './text.js';
@@ -118,6 +118,7 @@ export function drillSheet({ only = null, extra = 0, practice = null, onClose } 
     // In the tap that brought this card, for iOS.
     if (st.k === 'listen') playBtn($('.dr-disc', body));
     else if (cfg().enFirst && s.en) speak(s.en, { lang: 'en', rate: cfg().speed || 1 });
+    if (cfg().enFirst) prepareVoice({ lang: 'en' }); // for the next card
   };
 
   const drawCard = (enter) => {

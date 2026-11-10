@@ -10,7 +10,8 @@ import { getDays, streak, todayKey, bump } from './stats.js';
 import { openSheet, closeSheet, initSheetGestures, esc, icons, coverHTML, toast, $, $$ } from './ui.js';
 import { SAMPLE } from '../samples/sample.js';
 import { STORIES } from '../samples/stories.js';
-import { SERIES, seriesBookId, seriesRev, loadSeriesBook } from '../samples/series/index.js';
+import * as CASA_GIALLA from '../samples/series/index.js';
+import * as HOGWARTS from '../samples/hogwarts/index.js';
 import { haptic } from './haptics.js';
 import { bookPct, goalSheet, goalSummary, goalCardHTML, markBookComplete } from './goals.js';
 import { fillDifficulty } from './difficulty.js';
@@ -45,6 +46,8 @@ async function boot() {
   }
 }
 
+const BUNDLED_SERIES = [CASA_GIALLA, HOGWARTS];
+
 // Bundled stories are each added once: new installs get them all, existing libraries get new ones.
 // A story you delete stays deleted.
 async function addBundledStories() {
@@ -59,32 +62,35 @@ async function addBundledStories() {
     if (!titles.has(s.title)) await saveBook(s);
     added.push(s.id);
   }
-  // The graded series, each book loaded only if it hasn't been added yet, or if the library has an older
+  // The bundled series, each book loaded only if it hasn't been added yet, or if the library has an older
   // revision of its text (which is then replaced, keeping the reader's place). Book 1 gets the newest
-  // date, so a fresh install starts there and the books line up in order.
+  // date, so a fresh install starts there and the books line up in order; later series line up after it.
   const now = Date.now();
-  const fresh = [];
-  for (let n = 1; n <= SERIES.books; n++) {
-    const id = seriesBookId(n);
-    const have = books.find((b) => b.series?.id === SERIES.id && b.series.n === n);
-    if (have && (have.rev || 1) < seriesRev(n)) await replaceBookText(have, await loadSeriesBook(n));
-    if (added.includes(id)) continue;
-    const b = await loadSeriesBook(n);
-    if (!titles.has(b.title)) fresh.push(await saveBook({ ...b, added: now + SERIES.books - n + 1 }));
-    added.push(id);
-  }
-  // The series ships with its own collection, listed before yours and shown in series order. It's made
-  // once with every series book in it; books shipped later join it if it's still there. A collection you
-  // delete stays deleted, and a book you take out of it stays out.
-  const CID = SERIES.id, CKEY = `collection:${CID}`;
-  let join = fresh;
-  if (!added.includes(CKEY)) {
-    await db.put('collections', { id: CID, name: SERIES.title, created: 0, series: CID });
-    join = (await db.all('books')).filter((b) => b.series?.id === CID);
-    added.push(CKEY);
-  }
-  if (join.length && await db.get('collections', CID)) {
-    for (const b of join) if (!b.collections?.includes(CID)) await db.put('books', { ...b, collections: [...(b.collections || []), CID] });
+  for (const [k, { SERIES, seriesBookId, seriesRev, loadSeriesBook }] of BUNDLED_SERIES.entries()) {
+    const base = now - k * 1000;
+    const fresh = [];
+    for (let n = 1; n <= SERIES.books; n++) {
+      const id = seriesBookId(n);
+      const have = books.find((b) => b.series?.id === SERIES.id && b.series.n === n);
+      if (have && (have.rev || 1) < seriesRev(n)) await replaceBookText(have, await loadSeriesBook(n));
+      if (added.includes(id)) continue;
+      const b = await loadSeriesBook(n);
+      if (!titles.has(b.title)) fresh.push(await saveBook({ ...b, added: base + SERIES.books - n + 1 }));
+      added.push(id);
+    }
+    // Each series ships with its own collection, listed before yours and shown in series order. It's made
+    // once with every series book in it; books shipped later join it if it's still there. A collection you
+    // delete stays deleted, and a book you take out of it stays out.
+    const CID = SERIES.id, CKEY = `collection:${CID}`;
+    let join = fresh;
+    if (!added.includes(CKEY)) {
+      await db.put('collections', { id: CID, name: SERIES.title, created: k, series: CID });
+      join = (await db.all('books')).filter((b) => b.series?.id === CID);
+      added.push(CKEY);
+    }
+    if (join.length && await db.get('collections', CID)) {
+      for (const b of join) if (!b.collections?.includes(CID)) await db.put('books', { ...b, collections: [...(b.collections || []), CID] });
+    }
   }
   try { localStorage.setItem(KEY, JSON.stringify(added)); localStorage.setItem('langreader.seeded', '1'); } catch {}
   books = await db.all('books');

@@ -1,7 +1,7 @@
 // Translation + speech services.
 import { db } from './db.js';
 import { settings } from './settings.js';
-import { VOICES, piperSupported, warmUp, unlockAudio, speakPiper, stopPiper } from './piper.js';
+import { VOICES, EN_VOICE, piperSupported, warmUp, unlockAudio, speakPiper, stopPiper } from './piper.js';
 
 // ---------- Translation ----------
 // With a Google Cloud Translation API key in Settings (settings.googleKey, kept on this device only),
@@ -142,26 +142,35 @@ export function piperVoice() {
   if (!piperSupported || settings.lang !== 'it') return null;
   const s = settings.voice;
   const v = !s ? 'riccardo' : s.startsWith('piper:') ? s.slice(6) : null;
-  return VOICES[v] ? v : null;
+  return VOICES[v]?.lang === 'it' ? v : null;
 }
-// Start loading the Piper voice ahead of the first tap (the reader calls this when it opens).
-export function prepareVoice() { const v = piperVoice(); if (v) warmUp(v); }
+// The Piper voice for English (Focus mode's Dual audio), or null for a device voice (settings.enVoice 'system').
+const englishVoice = () => (piperSupported && settings.enVoice !== 'system' ? EN_VOICE : null);
+// Start loading the Piper voice ahead of the first tap (the reader calls this when it opens; Training with
+// `lang: 'en'` when the English prompt will be spoken).
+export function prepareVoice({ lang = '' } = {}) {
+  const v = lang === 'en' ? englishVoice() : piperVoice();
+  if (v) warmUp(v);
+}
 
 // `slow` (Training's 🐢) speaks at 70% of the usual rate: Piper makes the voice itself slower, rather than
 // stretching the audio. `rate` multiplies the usual rate too (Focus mode's speed steps). `lang: 'en'` speaks
-// English in a device voice (Focus mode's Dual audio), never Piper.
+// English (Focus mode's Dual audio): the English Piper voice, or a device voice until it has loaded.
 export function speak(text, { onend, onboundary, slow = false, rate: times = 1, lang = '' } = {}) {
   stopSpeaking();
   const rate = settings.rate * times * (slow ? 0.7 : 1);
-  if (lang && lang !== settings.lang) return speakSystem(text, { onend, onboundary, rate, lang });
+  const other = lang && lang !== settings.lang;
+  if (other && lang !== 'en') return speakSystem(text, { onend, onboundary, rate, lang });
   // Unlock audio on every tap, even while the voice loads, so later clips can play outside a tap.
-  const v = piperVoice();
+  const v = other ? englishVoice() : piperVoice();
+  if (other && !v) return speakSystem(text, { onend, onboundary, rate, lang });
+  const sys = () => speakSystem(text, { onend, onboundary, rate, lang: other ? lang : '' });
   if (v) unlockAudio();
   if (v && warmUp(v) === 'ready') {
-    speakPiper(text, { voice: v, rate, onend }).catch(() => speakSystem(text, { onend, onboundary, rate }));
+    speakPiper(text, { voice: v, rate, onend }).catch(sys);
     return;
   }
-  speakSystem(text, { onend, onboundary, rate });
+  sys();
 }
 // The best device voice for another language (English for Dual audio), preferring enhanced ones.
 function otherVoice(lang) {

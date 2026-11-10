@@ -816,7 +816,7 @@ function themesSheet() {
 // The bundled Piper voices first, with their download sizes, then the device's.
 function voiceOptions(voices) {
   const opt = (value, label) => `<option value="${esc(value)}" ${settings.voice === value ? 'selected' : ''}>${esc(label)}</option>`;
-  const piper = piperSupported ? Object.entries(VOICES).map(([k, v]) => opt(k === 'riccardo' ? '' : `piper:${k}`,
+  const piper = piperSupported ? Object.entries(VOICES).filter(([, v]) => v.lang === 'it').map(([k, v]) => opt(k === 'riccardo' ? '' : `piper:${k}`,
     `${v.name} (natural, ${v.sex}, ${v.mb} MB)`)) : [];
   return [...piper, opt(piperSupported ? 'system' : '', 'Device voice'), ...voices.map((v) => opt(v.name, v.name))].join('');
 }

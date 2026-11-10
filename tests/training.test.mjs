@@ -490,7 +490,8 @@ describe('training', () => {
   });
 
   test('Focus settings are per mode: Repeats 1 plays each sentence once, Dual audio plays the English first; Recall says it after the English', async () => {
-    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: GENDER });
+    // Recall ignores English "Tap to reveal": the English is the prompt.
+    const { page, errors } = await openApp(t, srv.url, { hash: 'training', settings: { ...GENDER, focus: { recall: { en: 'tap', it: 'hidden' } } } });
     await page.evaluate(() => { window.__said = []; speechSynthesis.speak = (u) => { window.__said.push((u.lang.startsWith('en') ? 'en:' : '') + u.text); setTimeout(() => u.onend?.(), 10); }; });
     await page.click('[data-pack=survival]'); await sleep(300);
     await page.click('[data-act=fsettings]'); await sleep(300);
@@ -504,18 +505,24 @@ describe('training', () => {
     assert.equal(await page.$$eval('.dr-reps i', (r) => r.length), 1);
     await page.click('.x'); await sleep(300);
     const f = await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focus);
-    assert.deepEqual(f, { shadow: { repeats: 1, enFirst: true } }, 'only Shadowing changed');
+    assert.deepEqual(f.shadow, { repeats: 1, enFirst: true }, 'only Shadowing changed');
+    assert.deepEqual(f.recall, { en: 'tap', it: 'hidden' });
     // Recall: the English, a gap to say it (the Italian hidden), then the Italian.
     await page.click('[data-mode=recall]'); await sleep(200);
     await page.evaluate(() => { window.__said = []; });
     await page.click('[data-act=focus]'); await sleep(300);
     assert.deepEqual(await page.evaluate(() => window.__said), ['en:Good morning!']);
-    assert.match(await page.textContent('.fc-text'), /Good morning!\s*Say it in Italian/);
+    assert.match(await page.textContent('.fc-text'), /Good morning!\s*Say it in Italian/, 'the English always shows');
+    assert.equal(await page.$('[data-tog=en]'), null, 'Recall has no Translation toggle');
     assert.match(await page.textContent('.dr-ring'), /Your turn/);
     await page.waitForFunction(() => window.__said.length >= 2, null, { timeout: 8000 });
     assert.equal((await page.evaluate(() => window.__said))[1], 'Buongiorno!');
     await sleep(100);
-    assert.match(await page.textContent('.fc-text .dr-it'), /Buongiorno!/, 'shown once it plays');
+    assert.match(await page.textContent('.fc-text .dr-it'), /Buongiorno!/, 'the answer pops up as it plays');
+    assert.match(await page.textContent('.dr-ring'), /Answer/);
+    await page.waitForSelector('.dr-ring .mid:has-text("Nice")', { timeout: 4000 });
+    assert.match(await page.textContent('.fc-text .dr-it'), /Buongiorno!/, 'and stays up after, to check it');
+    assert.match(await page.textContent('.fc-text'), /Good morning!/);
     // The toggle row changes the same settings: Repeat goes round 1–5.
     await page.click('[data-tog=rep]'); await sleep(100);
     assert.match(await page.textContent('[data-tog=rep]'), /2×/);

@@ -22,6 +22,7 @@ const defaults = {
   commonHL: true,          // new words among the 2,000 most common get a stronger mark
   rate: 0.9,
   voice: '',               // '' Riccardo | piper:paola | piper:serena | system | a device voice's name
+  enVoice: '',             // '' the Lessac Piper voice | system: the device's English voice (Focus's Dual audio)
   speakOnTap: true,        // tapping a word also says it
   goalMinutes: 15,
   librarySort: 'recent',   // see SORTS in collections.js

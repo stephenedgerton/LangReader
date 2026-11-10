@@ -1,18 +1,21 @@
-// Italian Piper neural voices that run on the device (see js/tts-worker.js). A voice's model,
-// plus the shared runtime (~4 MB over the wire), loads on first use and is kept by the service worker.
-// The worker holds one voice at a time; switching voices loads the new one.
+// Piper neural voices that run on the device (see js/tts-worker.js). A voice's model, plus the shared
+// runtime (~4 MB over the wire), loads on first use and is kept by the service worker. The worker holds one
+// voice per language; switching voices loads the new one. The Italian ones are the reading voice
+// (settings.voice); EN_VOICE says Focus mode's English prompts (Dual audio).
 export const VOICES = {
-  riccardo: { name: 'Riccardo', sex: 'male', file: 'it_IT-riccardo-x_low', mb: 28 },
-  paola: { name: 'Paola', sex: 'female', file: 'it_IT-paola-medium', mb: 64 },
-  serena: { name: 'Serena', sex: 'female', file: 'it_IT-serena-medium', mb: 64 },
+  riccardo: { name: 'Riccardo', sex: 'male', file: 'it_IT-riccardo-x_low', mb: 28, lang: 'it' },
+  paola: { name: 'Paola', sex: 'female', file: 'it_IT-paola-medium', mb: 64, lang: 'it' },
+  serena: { name: 'Serena', sex: 'female', file: 'it_IT-serena-medium', mb: 64, lang: 'it' },
+  lessac: { name: 'Lessac', sex: 'female', file: 'en_US-lessac-medium', mb: 63, lang: 'en' },
 };
+export const EN_VOICE = 'lessac';
 const url = (voice) => new URL(`../voices/${VOICES[voice].file}.onnx`, import.meta.url).href;
 
 const AC = window.AudioContext || window.webkitAudioContext;
 export const piperSupported = !!(AC && window.Worker && window.WebAssembly);
 
 let worker = null, ctx = null, source = null, seq = 0, nextId = 0;
-let loaded = { voice: null, state: 'idle' };   // state: loading | ready | failed
+const loaded = {};             // lang -> {voice, state}; state: loading | ready | failed
 const pending = new Map();
 const cache = new Map();        // `${voice}|${rate}|${text}` -> {samples, sampleRate}, most recent last
 
@@ -25,18 +28,19 @@ function call(voice, msg) {
     };
   }
   const id = ++nextId;
-  return new Promise((resolve, reject) => { pending.set(id, { resolve, reject }); worker.postMessage({ id, voice: url(voice), ...msg }); });
+  return new Promise((resolve, reject) => { pending.set(id, { resolve, reject }); worker.postMessage({ id, voice: url(voice), lang: VOICES[voice].lang, ...msg }); });
 }
 
 // Start loading a voice; returns its state (ready once it can speak).
 export function warmUp(voice) {
-  if (loaded.voice !== voice) {
-    const mine = loaded = { voice, state: 'loading' };
+  const lang = VOICES[voice].lang;
+  if (loaded[lang]?.voice !== voice) {
+    const mine = loaded[lang] = { voice, state: 'loading' };
     call(voice, {}).then(() => { mine.state = 'ready'; }, (e) => { mine.state = 'failed'; console.warn(`Piper voice ${voice} unavailable:`, e.message); });
   }
-  return loaded.state;
+  return loaded[lang].state;
 }
-export const piperReady = (voice) => loaded.voice === voice && loaded.state === 'ready';
+export const piperReady = (voice) => loaded[VOICES[voice].lang]?.voice === voice && loaded[VOICES[voice].lang].state === 'ready';
 
 export async function synth(text, rate = 1, voice = 'riccardo') {
   const key = `${voice}|${rate}|${text}`;

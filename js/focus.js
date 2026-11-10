@@ -2,7 +2,8 @@
 // (settings.focus.shadow / .recall, over FOCUS_DEFAULTS):
 //   Shadowing  the Italian plays, then it's your turn (a gap as long as the sentence × "Your turn"), × Repeats,
 //              then the next sentence by itself. With Dual audio the English plays first.
-//   Recall     the English plays (Dual audio) or shows, a gap to say it in Italian, then the Italian.
+//   Recall     the English shows (and plays, with Dual audio), a gap to say it in Italian, then the Italian
+//              plays and shows, and stays up a moment so you can check what you said.
 // Rating is optional and never advances: a grade rates that sentence's card (Shadowing → listen, Recall → say)
 // without touching today's plan, and can be changed while you're still in the session (it's re-rated from
 // where the card was, so it counts once). A sentence played through all its repeats without a rating, and new
@@ -15,7 +16,7 @@
 //                                     function for a rendered audio file (see docs/focus-mode-plan.md).
 import { settings } from './settings.js';
 import { openSheet, closeSheet, esc, icons, $, $$ } from './ui.js';
-import { speak, stopSpeaking } from './services.js';
+import { speak, stopSpeaking, prepareVoice } from './services.js';
 import { haptic } from './haptics.js';
 import { openCardBubble, closeBubble, bubbleOpen } from './bubble.js';
 import { bump } from './stats.js';
@@ -29,7 +30,8 @@ export const MODES = {
 };
 // turn: the gap for you, as a multiple of the sentence's length (0 = Speak along: no gap). it: shown | later
 // (hidden from the 2nd repeat) | hidden. en: shown | tap (tap to reveal) | hidden. gap: seconds between the
-// English and the Italian.
+// English and the Italian. Recall ignores `it` and `en`: the English is the prompt, so it's always shown, and
+// the Italian is the answer, so it shows as soon as it plays.
 export const FOCUS_DEFAULTS = {
   shadow: { repeats: 3, turn: 1.5, speed: 1, loop: false, enFirst: false, enOnce: true, gap: 0.5, it: 'shown', en: 'shown' },
   recall: { repeats: 1, turn: 1.5, speed: 1, loop: false, enFirst: true, enOnce: true, gap: 0.5, it: 'shown', en: 'shown' },
@@ -78,6 +80,7 @@ const ICON = {
 // adjust them (the daily session's Shadow plays one sentence at a time, so it turns Loop off).
 export function createPlayer({ items, mode, at = 0, slow = () => false, config = () => focusCfg(mode), on = {} }) {
   const p = { i: Math.max(0, Math.min(at, items.length - 1)), rep: 0, playing: false, ended: false, cfg: config() };
+  if (p.cfg.enFirst) prepareVoice({ lang: 'en' });
   let run = 0, timer = null;
   const lens = new Map(); // `${text}|${rate}` -> how long the Italian took, for Recall's gap before it
   let turnThen = null; // what comes after "Your turn", while it's running, so a tap can skip to it
@@ -116,10 +119,11 @@ export function createPlayer({ items, mode, at = 0, slow = () => false, config =
       const go = () => italian((ms) => turn(ms, next));
       return withEN ? english(() => wait(cfg.gap * 1000, go)) : go();
     }
-    const ask = () => turn(lens.get(key) || guess(item.text, r), () => italian(() => wait(700, next)));
+    // After the answer, a moment to check it against what you said.
+    const ask = () => turn(lens.get(key) || guess(item.text, r), () => italian(() => wait(1500, next)));
     return withEN ? english(ask) : ask();
   }
-  function startSentence() { p.cfg = config(); p.rep = 0; rep(); }
+  function startSentence() { p.cfg = config(); p.rep = 0; if (p.cfg.enFirst) prepareVoice({ lang: 'en' }); rep(); }
   function advance() {
     if (p.i + 1 < items.length) return goto(p.i + 1);
     if (p.cfg.loop && items.length) return goto(0);
@@ -161,6 +165,7 @@ export const ringHTML = () => `<div class="dr-ring"><svg viewBox="0 0 200 200"><
 export const repsHTML = (n) => `<div class="dr-reps">${Array.from({ length: n }, () => '<i></i>').join('')}</div>`;
 const RING = {
   en: () => [ICON.en, 'English'], it: () => [stepIcon('listen'), 'Listen…'], turn: () => [stepIcon('say'), 'Your turn', 'Tap when done'],
+  answer: () => [stepIcon('listen'), 'Answer'],
   done: () => [icons.check, 'Nice'], paused: () => [ICON.pause, 'Paused'],
 };
 // Shows a part (a player phase, or 'paused'); `ms` animates the fill over that long. 'done' fills it at once.
@@ -198,18 +203,20 @@ export function settingsHTML(mode, { note } = {}) {
       ${item('English first', sw('enFirst'), 'The English plays before the Italian')}
       ${item('English only on the first repeat', sw('enOnce'))}
       ${item('Gap between them', sel('gap', [[0.25, '0.25 s'], [0.5, '0.5 s'], [1, '1 s'], [1.5, '1.5 s']]))}
+      ${item('English voice', `<select data-env>${[['', 'Lessac (on this device)'], ['system', 'Device voice']].map(([v, l]) => `<option value="${v}"${(settings.enVoice || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`, 'Lessac downloads once, 63 MB')}
     </div>
-    <div class="section-title fc-set-title">Display</div>
+    ${mode === 'recall' ? '' : `<div class="section-title fc-set-title">Display</div>
     <div class="ts-group">
       ${item('Italian text', sel('it', [['shown', 'Shown'], ['later', 'Hidden from the 2nd repeat'], ['hidden', 'Hidden']]))}
       ${item('English', sel('en', [['shown', 'Shown'], ['tap', 'Tap to reveal'], ['hidden', 'Hidden']]))}
-    </div>
+    </div>`}
     <p class="muted fc-set-note">${note || `Saved for ${MODES[mode].name} only. Changes apply from the next sentence.`}</p>`;
 }
 // `mode` can be a function, for a sheet whose mode changes (the daily session's steps).
 export function bindSettings(root, mode, onChange) {
   root.addEventListener('change', (e) => {
     const t = e.target, k = t.dataset?.k;
+    if (t.dataset?.env != null) { settings.enVoice = t.value; prepareVoice({ lang: 'en' }); return onChange?.('enVoice'); }
     if (!k) return;
     setFocusCfg(typeof mode === 'function' ? mode() : mode, { [k]: t.type === 'checkbox' ? t.checked : t.dataset.num != null ? +t.value : t.value });
     onChange?.(k);
@@ -255,10 +262,12 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
   const player = createPlayer({ items, mode, at, slow: () => slow, on: {
     show: () => { cur = { heard: false, tapIt: false, tapEN: false }; closeBubble(); draw(); },
     phase: (name, { rep, ms }) => {
+      // Recall's answer stays up after it has played, until the next repetition asks again.
+      const again = mode === 'recall' && cur.heard && (name === 'en' || name === 'turn');
       if (name === 'it') cur.heard = true;
-      if (name === 'rep' && mode === 'recall') cur.heard = false;
+      if (again) cur.heard = false;
       if (view !== 'player') return;
-      if (name === 'it' || name === 'rep') drawText();
+      if (name === 'it' || again || (name === 'rep' && mode === 'shadow')) drawText();
       drawPhase(name, rep, ms);
     },
     sentenceDone: (item) => {
@@ -280,17 +289,18 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
   const head = () => `<h2><span>${esc(title)}</span><span class="rv-hbtns"><button class="fc-gear" data-gear aria-label="${M.name} settings">${icons.gear}</button><button class="x" aria-label="Close">${icons.close}</button></span></h2>`;
   const item = () => items[player.i];
 
-  const togs = () => toggleRowHTML(mode);
+  // Recall's English is always shown, so it has no Translation toggle.
+  const togs = () => toggleRowHTML(mode, mode === 'recall' ? ['dual', 'rep', 'speed'] : undefined);
 
-  // What's visible: Recall keeps the Italian back until it has played; "hidden from the 2nd repeat" hides it
-  // after the first time through. A hidden part can be tapped to show it.
+  // What's visible: Recall shows the English (the prompt) always and the Italian (the answer) once it has
+  // played. Shadowing follows its Display settings: "hidden from the 2nd repeat" hides the Italian after the
+  // first time through. A hidden part can be tapped to show it.
   const textHTML = () => {
     const it = item(), c = focusCfg(mode);
     if (!it) return '';
     const rep = player.rep;
-    const showIT = cur.tapIt || (c.it === 'shown' || (c.it === 'later' && rep === 0)) && (mode === 'shadow' || cur.heard);
-    // Recall's English is the prompt: without Dual audio it's always shown.
-    const enMode = mode === 'recall' && !c.enFirst ? 'shown' : c.en;
+    const showIT = cur.tapIt || (mode === 'recall' ? cur.heard : c.it === 'shown' || (c.it === 'later' && rep === 0));
+    const enMode = mode === 'recall' ? 'shown' : c.en;
     const showEN = cur.tapEN || enMode === 'shown';
     const itHTML = showIT ? `<div class="dr-it fc-it">${sentenceHTML(it.text)}</div>`
       : `<button class="fc-hidden" data-reveal="it">${mode === 'recall' && !cur.heard ? 'Say it in Italian' : 'Italian hidden'}<small>Tap to show it</small></button>`;
@@ -303,7 +313,8 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
   const drawPhase = (name, rep, ms) => {
     ringReps(body, Math.min(rep, player.cfg.repeats));
     if (name === 'rep') return;
-    ringPhase($('.dr-ring', body), player.playing ? name : 'paused', ms);
+    // Recall's Italian is the answer to check, not something to listen to.
+    ringPhase($('.dr-ring', body), !player.playing ? 'paused' : mode === 'recall' && name === 'it' ? 'answer' : name, ms);
   };
   const drawTransport = () => {
     const b = $('[data-toggle]', body);
@@ -338,7 +349,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
           <button class="fc-play" data-toggle aria-label="${player.playing ? 'Pause' : 'Play'}">${player.playing ? ICON.pause : ICON.play}</button>
           <button data-next aria-label="Next sentence">${ICON.next}</button></div>
       </div>`;
-    if (!ended) drawPhase('it', player.rep);
+    if (!ended) drawPhase(mode === 'recall' ? 'en' : 'it', player.rep);
   };
 
   // Settings, in this same sheet (the shared sheet can only hold one thing); playback carries on behind it.

@@ -159,14 +159,15 @@ export function createPlayer({ items, mode, at = 0, slow = () => false, config =
 
 // ---------- the ring ----------
 // Both shadowing screens (the daily session's Shadow and the Focus screen) show where the player is as a ring
-// that fills while each part plays, with the part's name in the middle. During "Your turn" it can be tapped.
+// that fills while each part plays, with the part's name in the middle. During "Your turn" it can be tapped,
+// and on the Focus screen, while paused, it's a Play button.
 export const ringHTML = () => `<div class="dr-ring"><svg viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="90"/><circle class="prog" cx="100" cy="100" r="90" pathLength="100"/></svg>
   <div class="mid"></div></div>`;
 export const repsHTML = (n) => `<div class="dr-reps">${Array.from({ length: n }, () => '<i></i>').join('')}</div>`;
 const RING = {
   en: () => [ICON.en, 'English'], it: () => [stepIcon('listen'), 'Listen…'], turn: () => [stepIcon('say'), 'Your turn', 'Tap when done'],
   answer: () => [stepIcon('listen'), 'Answer'],
-  done: () => [icons.check, 'Nice'], paused: () => [ICON.pause, 'Paused'],
+  done: () => [icons.check, 'Nice'], paused: () => [ICON.play, 'Play', 'Tap to start'],
 };
 // Shows a part (a player phase, or 'paused'); `ms` animates the fill over that long. 'done' fills it at once.
 export function ringPhase(ring, name, ms) {
@@ -176,6 +177,7 @@ export function ringPhase(ring, name, ms) {
   ring.classList.toggle('turn', turn);
   ring.classList.toggle('paused', name === 'paused');
   if (turn) { ring.setAttribute('role', 'button'); ring.setAttribute('aria-label', 'Your turn. Tap when you’ve said it'); }
+  else if (name === 'paused') { ring.setAttribute('role', 'button'); ring.setAttribute('aria-label', 'Play'); }
   else { ring.removeAttribute('role'); ring.removeAttribute('aria-label'); }
   $('.mid', ring).innerHTML = `${ic}<b>${label}</b>${sub ? `<small>${sub}</small>` : ''}`;
   prog.style.transition = 'none';
@@ -195,7 +197,7 @@ export function settingsHTML(mode, { note } = {}) {
     <div class="ts-group">
       ${item('Repeats', sel('repeats', [1, 2, 3, 4, 5].map((n) => [n, x(n)])), 'Each sentence, this many times')}
       ${item('Your turn', sel('turn', [[1, '1× the sentence'], [1.5, '1.5× the sentence'], [2, '2× the sentence'], [0, 'Speak along']]), mode === 'recall' ? 'The gap to say it before the Italian plays' : 'The gap after the Italian, to say it')}
-      ${item('Speed', sel('speed', SPEEDS.map((n) => [n, x(n)])), '🐢 on the screen still slows it down')}
+      ${item('Speed', sel('speed', SPEEDS.map((n) => [n, x(n)])))}
       ${item('Loop', sw('loop'), 'Start again at the end of the pack')}
     </div>
     <div class="section-title fc-set-title">Dual audio</div>
@@ -247,7 +249,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
   const M = MODES[mode], title = packMeta(pack)?.name || 'Pack';
   const rated = new Map();    // id -> {g, job: Promise<snap>}: changing it re-rates from the first rating's snapshot
   const counted = new Set();  // ids already in days[].drills this session
-  let saving = Promise.resolve(), view = 'player', slow = false, wake = null;
+  let saving = Promise.resolve(), view = 'player', wake = null;
   let cur = { heard: false, tapIt: false, tapEN: false };
   const onKey = (e) => keydown(e);
   navigator.wakeLock?.request('screen').then((l) => { wake = l; }, () => {});
@@ -259,7 +261,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
   body.classList.add('focus');
   addEventListener('keydown', onKey);
 
-  const player = createPlayer({ items, mode, at, slow: () => slow, on: {
+  const player = createPlayer({ items, mode, at, on: {
     show: () => { cur = { heard: false, tapIt: false, tapEN: false }; closeBubble(); draw(); },
     phase: (name, { rep, ms }) => {
       // Recall's answer stays up after it has played, until the next repetition asks again.
@@ -289,11 +291,8 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
   const head = () => `<h2><span>${esc(title)}</span><span class="rv-hbtns"><button class="fc-gear" data-gear aria-label="${M.name} settings">${icons.gear}</button><button class="x" aria-label="Close">${icons.close}</button></span></h2>`;
   const item = () => items[player.i];
 
-  // Recall's English is always shown, so it has no Translation toggle.
-  const togs = () => toggleRowHTML(mode, mode === 'recall' ? ['dual', 'rep', 'speed'] : undefined);
-
   // What's visible: Recall shows the English (the prompt) always and the Italian (the answer) once it has
-  // played. Shadowing follows its Display settings: "hidden from the 2nd repeat" hides the Italian after the
+  // played; the English (the prompt) comes first there but stays smaller, since the Italian is what you learn. Shadowing follows its Display settings: "hidden from the 2nd repeat" hides the Italian after the
   // first time through. A hidden part can be tapped to show it.
   const textHTML = () => {
     const it = item(), c = focusCfg(mode);
@@ -336,12 +335,10 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
     body.innerHTML = `${head()}
       <div class="progress-line"><i style="width:${n ? ((ended ? n : player.i + 1) / n) * 100 : 0}%"></i></div>
       <div class="fc-count"><b>${M.name}</b><span>${player.i + 1} / ${n}</span></div>
-      ${togs()}
       <div class="fc-main">${ended ? `<div class="fc-end"><div class="dr-done-ico">${icons.check}</div><h3>That’s the whole pack</h3>
           <p class="muted">${n} sentence${n === 1 ? '' : 's'}. ${byYou() ? `${byYou()} rated.` : 'Rating them is up to you.'}</p>
           <button class="secondary" data-restart>Play again from the start</button><button class="link-btn" data-done>Done</button></div>`
-        : `${ringHTML()}<div class="fc-text">${textHTML()}</div>${repsHTML(player.cfg.repeats)}
-        <div class="rv-tools fc-tools"><button data-replay>${icons.speaker}Play</button><button data-slow class="${slow ? 'on' : ''}" aria-pressed="${slow}">${stepIcon('slow')}Slow</button></div>`}</div>
+        : `${ringHTML()}<div class="fc-text">${textHTML()}</div>${repsHTML(player.cfg.repeats)}`}</div>
       <div class="fc-bottom">
         <div class="fc-rate-label">Optional: how well did you know it?</div>
         <div class="review-btns four fc-rate">${rateHTML()}</div>
@@ -352,7 +349,8 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
     if (!ended) drawPhase(mode === 'recall' ? 'en' : 'it', player.rep);
   };
 
-  // Settings, in this same sheet (the shared sheet can only hold one thing); playback carries on behind it.
+  // Settings (the toggles live here, to keep the player clear), in this same sheet (the shared sheet can only
+  // hold one thing); playback carries on behind it.
   const drawSettings = () => {
     body.innerHTML = `<h2><span>${M.name} Settings</span><span class="rv-hbtns"><button class="fc-done-set" data-close-set>Done</button></span></h2>
       <div class="fc-settings">${settingsHTML(mode)}</div>`;
@@ -375,12 +373,6 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
     saving = Promise.all([saving, job]).catch(() => {});
     const row = $('.fc-rate', body); if (row) row.innerHTML = rateHTML();
   };
-  const setTog = (k) => {
-    flipToggle(mode, k);
-    haptic();
-    $('.fc-togs', body).outerHTML = togs();
-    if (k === 'en') { cur.tapEN = false; drawText(); }
-  };
 
   function keydown(e) {
     if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select') || view !== 'player') return;
@@ -402,16 +394,15 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
       if (b.dataset.prev != null) { haptic(); return player.prev(); }
       if (b.dataset.restart != null) { player.goto(0); return player.play(); }
       if (b.dataset.r != null) return rate(+b.dataset.r);
-      if (b.dataset.tog) return setTog(b.dataset.tog);
       if (b.dataset.reveal) { cur[b.dataset.reveal === 'it' ? 'tapIt' : 'tapEN'] = true; return drawText(); }
       if (b.dataset.gear != null) { view = 'settings'; $('#sheet').scrollTop = 0; return draw(); }
       if (b.dataset.closeSet != null) { view = 'player'; return draw(); }
-      if (b.dataset.slow != null) { slow = !slow; b.classList.toggle('on', slow); b.setAttribute('aria-pressed', slow); return; }
-      if (b.dataset.replay != null) { player.pause(); b.classList.add('playing'); return speak(item().text, { rate: (focusCfg(mode).speed || 1) * (slow ? 0.7 : 1), onend: () => b.classList.remove('playing') }); }
       return;
     }
     // Tapping "Your turn" ends it: you've said it, go on.
     if (e.target.closest('.dr-ring.turn') && player.skipTurn()) return haptic();
+    // Paused, the ring is a Play button.
+    if (e.target.closest('.dr-ring.paused')) { haptic(); return player.play(); }
     // A word: the reader's bubble, with the playback paused so the two don't talk over each other.
     const cw = e.target.closest('.cw');
     if (cw) { player.pause(); return openCardBubble(cw, { root: body, context: item()?.text || '' }); }

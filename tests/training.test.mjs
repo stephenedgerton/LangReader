@@ -367,12 +367,13 @@ describe('training', () => {
     await page.click('[data-act=focus]'); await sleep(200);
     assert.deepEqual(await page.evaluate(() => window.__said), ['Buongiorno!'], 'no intro: it plays in the tap');
     assert.match(await page.textContent('.fc-count'), new RegExp(`Shadowing\\s*1 / ${N}`));
-    assert.match(await page.textContent('.fc-togs'), /Translation.*Dual audio.*Repeat\s*3×.*Speed\s*1×/s);
+    assert.equal(await page.$('.fc-togs'), null, 'the toggles are in settings, not on the screen');
     await page.waitForFunction((n) => document.querySelector('.fc-count')?.textContent.includes(`2 / ${n}`), N, { timeout: 12000 });
     await page.waitForFunction(() => window.__said.length >= 4);
     assert.deepEqual((await page.evaluate(() => window.__said)).slice(0, 4), ['Buongiorno!', 'Buongiorno!', 'Buongiorno!', 'Buonasera!']);
     await page.click('[data-toggle]'); await sleep(200);
-    assert.match(await page.textContent('.dr-ring'), /Paused/);
+    assert.match(await page.textContent('.dr-ring'), /Play/);
+    assert.equal(await page.getAttribute('.dr-ring', 'role'), 'button', 'paused, the ring is a Play button');
     assert.equal(await page.getAttribute('[data-toggle]', 'aria-label'), 'Play');
     const said = (await page.evaluate(() => window.__said)).length;
     await sleep(2500);
@@ -382,8 +383,9 @@ describe('training', () => {
     assert.equal((await page.evaluate(() => window.__said)).length, said, 'still paused');
     await page.click('[data-prev]'); await sleep(200);
     assert.match(await page.textContent('.fc-count'), new RegExp(`2 / ${N}`), '‹‹ goes back');
-    await page.click('[data-toggle]'); await sleep(200);
-    assert.equal((await page.evaluate(() => window.__said)).at(-1), 'Buonasera!', 'Play starts it again');
+    await page.click('.dr-ring'); await sleep(200);
+    assert.equal((await page.evaluate(() => window.__said)).at(-1), 'Buonasera!', 'tapping the ring starts it again');
+    assert.equal(await page.getAttribute('[data-toggle]', 'aria-label'), 'Pause');
     await page.click('.x'); await sleep(300);
     const d = await tr(page, (m) => [m.doneToday(), m.sentence('survival:1').cards]);
     assert.deepEqual([d[0].listen, d[0].shadow, d[0].fresh], [0, 0, 0], 'today’s plan is untouched');
@@ -512,7 +514,7 @@ describe('training', () => {
     await page.evaluate(() => { window.__said = []; });
     await page.click('[data-act=focus]'); await sleep(300);
     assert.deepEqual(await page.evaluate(() => window.__said), ['en:Good morning!']);
-    assert.match(await page.textContent('.fc-text'), /Good morning!\s*Say it in Italian/, 'the English always shows');
+    assert.match(await page.textContent('.fc-text'), /Good morning!\s*Say it in Italian/, 'the English always shows, above the Italian');
     assert.equal(await page.$('[data-tog=en]'), null, 'Recall has no Translation toggle');
     assert.match(await page.textContent('.dr-ring'), /Your turn/);
     await page.waitForFunction(() => window.__said.length >= 2, null, { timeout: 8000 });
@@ -523,13 +525,11 @@ describe('training', () => {
     await page.waitForSelector('.dr-ring .mid:has-text("Nice")', { timeout: 4000 });
     assert.match(await page.textContent('.fc-text .dr-it'), /Buongiorno!/, 'and stays up after, to check it');
     assert.match(await page.textContent('.fc-text'), /Good morning!/);
-    // The toggle row changes the same settings: Repeat goes round 1–5.
-    await page.click('[data-tog=rep]'); await sleep(100);
-    assert.match(await page.textContent('[data-tog=rep]'), /2×/);
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focus.recall.repeats), 2);
     // Settings from inside the session, in the same sheet; Done comes back to it.
     await page.click('[data-gear]'); await sleep(200);
     assert.match(await page.textContent('#sheet h2'), /Recall Settings/);
+    await page.selectOption('select[data-k=repeats]', '2'); await sleep(100);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('langreader.settings')).focus.recall.repeats), 2);
     await page.click('[data-close-set]'); await sleep(200);
     assert.ok(await page.$('.fc-ctrl'));
     await page.click('.x'); await sleep(300);

@@ -1130,8 +1130,8 @@ svg.solid { fill: currentColor; stroke: none; }
 .dr-ring.turn .prog { stroke: var(--blue); }
 .dr-ring .mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--tint); }
 .dr-ring.turn .mid { color: var(--blue); }
-.dr-ring.turn { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.dr-ring.paused .mid { color: var(--label-3); }
+.dr-ring.turn, .dr-ring.paused { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dr-ring.paused .mid { color: var(--tint); }
 .dr-ring.paused .prog { visibility: hidden; }
 .dr-ring .mid small { font-size: 12px; font-weight: 500; color: var(--label-3); margin-top: -4px; }
 .dr-ring .mid svg { width: 40px; height: 40px; }
@@ -1227,12 +1227,11 @@ svg.solid { fill: currentColor; stroke: none; }
 .fc-text { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
 .fc-text .dr-ctx { position: static; margin-bottom: 10px; }
 .fc-text .dr-en { margin-top: 6px; }
-.focus .fc-text > .dr-en:first-child, .focus .fc-text > .dr-ctx + .dr-en { font: 600 22px/1.3 var(--sans); color: var(--label); margin: 0 0 12px; } /* Recall's English is the prompt */
 .fc-hidden { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding: 16px 12px; border: 1.5px dashed var(--sep); border-radius: 14px; color: var(--label-2); font: 600 17px var(--sans); }
 .fc-hidden small { font-size: 12px; font-weight: 500; color: var(--label-3); }
 .fc-hidden.en { margin-top: 10px; padding: 10px 12px; font-size: 14px; }
 /* Focus has more under the sentence than the session, so while it plays the screen is one screen high and the
-   ring takes what room is left (96–160px), rather than a long sentence pushing Play and Slow under the controls. */
+   ring takes what room is left (96–160px), rather than a long sentence pushing the dots under the controls. */
 .focus:has(.dr-ring) { height: calc(100dvh - var(--safe-bottom) - 18px); min-height: 0; }
 .focus .fc-main:has(.dr-ring) { min-height: 0; overflow-y: auto; justify-content: safe center; } /* scrolls only if even the smallest ring can't fit */
 .focus .fc-main > * { flex-shrink: 0; }
@@ -1243,8 +1242,6 @@ svg.solid { fill: currentColor; stroke: none; }
 .focus .dr-ring .mid b { font-size: 16px; }
 .focus .dr-ring .mid small { font-size: 11px; margin-top: -2px; }
 .focus .fc-main:has(.dr-ring) { gap: 10px; padding: 4px 0 8px; }
-.fc-tools { margin-top: 0; }
-.fc-tools button.on, .fc-tools button.playing { background: var(--tint-fill); color: var(--on-tint); }
 .fc-bottom { position: sticky; bottom: 0; z-index: 4; background: var(--bg-elev); padding: 8px 0 4px; }
 .fc-rate-label { text-align: center; font-size: 12px; color: var(--label-3); margin-bottom: 6px; }
 .fc-rate button { font-size: 13px; padding: 11px 2px; line-height: 1.15; }

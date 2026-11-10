@@ -12,8 +12,9 @@ rate to advance). Focus mode brings the player to pack pages first; the daily se
   stays reachable, e.g. in the pack's ⋯. Rows get tap-to-reveal English each (instead of only the global Show
   English) and the level as stars. Range play (long-press a row, tap another) comes later.
 - **The Focus screen** (full-screen sheet, like `drillSheet()`): the progress line and "Shadowing 4 / 30" at the
-  top; one row of toggle buttons (Translation, Dual audio, Repeat, Speed); the sentence in the middle (words
-  tappable → `openCardBubble()`); at the **bottom, in thumb reach**: ‹‹ ▶/❚❚ ›› (auto-play) and the rating row.
+  top; the ring (a Play button while paused); the sentence in the middle, the Italian large and the English
+  smaller under it in both modes (words tappable → `openCardBubble()`); the toggles live in ⚙︎ settings, not on
+  the screen; at the **bottom, in thumb reach**: ‹‹ ▶/❚❚ ›› (auto-play) and the rating row.
   No intro screen.
   - **Shadowing:** the Italian plays, then your turn, × the repeat count, then the next sentence by itself.
   - **Recall:** the English plays (with Dual audio on) or shows, a gap to say it, then the Italian; then next.
@@ -72,7 +73,7 @@ Choices made where the decisions above left room:
   on, with that mode's settings. "Start Focus · N" opens the Focus screen. Both use `createPlayer()`.
 - **Rows:** tapping a sentence shows or hides its English; a ⋯ on each row opens the sentence's sheet (Edit,
   Packs…, Pause, Delete), which used to open on the tap. Level stars are 1–4; New and mastered keep their tags.
-- **The toggle row** writes the same per-mode settings as the sheet: Translation is English shown ↔ tap to
+- **The toggle row** (the daily session only; Focus keeps them in ⚙︎) writes the same per-mode settings as the sheet: Translation is English shown ↔ tap to
   reveal, Dual audio is English first, Repeat goes round 1–5, Speed round 0.75–1.1×.
 - **Settings inside a session** open in the same full-screen sheet (the app has one shared sheet), with Done to
   go back; playback carries on behind them.

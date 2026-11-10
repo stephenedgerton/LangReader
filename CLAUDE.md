@@ -9,7 +9,7 @@ LangReader is a phone-first web app (PWA) for reading Italian. It copies the loo
 ## Running and deploying
 
 - Run locally: `python3 -m http.server 8000`, then open http://localhost:8000. ES modules and the service worker need http(s), not `file://`.
-- Deploy: GitHub Pages serves `main` from the repo root (https://stephenedgerton.github.io/LangReader/). Merging to `main` is the deploy. So far the workflow has been: work on branch `langreader-app`, open a PR, merge.
+- Deploy: GitHub Pages serves `main` from the repo root (https://stephenedgerton.github.io/LangReader/). Merging to `main` is the deploy. So far the workflow has been: work on branch `langreader-app`, open a PR, merge. The site is large (about 250 MB, mostly voices), and a Pages deploy can time out in "syncing_files" and keep failing on re-runs of the same commit; a new commit to `main` deploys cleanly.
 - **On every release, bump `VERSION` in `sw.js`, and add any new file to its `SHELL` list**, or installed home-screen copies keep stale or missing modules. The service worker is network-first for same-origin requests and falls back to its cache offline.
 
 ## Tests

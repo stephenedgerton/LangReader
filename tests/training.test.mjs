@@ -514,7 +514,7 @@ describe('training', () => {
     await page.evaluate(() => { window.__said = []; });
     await page.click('[data-act=focus]'); await sleep(300);
     assert.deepEqual(await page.evaluate(() => window.__said), ['en:Good morning!']);
-    assert.match(await page.textContent('.fc-text'), /Say it in Italian.*Good morning!/s, 'the English always shows, under the Italian');
+    assert.match(await page.textContent('.fc-text'), /Good morning!\s*Say it in Italian/, 'the English always shows, above the Italian');
     assert.equal(await page.$('[data-tog=en]'), null, 'Recall has no Translation toggle');
     assert.match(await page.textContent('.dr-ring'), /Your turn/);
     await page.waitForFunction(() => window.__said.length >= 2, null, { timeout: 8000 });

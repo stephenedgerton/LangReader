@@ -13,7 +13,7 @@ rate to advance). Focus mode brings the player to pack pages first; the daily se
   English) and the level as stars. Range play (long-press a row, tap another) comes later.
 - **The Focus screen** (full-screen sheet, like `drillSheet()`): the progress line and "Shadowing 4 / 30" at the
   top; the ring (a Play button while paused); the sentence in the middle, the Italian large and the English
-  smaller under it in both modes (words tappable → `openCardBubble()`); the toggles live in ⚙︎ settings, not on
+  smaller in both modes (Recall puts its English prompt above the hidden Italian) (words tappable → `openCardBubble()`); the toggles live in ⚙︎ settings, not on
   the screen; at the **bottom, in thumb reach**: ‹‹ ▶/❚❚ ›› (auto-play) and the rating row.
   No intro screen.
   - **Shadowing:** the Italian plays, then your turn, × the repeat count, then the next sentence by itself.

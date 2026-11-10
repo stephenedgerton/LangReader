@@ -292,7 +292,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
   const item = () => items[player.i];
 
   // What's visible: Recall shows the English (the prompt) always and the Italian (the answer) once it has
-  // played. Both modes put the Italian first and the English smaller under it: the Italian is what you learn. Shadowing follows its Display settings: "hidden from the 2nd repeat" hides the Italian after the
+  // played; the English (the prompt) comes first there but stays smaller, since the Italian is what you learn. Shadowing follows its Display settings: "hidden from the 2nd repeat" hides the Italian after the
   // first time through. A hidden part can be tapped to show it.
   const textHTML = () => {
     const it = item(), c = focusCfg(mode);
@@ -305,7 +305,7 @@ export function focusSheet({ pack, mode = 'shadow', ids, at = 0, onClose }) {
       : `<button class="fc-hidden" data-reveal="it">${mode === 'recall' && !cur.heard ? 'Say it in Italian' : 'Italian hidden'}<small>Tap to show it</small></button>`;
     const enHTML = showEN ? `<div class="dr-en fc-en">${esc(it.en)}</div>`
       : enMode === 'tap' ? `<button class="fc-hidden en" data-reveal="en">Tap to show the English</button>` : '';
-    return `${it.ctx ? `<span class="dr-ctx fc-ctx">${esc(it.ctx)}</span>` : ''}${itHTML}${enHTML}`;
+    return `${it.ctx ? `<span class="dr-ctx fc-ctx">${esc(it.ctx)}</span>` : ''}${mode === 'recall' ? enHTML + itHTML : itHTML + enHTML}`;
   };
   const drawText = () => { const el = $('.fc-text', body); if (el) el.innerHTML = textHTML(); };
 

@@ -3,6 +3,9 @@ import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { SERIES, seriesBookId, seriesFiles, loadSeriesBook } from '../samples/hogwarts/index.js';
+import * as B1 from '../samples/hogwarts-b1/index.js';
+import { loadFreqList } from '../tools/check-series.mjs';
+import { analyse, MAX_RARE } from '../tools/check-hogwarts.mjs';
 import { startServer, openApp, closeBrowser, sleep } from './helpers.mjs';
 
 const root = new URL('..', import.meta.url);
@@ -41,5 +44,21 @@ describe('Ritorno a Hogwarts', () => {
       assert.deepEqual(titles, (await loadBooks()).map((b) => b.title));
       assert.deepEqual(errors, []);
     });
+  });
+
+  test('the B1 books are cached, uniquely titled and under the uncommon-word cap', async () => {
+    const sw = readFileSync(new URL('sw.js', root), 'utf8');
+    const onDisk = readdirSync(new URL('samples/hogwarts-b1/', root)).filter((f) => /^\d\d\.js$/.test(f)).map((f) => `samples/hogwarts-b1/${f}`);
+    assert.deepEqual(onDisk.sort(), B1.seriesFiles());
+    for (const f of [...B1.seriesFiles(), 'samples/hogwarts-b1/index.js', 'samples/hogwarts-b1/book.js']) assert.ok(sw.includes(`'${f}'`), `${f} missing from SHELL`);
+    const b2 = new Set((await loadBooks()).map((b) => b.title));
+    const freq = loadFreqList();
+    for (let n = 1; n <= B1.SERIES.books; n++) {
+      const b = await B1.loadSeriesBook(n);
+      assert.equal(b.id, B1.seriesBookId(n));
+      assert.ok(!b2.has(b.title), `${b.title}: same title as a B2 book, so the library would skip it`);
+      const r = analyse(b, freq);
+      assert.ok(r.share <= MAX_RARE, `${b.title}: ${(100 * r.share).toFixed(1)}% uncommon words`);
+    }
   });
 });

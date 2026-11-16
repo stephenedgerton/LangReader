@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { startServer, openApp, closeBrowser, sleep } from './helpers.mjs';
 import { SERIES } from '../samples/series/index.js';
 import { SERIES as HOGWARTS } from '../samples/hogwarts/index.js';
+import { SERIES as HOGWARTS_B1 } from '../samples/hogwarts-b1/index.js';
 import { loadBooks } from '../tools/check-series.mjs';
 
 const titles = (page) => page.$$eval('#view-library .cover .ct', (e) => e.map((x) => x.textContent));
@@ -49,12 +50,12 @@ describe('library organising', () => {
     assert.equal(await page.$('.coll-row:has-text("Inverno")'), null);
     await page.click('#sheet .x'); await sleep(300);
     assert.equal(await page.textContent('.chips .on'), 'All');
-    assert.equal((await titles(page)).length, 20);
+    assert.equal((await titles(page)).length, 21);
     const left = await page.evaluate(async (ids) => {
       const db = await new Promise((r) => { const q = indexedDB.open('langreader'); q.onsuccess = () => r(q.result); });
       const all = await new Promise((r) => { const q = db.transaction('books').objectStore('books').getAll(); q.onsuccess = () => r(q.result); });
       return all.filter((b) => b.collections?.some((c) => !ids.includes(c))).length;
-    }, [SERIES.id, HOGWARTS.id]);
+    }, [SERIES.id, HOGWARTS.id, HOGWARTS_B1.id]);
     assert.equal(left, 0, 'books no longer list the deleted collection');
     assert.deepEqual(errors, []);
   });
@@ -63,7 +64,7 @@ describe('library organising', () => {
     const { page, errors } = await openApp(t, srv.url);
     await library(page);
     const chips = await page.$$eval('.chips button[data-filter^="c:"]', (e) => e.map((x) => x.textContent));
-    assert.deepEqual(chips, [SERIES.title, HOGWARTS.title]);
+    assert.deepEqual(chips, [SERIES.title, HOGWARTS.title, HOGWARTS_B1.title]);
     // Whatever the sort order, the collection lists book 1 to the last.
     await page.click('.lib-sub button'); await sleep(300);
     await page.click('[data-sort=title]'); await sleep(100);

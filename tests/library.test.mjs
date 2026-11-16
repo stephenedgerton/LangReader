@@ -19,7 +19,7 @@ describe('library', () => {
       'Il segnale sotto il ghiaccio', 'La bottega delle chiavi', 'La chiesa sulla collina', 'La stanza numero sette', 'Natale al porto',
       'Quello che ricorda Tonino', 'Un caffè a Bologna', 'Una casa a Montemare', 'Una lettera nel muro', 'Una notte di tempesta',
       // Ritorno a Hogwarts
-      'La Foresta Proibita', 'Il corridoio del terzo piano', 'La lettera col sigillo rosso', 'Lo Specchio delle Brame', 'Sotto la botola',
+      'La Foresta Proibita', 'Il corridoio del terzo piano', 'La lettera col sigillo rosso', 'La lettera col sigillo rosso · B1', 'Lo Specchio delle Brame', 'Sotto la botola',
     ].sort());
     await openBook(page, 'Il segnale sotto il ghiaccio');
     assert.equal(await page.textContent('#r-running'), 'Capitolo 1 · Le tre e diciassette');
@@ -40,8 +40,8 @@ describe('library', () => {
     });
     await page.reload(); await page.waitForSelector('#view-library .book');
     const titles = await bookTitles(page);
-    assert.equal(titles.length, 20);
-    assert.equal(new Set(titles).size, 20, 'no duplicates');
+    assert.equal(titles.length, 21);
+    assert.equal(new Set(titles).size, 21, 'no duplicates');
 
     page.once('dialog', (d) => d.accept());
     await page.click('#view-library .book:has-text("La stanza numero sette") [data-more]');

@@ -12,6 +12,7 @@ import { SAMPLE } from '../samples/sample.js';
 import { STORIES } from '../samples/stories.js';
 import * as CASA_GIALLA from '../samples/series/index.js';
 import * as HOGWARTS from '../samples/hogwarts/index.js';
+import * as HOGWARTS_B1 from '../samples/hogwarts-b1/index.js';
 import { haptic } from './haptics.js';
 import { bookPct, goalSheet, goalSummary, goalCardHTML, markBookComplete } from './goals.js';
 import { fillDifficulty } from './difficulty.js';
@@ -46,7 +47,7 @@ async function boot() {
   }
 }
 
-const BUNDLED_SERIES = [CASA_GIALLA, HOGWARTS];
+const BUNDLED_SERIES = [CASA_GIALLA, HOGWARTS, HOGWARTS_B1];
 
 // Bundled stories are each added once: new installs get them all, existing libraries get new ones.
 // A story you delete stays deleted.
